@@ -38,4 +38,6 @@ router.post("/update-slave", auth, userCrop.updateCropCalendarStatus);
 
 router.post("/geo-location", userCrop.addGeoLocation);
 
+router.get("/get-task-image/:slaveId", auth, userCrop.getTaskImage);
+
 module.exports = router;

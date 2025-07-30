@@ -451,7 +451,7 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
 
         const { id, status } = req.body;
         // const userId = req.user.ownerId;
-        console.log(id)
+        console.log(",,,,,,,,,,,,,,,,,,,", id)
         const currentTime = new Date();
 
         const taskResults = await cropDao.getTaskById(id);
@@ -673,3 +673,43 @@ exports.getUploadedImagesCount = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Internal Server Error!" });
     }
 });
+
+
+exports.getTaskImage = asyncHandler(async (req, res) => {
+    try {
+        const { slaveId } = req.params; // Get slaveId from URL params
+        console.log("Fetching task images for slaveId:", slaveId);
+
+        // Validate slaveId
+        if (!slaveId) {
+            return res.status(400).json({
+                message: "slaveId is required"
+            });
+        }
+
+
+        const taskResults = await cropDao.getTaskImage(slaveId);
+
+        if (taskResults.length === 0) {
+            return res.status(404).json({
+                message: "No task images found for the provided slaveId."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Task images retrieved successfully",
+            data: taskResults,
+
+        });
+
+    } catch (error) {
+        console.error("Error in getTaskImage:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+});
+
