@@ -197,6 +197,7 @@ exports.getUserProfileById = (userId, ownerId) => {
                 lastName,
                 phoneNumber,
                 NICnumber,
+                district,
                 LEFT(profileImage, 256) as profileImage,
                 LEFT(farmerQr, 256) as farmerQr,
                 membership,
