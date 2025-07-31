@@ -1452,6 +1452,62 @@ exports.getrenew = async (userId) => {
 //     });
 // };
 
+// exports.deleteFarm = (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         // First check if farm exists and get its details
+//         const checkSql = "SELECT id, userId, farmIndex FROM farms WHERE id = ?";
+//         db.plantcare.query(checkSql, [farmId], (err, checkResult) => {
+//             if (err) {
+//                 reject(err);
+//                 return;
+//             }
+
+//             if (checkResult.length === 0) {
+//                 resolve(false); // Farm doesn't exist
+//                 return;
+//             }
+
+//             const farmToDelete = checkResult[0];
+//             const { userId, farmIndex } = farmToDelete;
+
+//             // Delete the farm first
+//             const deleteSql = "DELETE FROM farms WHERE id = ?";
+//             db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+//                 if (err) {
+//                     reject(err);
+//                     return;
+//                 }
+
+//                 if (deleteResult.affectedRows === 0) {
+//                     resolve(false);
+//                     return;
+//                 }
+
+//                 // Now update farmIndex for remaining farms of the same user
+//                 // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
+//                 const updateIndexSql = `
+//                     UPDATE farms 
+//                     SET farmIndex = farmIndex - 1 
+//                     WHERE userId = ? AND farmIndex > ?
+//                 `;
+
+//                 db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+//                     if (err) {
+//                         console.error("Error updating farm indexes:", err);
+//                         // Even if index update fails, the farm was deleted successfully
+//                         // We'll still return true but log the error
+//                         resolve(true);
+//                         return;
+//                     }
+
+//                     console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
+//                     resolve(true);
+//                 });
+//             });
+//         });
+//     });
+// };
+
 exports.deleteFarm = (farmId) => {
     return new Promise((resolve, reject) => {
         // First check if farm exists and get its details
@@ -1461,49 +1517,266 @@ exports.deleteFarm = (farmId) => {
                 reject(err);
                 return;
             }
-
             if (checkResult.length === 0) {
                 resolve(false); // Farm doesn't exist
                 return;
             }
-
             const farmToDelete = checkResult[0];
             const { userId, farmIndex } = farmToDelete;
 
-            // Delete the farm first
-            const deleteSql = "DELETE FROM farms WHERE id = ?";
-            db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+            // Delete related currentasset records first
+            const deleteCurrentAssetsSql = "DELETE FROM currentasset WHERE farmId = ?";
+            db.plantcare.query(deleteCurrentAssetsSql, [farmId], (err, currentAssetDeleteResult) => {
                 if (err) {
+                    console.error("Error deleting currentasset records:", err);
                     reject(err);
                     return;
                 }
 
-                if (deleteResult.affectedRows === 0) {
-                    resolve(false);
-                    return;
-                }
+                console.log(`Deleted ${currentAssetDeleteResult.affectedRows} currentasset records for farm ${farmId}`);
 
-                // Now update farmIndex for remaining farms of the same user
-                // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
-                const updateIndexSql = `
-                    UPDATE farms 
-                    SET farmIndex = farmIndex - 1 
-                    WHERE userId = ? AND farmIndex > ?
-                `;
-
-                db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+                // Delete related fixedasset records
+                const deleteFixedAssetsSql = "DELETE FROM fixedasset WHERE farmId = ?";
+                db.plantcare.query(deleteFixedAssetsSql, [farmId], (err, fixedAssetDeleteResult) => {
                     if (err) {
-                        console.error("Error updating farm indexes:", err);
-                        // Even if index update fails, the farm was deleted successfully
-                        // We'll still return true but log the error
-                        resolve(true);
+                        console.error("Error deleting fixedasset records:", err);
+                        reject(err);
                         return;
                     }
 
-                    console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
-                    resolve(true);
+                    console.log(`Deleted ${fixedAssetDeleteResult.affectedRows} fixedasset records for farm ${farmId}`);
+
+                    // Delete the farm
+                    const deleteSql = "DELETE FROM farms WHERE id = ?";
+                    db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+                        if (err) {
+                            console.error("Error deleting farm:", err);
+                            reject(err);
+                            return;
+                        }
+                        if (deleteResult.affectedRows === 0) {
+                            resolve(false);
+                            return;
+                        }
+
+                        // Now update farmIndex for remaining farms of the same user
+                        // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
+                        const updateIndexSql = `
+                            UPDATE farms 
+                            SET farmIndex = farmIndex - 1 
+                            WHERE userId = ? AND farmIndex > ?
+                        `;
+                        db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+                            if (err) {
+                                console.error("Error updating farm indexes:", err);
+                                // Even if index update fails, the farm was deleted successfully
+                                // We'll still return true but log the error
+                                resolve(true);
+                                return;
+                            }
+
+                            console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
+                            console.log(`${currentAssetDeleteResult.affectedRows} currentasset records were deleted.`);
+                            console.log(`${fixedAssetDeleteResult.affectedRows} fixedasset records were deleted.`);
+                            resolve(true);
+                        });
+                    });
                 });
             });
+        });
+    });
+};
+
+exports.getSelectFarm = async (ownerId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT id, userId, farmName
+            FROM farms
+            WHERE userId = ?
+            ORDER BY farmName ASC
+        `;
+
+        db.plantcare.query(query, [ownerId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farms:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+
+
+////currect asset
+
+exports.createNewAsset = async (assetData) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            INSERT INTO currentasset (userId, farmId, category, asset, brand, batchNum, 
+                                    unitVolume, unit, numOfUnit, unitPrice, total, 
+                                    purchaseDate, expireDate, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const values = [
+            assetData.userId,
+            assetData.farmId,
+            assetData.category,
+            assetData.asset,
+            assetData.brand,
+            assetData.batchNum,
+            assetData.unitVolume,
+            assetData.unit,
+            assetData.numOfUnit,
+            assetData.unitPrice,
+            assetData.total,
+            assetData.purchaseDate,
+            assetData.expireDate,
+            assetData.status
+        ];
+
+        db.plantcare.query(query, values, (error, results) => {
+            if (error) {
+                console.error("Error creating new asset:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+exports.addAssetRecord = async (recordData) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
+            VALUES (?, ?, ?, ?)
+        `;
+
+        const values = [
+            recordData.currentAssetId,
+            recordData.numOfPlusUnit,
+            recordData.numOfMinUnit,
+            recordData.totalPrice
+        ];
+
+        db.plantcare.query(query, values, (error, results) => {
+            if (error) {
+                console.error("Error adding asset record:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+
+
+
+exports.getAssetsByCategory = (userId, category, farmId) => {
+    return new Promise((resolve, reject) => {
+        let query;
+        let values;
+
+        if (Array.isArray(category)) {
+            const placeholders = category.map(() => "?").join(",");
+            query = `SELECT * FROM currentasset WHERE userId = ? AND farmId = ? AND category IN (${placeholders})`;
+            values = [userId, farmId, ...category];
+        } else {
+            query = "SELECT * FROM currentasset WHERE userId = ? AND farmId = ? AND category = ?";
+            values = [userId, farmId, category];
+        }
+
+        db.plantcare.query(query, values, (err, results) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(results);
+        });
+    });
+};
+
+
+
+exports.getAllCurrentAssets = (userId, farmId) => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT category, SUM(total) AS totalSum 
+            FROM currentasset 
+            WHERE userId = ? AND farmId = ?
+            GROUP BY category
+            HAVING totalSum > 0
+        `;
+        db.plantcare.query(sql, [userId, farmId], (err, results) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(results);
+        });
+    });
+};
+
+
+exports.getFixedAssetsByCategory = (userId, category, farmId) => {
+    return new Promise((resolve, reject) => {
+        let sqlQuery = '';
+        let queryParams = [userId, farmId]; // Add farmId to parameters
+
+        if (category === 'Land') {
+            sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
+                JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
+                WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Land'`;
+        } else if (category === 'Building and Infrastructures') {
+            sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
+                JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
+                WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Building and Infrastructures'`;
+        } else if (category === 'Machine and Vehicles') {
+            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+                JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+                WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Machine and Vehicles'`;
+        } else if (category === 'Tools') {
+            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+                JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+                WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Tools'`;
+        } else {
+            return reject(new Error('Invalid category provided.'));
+        }
+
+        db.plantcare.query(sqlQuery, queryParams, (err, results) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(results);
+        });
+    });
+};
+
+
+exports.getFarmName = async (userId, farmId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                id, 
+                farmName,
+                district,
+                city,
+                plotNo,
+                street
+            FROM farms 
+            WHERE userId = ? AND id = ? AND isBlock = 0
+        `;
+
+        db.plantcare.query(query, [userId, farmId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farm:", error);
+                reject(error);
+            } else {
+                console.log("Query results:", results);
+                resolve(results);
+            }
         });
     });
 };

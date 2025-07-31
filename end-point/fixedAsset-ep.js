@@ -1,8 +1,8 @@
 const {
   fixedAssetsSchema,
   deleteFixedAssetSchema,
-} = require("../validations/fixedAssest-validation"); 
-const fixedAssetsDao = require("../dao/fixedAsset-dao"); 
+} = require("../validations/fixedAssest-validation");
+const fixedAssetsDao = require("../dao/fixedAsset-dao");
 const asyncHandler = require("express-async-handler");
 
 exports.getFixedAssetsByCategoryAndUser = asyncHandler(async (req, res) => {
@@ -10,7 +10,7 @@ exports.getFixedAssetsByCategoryAndUser = asyncHandler(async (req, res) => {
     await fixedAssetsSchema.validateAsync(req.params);
 
     const { category } = req.params;
-    const userId = req.user.id; 
+    const userId = req.user.id;
 
     const fixedAssets = await fixedAssetsDao.getFixedAssetsByCategoryAndUser(
       category,
@@ -50,7 +50,7 @@ exports.deleteFixedAsset = asyncHandler(async (req, res) => {
     await deleteFixedAssetSchema.validateAsync(req.body);
 
     const { ids } = req.body;
-    const idArray = Array.isArray(ids) ? ids : [ids]; 
+    const idArray = Array.isArray(ids) ? ids : [ids];
 
     const deleteResult = await fixedAssetsDao.deleteFixedAsset(idArray);
 
@@ -80,3 +80,5 @@ exports.deleteFixedAsset = asyncHandler(async (req, res) => {
     });
   }
 });
+
+

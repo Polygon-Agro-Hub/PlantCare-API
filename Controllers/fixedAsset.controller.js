@@ -21,6 +21,7 @@ exports.addFixedAsset = (req, res) => {
     const {
         category,
         ownership,
+        farmId,
         type,
         floorArea,
         generalCondition,
@@ -67,109 +68,73 @@ exports.addFixedAsset = (req, res) => {
                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
             }
 
-        const fixedAssetSql = `INSERT INTO fixedasset (userId, category) VALUES (?, ?)`;
-        db.plantcare.query(fixedAssetSql, [userId, category], (fixedAssetErr, fixedAssetResult) => {
-            if (fixedAssetErr) {
-                return connection.rollback(() => {
-                    connection.release();
-                    return res.status(500).json({ message: 'Error inserting into fixedasset table', error: fixedAssetErr });
-                });
-            }
+            const fixedAssetSql = `INSERT INTO fixedasset (userId, category,farmId) VALUES (?, ?,?)`;
+            db.plantcare.query(fixedAssetSql, [userId, category, farmId], (fixedAssetErr, fixedAssetResult) => {
+                if (fixedAssetErr) {
+                    return connection.rollback(() => {
+                        connection.release();
+                        return res.status(500).json({ message: 'Error inserting into fixedasset table', error: fixedAssetErr });
+                    });
+                }
 
-            const fixedAssetId = fixedAssetResult.insertId;
+                const fixedAssetId = fixedAssetResult.insertId;
 
-            if (category === 'Building and Infrastructures') {
-                const buildingSql = `INSERT INTO buildingfixedasset (fixedAssetId, type, floorArea, ownership, generalCondition, district)
+                if (category === 'Building and Infrastructures') {
+                    const buildingSql = `INSERT INTO buildingfixedasset (fixedAssetId, type, floorArea, ownership, generalCondition, district)
                                      VALUES (?, ?, ?, ?, ?, ?)`;
 
-                db.plantcare.query(buildingSql, [fixedAssetId, type, floorArea, ownership, generalCondition, district], (buildingErr, buildingResult) => {
-                    if (buildingErr) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(500).json({ message: 'Error inserting into buildingfixedasset table', error: buildingErr });
-                        });
-                    }
-
-                    const buildingAssetId = buildingResult.insertId;
-                    let ownershipSql = '';
-                    let ownershipParams = [];
-
-                    switch (ownership) {
-                        case 'Own Building (with title ownership)':
-                            ownershipSql = `INSERT INTO ownershipownerfixedasset (buildingAssetId, issuedDate, estimateValue)
-                                            VALUES (?, ?, ?)`;
-                            ownershipParams = [buildingAssetId, formattedIssuedDate, estimateValue];
-                            break;
-
-                        case 'Leased Building':
-                            ownershipSql = `INSERT INTO ownershipleastfixedasset (buildingAssetId, startDate, durationYears, durationMonths, leastAmountAnnually)
-                                            VALUES (?, ?, ?, ?, ?)`;
-                            ownershipParams = [buildingAssetId, formattedStartDate, durationYears, durationMonths, leastAmountAnnually];
-                            break;
-
-                        case 'Permit Building':
-                            ownershipSql = `INSERT INTO ownershippermitfixedasset (buildingAssetId, issuedDate, permitFeeAnnually)
-                                            VALUES (?, ?, ?)`;
-                            ownershipParams = [buildingAssetId, formattedIssuedDate, permitFeeAnnually];
-                            break;
-
-                        case 'Shared / No Ownership':
-                            ownershipSql = `INSERT INTO ownershipsharedfixedasset (buildingAssetId, paymentAnnually)
-                                            VALUES (?, ?)`;
-                            ownershipParams = [buildingAssetId, paymentAnnually];
-                            break;
-
-                        default:
+                    db.plantcare.query(buildingSql, [fixedAssetId, type, floorArea, ownership, generalCondition, district], (buildingErr, buildingResult) => {
+                        if (buildingErr) {
                             return connection.rollback(() => {
                                 connection.release();
-                                return res.status(400).json({ message: 'Invalid ownership type provided for building asset.' });
-                            });
-                    }
-
-                    db.plantcare.query(ownershipSql, ownershipParams, (ownershipErr) => {
-                        if (ownershipErr) {
-                            return connection.rollback(() => {
-                                connection.release();
-                                return res.status(500).json({ message: 'Error inserting into ownership table', error: ownershipErr });
+                                return res.status(500).json({ message: 'Error inserting into buildingfixedasset table', error: buildingErr });
                             });
                         }
 
-                        connection.commit((commitErr) => {
-                            if (commitErr) {
+                        const buildingAssetId = buildingResult.insertId;
+                        let ownershipSql = '';
+                        let ownershipParams = [];
+
+                        switch (ownership) {
+                            case 'Own Building (with title ownership)':
+                                ownershipSql = `INSERT INTO ownershipownerfixedasset (buildingAssetId, issuedDate, estimateValue)
+                                            VALUES (?, ?, ?)`;
+                                ownershipParams = [buildingAssetId, formattedIssuedDate, estimateValue];
+                                break;
+
+                            case 'Leased Building':
+                                ownershipSql = `INSERT INTO ownershipleastfixedasset (buildingAssetId, startDate, durationYears, durationMonths, leastAmountAnnually)
+                                            VALUES (?, ?, ?, ?, ?)`;
+                                ownershipParams = [buildingAssetId, formattedStartDate, durationYears, durationMonths, leastAmountAnnually];
+                                break;
+
+                            case 'Permit Building':
+                                ownershipSql = `INSERT INTO ownershippermitfixedasset (buildingAssetId, issuedDate, permitFeeAnnually)
+                                            VALUES (?, ?, ?)`;
+                                ownershipParams = [buildingAssetId, formattedIssuedDate, permitFeeAnnually];
+                                break;
+
+                            case 'Shared / No Ownership':
+                                ownershipSql = `INSERT INTO ownershipsharedfixedasset (buildingAssetId, paymentAnnually)
+                                            VALUES (?, ?)`;
+                                ownershipParams = [buildingAssetId, paymentAnnually];
+                                break;
+
+                            default:
                                 return connection.rollback(() => {
                                     connection.release();
-                                    return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                    return res.status(400).json({ message: 'Invalid ownership type provided for building asset.' });
                                 });
-                            }
-                            connection.release();
-                            return res.status(201).json({ message: 'Building fixed asset with ownership created successfully.' });
-                        });
-                    });
-                });
+                        }
 
-            } else if (category === 'Land') {
-                const landSql = `INSERT INTO landfixedasset (fixedAssetId, extentha, extentac, extentp, ownership, district, landFenced, perennialCrop)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-                db.plantcare.query(landSql, [fixedAssetId, extentha, extentac, extentp, landownership, district, landFenced, perennialCrop], (landErr, landResult) => {
-                    if (landErr) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(500).json({ message: 'Error inserting into landfixedasset table', error: landErr });
-                        });
-                    }
-
-                    const landAssetId = landResult.insertId;
-
-                    if (landownership === 'Own') {
-                        const ownershipOwnerSql = `INSERT INTO ownershipownerfixedasset (landAssetId, issuedDate, estimateValue)
-                                                   VALUES (?, ?, ?)`;
-                        db.plantcare.query(ownershipOwnerSql, [landAssetId, formattedIssuedDate, estimateValue], (ownershipErr) => {
+                        db.plantcare.query(ownershipSql, ownershipParams, (ownershipErr) => {
                             if (ownershipErr) {
                                 return connection.rollback(() => {
                                     connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into ownershipownerfixedasset table', error: ownershipErr });
+                                    return res.status(500).json({ message: 'Error inserting into ownership table', error: ownershipErr });
                                 });
                             }
+
                             connection.commit((commitErr) => {
                                 if (commitErr) {
                                     return connection.rollback(() => {
@@ -178,107 +143,181 @@ exports.addFixedAsset = (req, res) => {
                                     });
                                 }
                                 connection.release();
-                                return res.status(201).json({ message: 'Land fixed asset with ownership created successfully.' });
+                                return res.status(201).json({ message: 'Building fixed asset with ownership created successfully.' });
                             });
                         });
-                    } else if (landownership === 'Lease') {
-                        const ownershipLeaseSql = `INSERT INTO ownershipleastfixedasset (landAssetId, startDate, durationYears,durationMonths, leastAmountAnnually)
+                    });
+
+                } else if (category === 'Land') {
+                    const landSql = `INSERT INTO landfixedasset (fixedAssetId, extentha, extentac, extentp, ownership, district, landFenced, perennialCrop)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                    db.plantcare.query(landSql, [fixedAssetId, extentha, extentac, extentp, landownership, district, landFenced, perennialCrop], (landErr, landResult) => {
+                        if (landErr) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                return res.status(500).json({ message: 'Error inserting into landfixedasset table', error: landErr });
+                            });
+                        }
+
+                        const landAssetId = landResult.insertId;
+
+                        if (landownership === 'Own') {
+                            const ownershipOwnerSql = `INSERT INTO ownershipownerfixedasset (landAssetId, issuedDate, estimateValue)
+                                                   VALUES (?, ?, ?)`;
+                            db.plantcare.query(ownershipOwnerSql, [landAssetId, formattedIssuedDate, estimateValue], (ownershipErr) => {
+                                if (ownershipErr) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        return res.status(500).json({ message: 'Error inserting into ownershipownerfixedasset table', error: ownershipErr });
+                                    });
+                                }
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Land fixed asset with ownership created successfully.' });
+                                });
+                            });
+                        } else if (landownership === 'Lease') {
+                            const ownershipLeaseSql = `INSERT INTO ownershipleastfixedasset (landAssetId, startDate, durationYears,durationMonths, leastAmountAnnually)
                                                    VALUES (?, ?, ?, ?,?)`;
-                        db.plantcare.query(ownershipLeaseSql, [landAssetId, formattedStartDate, durationYears, durationMonths, leastAmountAnnually], (leaseErr) => {
-                            if (leaseErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into ownershipleastfixedasset table', error: leaseErr });
-                                });
-                            }
-                            connection.commit((commitErr) => {
-                                if (commitErr) {
+                            db.plantcare.query(ownershipLeaseSql, [landAssetId, formattedStartDate, durationYears, durationMonths, leastAmountAnnually], (leaseErr) => {
+                                if (leaseErr) {
                                     return connection.rollback(() => {
                                         connection.release();
-                                        return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        return res.status(500).json({ message: 'Error inserting into ownershipleastfixedasset table', error: leaseErr });
                                     });
                                 }
-                                return res.status(201).json({ message: 'Land fixed asset with lease ownership created successfully.' });
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    return res.status(201).json({ message: 'Land fixed asset with lease ownership created successfully.' });
+                                });
                             });
-                        });
-                    } else if (landownership === 'Permited') {
-                        const ownershipPermitSql = `INSERT INTO ownershippermitfixedasset (landAssetId, issuedDate, permitFeeAnnually)
+                        } else if (landownership === 'Permited') {
+                            const ownershipPermitSql = `INSERT INTO ownershippermitfixedasset (landAssetId, issuedDate, permitFeeAnnually)
                                                     VALUES (?, ?, ?)`;
-                        db.plantcare.query(ownershipPermitSql, [landAssetId, formattedIssuedDate, permitFeeAnnually], (permitErr) => {
-                            if (permitErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into ownershippermitfixedasset table', error: permitErr });
-                                });
-                            }
-                            connection.commit((commitErr) => {
-                                if (commitErr) {
+                            db.plantcare.query(ownershipPermitSql, [landAssetId, formattedIssuedDate, permitFeeAnnually], (permitErr) => {
+                                if (permitErr) {
                                     return connection.rollback(() => {
                                         connection.release();
-                                        return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        return res.status(500).json({ message: 'Error inserting into ownershippermitfixedasset table', error: permitErr });
                                     });
                                 }
-                                return res.status(201).json({ message: 'Land fixed asset with permit ownership created successfully.' });
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    return res.status(201).json({ message: 'Land fixed asset with permit ownership created successfully.' });
+                                });
                             });
-                        });
-                    } else if (landownership === 'Shared') {
-                        const ownershipSharedSql = `INSERT INTO ownershipsharedfixedasset (landAssetId, paymentAnnually)
+                        } else if (landownership === 'Shared') {
+                            const ownershipSharedSql = `INSERT INTO ownershipsharedfixedasset (landAssetId, paymentAnnually)
                                                     VALUES (?, ?)`;
-                        db.plantcare.query(ownershipSharedSql, [landAssetId, paymentAnnually], (sharedErr) => {
-                            if (sharedErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into ownershipsharedfixedasset table', error: sharedErr });
-                                });
-                            }
-                            connection.commit((commitErr) => {
-                                if (commitErr) {
+                            db.plantcare.query(ownershipSharedSql, [landAssetId, paymentAnnually], (sharedErr) => {
+                                if (sharedErr) {
                                     return connection.rollback(() => {
                                         connection.release();
-                                        return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        return res.status(500).json({ message: 'Error inserting into ownershipsharedfixedasset table', error: sharedErr });
                                     });
                                 }
-                                connection.release();
-                                return res.status(201).json({ message: 'Land fixed asset with shared ownership created successfully.' });
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Land fixed asset with shared ownership created successfully.' });
+                                });
                             });
-                        });
-                    } else {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(400).json({ message: 'Invalid ownership type provided for land asset.' });
-                        });
-                    }
-                });
+                        } else {
+                            return connection.rollback(() => {
+                                connection.release();
+                                return res.status(400).json({ message: 'Invalid ownership type provided for land asset.' });
+                            });
+                        }
+                    });
 
-            } else if (category === 'Machine and Vehicles') {
-                const machToolsSql = `INSERT INTO machtoolsfixedasset (fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty)
+                } else if (category === 'Machine and Vehicles') {
+                    const machToolsSql = `INSERT INTO machtoolsfixedasset (fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty)
                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-                // Insert into machtoolsfixedasset table
-                db.plantcare.query(machToolsSql, [fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty], (machToolsErr, machToolsResult) => {
-                    if (machToolsErr) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(500).json({ message: 'Error inserting into machtoolsfixedasset table', error: machToolsErr });
-                        });
-                    }
+                    // Insert into machtoolsfixedasset table
+                    db.plantcare.query(machToolsSql, [fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty], (machToolsErr, machToolsResult) => {
+                        if (machToolsErr) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                return res.status(500).json({ message: 'Error inserting into machtoolsfixedasset table', error: machToolsErr });
+                            });
+                        }
 
-                    const machToolsId = machToolsResult.insertId; // Get the inserted machToolsId
+                        const machToolsId = machToolsResult.insertId; // Get the inserted machToolsId
 
-                    // Check warranty status
-                    if (warranty === 'yes') {
-                        // Insert into machtoolsfixedassetwarranty table
-                        const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
+                        // Check warranty status
+                        if (warranty === 'yes') {
+                            // Insert into machtoolsfixedassetwarranty table
+                            const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
                                                       VALUES (?, ?, ?, ?)`;
-                        db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
-                            if (warrantyErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
-                                });
-                            }
+                            db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
+                                if (warrantyErr) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
+                                    });
+                                }
 
-                            // Commit the transaction after successful insertions
+                                // Commit the transaction after successful insertions
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                });
+                            });
+                        } else if (warranty === 'no') {
+
+                            const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
+                                                      VALUES (?, ?, ?, ?)`;
+                            db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
+                                if (warrantyErr) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
+                                    });
+                                }
+
+                                // Commit the transaction after successful insertions
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                });
+                            });
+
+                        } else {
+                            // If no warranty, just commit the transaction
                             connection.commit((commitErr) => {
                                 if (commitErr) {
                                     return connection.rollback(() => {
@@ -287,77 +326,77 @@ exports.addFixedAsset = (req, res) => {
                                     });
                                 }
                                 connection.release();
-                                return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                return res.status(201).json({ message: 'Machine and tools fixed asset created successfully without warranty.' });
                             });
-                        });
-                    } else if (warranty === 'no') {
-
-                        const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
-                                                      VALUES (?, ?, ?, ?)`;
-                        db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
-                            if (warrantyErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
-                                });
-                            }
-
-                            // Commit the transaction after successful insertions
-                            connection.commit((commitErr) => {
-                                if (commitErr) {
-                                    return connection.rollback(() => {
-                                        connection.release();
-                                        return res.status(500).json({ message: 'Commit error', error: commitErr });
-                                    });
-                                }
-                                connection.release();
-                                return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
-                            });
-                        });
-
-                    } else {
-                        // If no warranty, just commit the transaction
-                        connection.commit((commitErr) => {
-                            if (commitErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Commit error', error: commitErr });
-                                });
-                            }
-                            connection.release();
-                            return res.status(201).json({ message: 'Machine and tools fixed asset created successfully without warranty.' });
-                        });
-                    }
-                });
-            } else if (category === 'Tools') {
-                const machToolsSql = `INSERT INTO machtoolsfixedasset (fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty)
+                        }
+                    });
+                } else if (category === 'Tools') {
+                    const machToolsSql = `INSERT INTO machtoolsfixedasset (fixedAssetId, asset, assetType, mentionOther, brand, numberOfUnits, unitPrice, totalPrice, warranty)
                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-                // Insert into machtoolsfixedasset table
-                db.plantcare.query(machToolsSql, [fixedAssetId, assetname, assetType, mentionOther, toolbrand, numberOfUnits, unitPrice, totalPrice, warranty], (machToolsErr, machToolsResult) => {
-                    if (machToolsErr) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(500).json({ message: 'Error inserting into machtoolsfixedasset table', error: machToolsErr });
-                        });
-                    }
+                    // Insert into machtoolsfixedasset table
+                    db.plantcare.query(machToolsSql, [fixedAssetId, assetname, assetType, mentionOther, toolbrand, numberOfUnits, unitPrice, totalPrice, warranty], (machToolsErr, machToolsResult) => {
+                        if (machToolsErr) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                return res.status(500).json({ message: 'Error inserting into machtoolsfixedasset table', error: machToolsErr });
+                            });
+                        }
 
-                    const machToolsId = machToolsResult.insertId; // Get the inserted machToolsId
+                        const machToolsId = machToolsResult.insertId; // Get the inserted machToolsId
 
-                    // Check warranty status
-                    if (warranty === 'yes') {
-                        // Insert into machtoolsfixedassetwarranty table
-                        const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
+                        // Check warranty status
+                        if (warranty === 'yes') {
+                            // Insert into machtoolsfixedassetwarranty table
+                            const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
                                                       VALUES (?, ?, ?, ?)`;
-                        db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
-                            if (warrantyErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
-                                });
-                            }
+                            db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
+                                if (warrantyErr) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
+                                    });
+                                }
 
-                            // Commit the transaction after successful insertions
+                                // Commit the transaction after successful insertions
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                });
+                            });
+                        } else if (warranty === 'no') {
+
+                            const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
+                                                      VALUES (?, ?, ?, ?)`;
+                            db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
+                                if (warrantyErr) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
+                                    });
+                                }
+
+                                // Commit the transaction after successful insertions
+                                connection.commit((commitErr) => {
+                                    if (commitErr) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                                        });
+                                    }
+                                    connection.release();
+                                    return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                });
+                            });
+
+                        } else {
+                            // If no warranty, just commit the transaction
                             connection.commit((commitErr) => {
                                 if (commitErr) {
                                     return connection.rollback(() => {
@@ -366,55 +405,17 @@ exports.addFixedAsset = (req, res) => {
                                     });
                                 }
                                 connection.release();
-                                return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
+                                return res.status(201).json({ message: 'Machine and tools fixed asset created successfully without warranty.' });
                             });
-                        });
-                    } else if (warranty === 'no') {
-
-                        const machToolsWarrantySql = `INSERT INTO machtoolsfixedassetwarranty (machToolsId, purchaseDate, expireDate, warrantystatus)
-                                                      VALUES (?, ?, ?, ?)`;
-                        db.plantcare.query(machToolsWarrantySql, [machToolsId, formattedPurchaseDate, formattedExpireDate, warranty], (warrantyErr) => {
-                            if (warrantyErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Error inserting into machtoolsfixedassetwarranty table', error: warrantyErr });
-                                });
-                            }
-
-                            // Commit the transaction after successful insertions
-                            connection.commit((commitErr) => {
-                                if (commitErr) {
-                                    return connection.rollback(() => {
-                                        connection.release();
-                                        return res.status(500).json({ message: 'Commit error', error: commitErr });
-                                    });
-                                }
-                                connection.release();
-                                return res.status(201).json({ message: 'Machine and tools fixed asset with warranty created successfully.' });
-                            });
-                        });
-
-                    } else {
-                        // If no warranty, just commit the transaction
-                        connection.commit((commitErr) => {
-                            if (commitErr) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    return res.status(500).json({ message: 'Commit error', error: commitErr });
-                                });
-                            }
-                            connection.release();
-                            return res.status(201).json({ message: 'Machine and tools fixed asset created successfully without warranty.' });
-                        });
-                    }
-                });
-            } else {
-                return connection.rollback(() => {
-                    connection.release();
-                    return res.status(400).json({ message: 'Invalid category provided.' });
-                });
-            }
-        });
+                        }
+                    });
+                } else {
+                    return connection.rollback(() => {
+                        connection.release();
+                        return res.status(400).json({ message: 'Invalid category provided.' });
+                    });
+                }
+            });
 
 
         });
@@ -423,8 +424,8 @@ exports.addFixedAsset = (req, res) => {
 
 
 exports.getFixedAssetsByCategory = (req, res) => {
-    const userId = req.user.id; 
-    const { category } = req.params; 
+    const userId = req.user.id;
+    const { category } = req.params;
 
     // Start a transaction
     db.plantcare.getConnection((err, connection) => {
@@ -435,59 +436,59 @@ exports.getFixedAssetsByCategory = (req, res) => {
                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
             }
 
-        let sqlQuery = '';
-        let queryParams = [userId]; 
+            let sqlQuery = '';
+            let queryParams = [userId];
 
-        // Determine which SQL to run based on category
-        if (category === 'Land') {
-            sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
+            // Determine which SQL to run based on category
+            if (category === 'Land') {
+                sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
                     JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
                     WHERE fa.userId = ? AND fa.category = 'Land'`;
-        } else if (category === 'Building and Infrastructures') {
-            sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
+            } else if (category === 'Building and Infrastructures') {
+                sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
                     JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
                     WHERE fa.userId = ? AND fa.category = 'Building and Infrastructures'`;
-        } else if (category === 'Machine and Vehicles') {
-            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+            } else if (category === 'Machine and Vehicles') {
+                sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
                     JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
                     WHERE fa.userId = ? AND fa.category = 'Machine and Vehicles'`;
-        } else if (category === 'Tools') {
-            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+            } else if (category === 'Tools') {
+                sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
                     JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
                     WHERE fa.userId = ? AND fa.category = 'Tools'`;
-        } else {
-            return res.status(400).json({ message: 'Invalid category provided.' });
-        }
-
-        // Execute the query based on the category
-        db.plantcare.query(sqlQuery, queryParams, (queryErr, results) => {
-            if (queryErr) {
-                return connection.rollback(() => {
-                    connection.release();
-                    return res.status(500).json({ message: 'Error retrieving fixed assets', error: queryErr });
-                });
+            } else {
+                return res.status(400).json({ message: 'Invalid category provided.' });
             }
 
-            // Commit the transaction and return the results
-            connection.commit((commitErr) => {
-                if (commitErr) {
+            // Execute the query based on the category
+            db.plantcare.query(sqlQuery, queryParams, (queryErr, results) => {
+                if (queryErr) {
                     return connection.rollback(() => {
                         connection.release();
-                        return res.status(500).json({ message: 'Commit error', error: commitErr });
+                        return res.status(500).json({ message: 'Error retrieving fixed assets', error: queryErr });
                     });
                 }
-                connection.release();
-                return res.status(200).json({ message: 'Fixed assets retrieved successfully.', data: results });
+
+                // Commit the transaction and return the results
+                connection.commit((commitErr) => {
+                    if (commitErr) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                        });
+                    }
+                    connection.release();
+                    return res.status(200).json({ message: 'Fixed assets retrieved successfully.', data: results });
+                });
             });
         });
-    });
     });
 };
 
 
 exports.getFixedAssetDetailsById = (req, res) => {
-    const userId = req.user.id; 
-    const { assetId, category } = req.params; 
+    const userId = req.user.id;
+    const { assetId, category } = req.params;
 
     db.plantcare.getConnection((err, connection) => {
         if (err) {
@@ -500,138 +501,138 @@ exports.getFixedAssetDetailsById = (req, res) => {
                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
             }
 
-        let sqlQuery = '';
-        let ownershipQuery = '';
-        let queryParams = [userId, assetId];
+            let sqlQuery = '';
+            let ownershipQuery = '';
+            let queryParams = [userId, assetId];
 
-        // Determine which SQL query to run based on category
-        if (category === 'Land') {
-            sqlQuery = `
+            // Determine which SQL query to run based on category
+            if (category === 'Land') {
+                sqlQuery = `
                 SELECT fa.id AS faId, fa.category, lfa.district, lfa.extentha, lfa.extentac, lfa.extentp, lfa.ownership, lfa.landFenced, lfa.perennialCrop, lfa.id
                 FROM fixedasset fa
                 JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-        } else if (category === 'Building and Infrastructures') {
-            sqlQuery = `
+            } else if (category === 'Building and Infrastructures') {
+                sqlQuery = `
                 SELECT fa.id AS faId, fa.category, bfa.type, bfa.floorArea, bfa.ownership, bfa.generalCondition, bfa.district, bfa.id
                 FROM fixedasset fa
                 JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-        } else if (category === 'Machine and Vehicles' || category === 'Tools') {
-            sqlQuery = `
+            } else if (category === 'Machine and Vehicles' || category === 'Tools') {
+                sqlQuery = `
                 SELECT fa.id AS faId, fa.category, mtfa.asset, mtfa.assetType, mtfa.mentionOther, mtfa.brand, mtfa.numberOfUnits, mtfa.unitPrice, mtfa.totalPrice, mtfa.warranty, mtfa.id 
                 FROM fixedasset fa
                 JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-            ownershipQuery = `
+                ownershipQuery = `
                 SELECT 
                     mtw.purchaseDate, mtw.expireDate, mtw.warrantystatus
                 FROM machtoolsfixedassetwarranty mtw
                 WHERE mtw.machToolsId = ?`;
 
-        } else {
-            connection.release();
-            return res.status(400).json({ message: 'Invalid category provided.' });
-        }
-
-        db.plantcare.query(sqlQuery, queryParams, (queryErr, assetResults) => {
-            if (queryErr) {
-                return connection.rollback(() => {
-                    connection.release();
-                    return res.status(500).json({ message: 'Error retrieving asset details', error: queryErr });
-                });
-            }
-
-            if (assetResults.length === 0) {
+            } else {
                 connection.release();
-                return res.status(404).json({ message: 'Asset not found.' });
+                return res.status(400).json({ message: 'Invalid category provided.' });
             }
 
-            const asset = assetResults[0];
-            const assetOwnershipId = asset.id;
-            const ownershipType = asset.ownership;
+            db.plantcare.query(sqlQuery, queryParams, (queryErr, assetResults) => {
+                if (queryErr) {
+                    return connection.rollback(() => {
+                        connection.release();
+                        return res.status(500).json({ message: 'Error retrieving asset details', error: queryErr });
+                    });
+                }
 
-            if (category === 'Building and Infrastructures') {
-                if (ownershipType === 'Own Building (with title ownership)') {
-                    ownershipQuery = `
+                if (assetResults.length === 0) {
+                    connection.release();
+                    return res.status(404).json({ message: 'Asset not found.' });
+                }
+
+                const asset = assetResults[0];
+                const assetOwnershipId = asset.id;
+                const ownershipType = asset.ownership;
+
+                if (category === 'Building and Infrastructures') {
+                    if (ownershipType === 'Own Building (with title ownership)') {
+                        ownershipQuery = `
                         SELECT 
                             oof.issuedDate, oof.estimateValue
                         FROM ownershipownerfixedasset oof
                         WHERE oof.buildingAssetId = ?`;
-                } else if (ownershipType === 'Leased Building') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Leased Building') {
+                        ownershipQuery = `
                         SELECT 
                             olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths
                         FROM ownershipleastfixedasset olf
                         WHERE olf.buildingAssetId = ?`;
-                } else if (ownershipType === 'Permit Building') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Permit Building') {
+                        ownershipQuery = `
                         SELECT
                             opf.issuedDate, opf.permitFeeAnnually
                         FROM ownershippermitfixedasset opf
                         WHERE opf.buildingAssetId = ?`;
-                } else if (ownershipType === 'Shared / No Ownership') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Shared / No Ownership') {
+                        ownershipQuery = `
                         SELECT
                             osf.paymentAnnually
                         FROM ownershipsharedfixedasset osf
                         WHERE osf.buildingAssetId = ?`;
-                }
-            } else if (category === 'Land') {
-                if (ownershipType === 'Own') {
-                    ownershipQuery = `
+                    }
+                } else if (category === 'Land') {
+                    if (ownershipType === 'Own') {
+                        ownershipQuery = `
                         SELECT 
                             oof.issuedDate, oof.estimateValue
                         FROM ownershipownerfixedasset oof
                         WHERE oof.landAssetId = ?`;
-                } else if (ownershipType === 'Lease') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Lease') {
+                        ownershipQuery = `
                         SELECT 
                             olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths
                         FROM ownershipleastfixedasset olf
                         WHERE olf.landAssetId = ?`;
-                } else if (ownershipType === 'Permited') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Permited') {
+                        ownershipQuery = `
                         SELECT
                             opf.issuedDate, opf.permitFeeAnnually
                         FROM ownershippermitfixedasset opf
                         WHERE opf.landAssetId = ?`;
-                } else if (ownershipType === 'Shared') {
-                    ownershipQuery = `
+                    } else if (ownershipType === 'Shared') {
+                        ownershipQuery = `
                         SELECT
                             osf.paymentAnnually
                         FROM ownershipsharedfixedasset osf
                         WHERE osf.landAssetId = ?`;
-                }
-            }
-
-            // Execute the ownership query based on the asset type
-            db.plantcare.query(ownershipQuery, [assetOwnershipId], (ownershipErr, ownershipResults) => {
-                if (ownershipErr) {
-                    return connection.rollback(() => {
-                        connection.release();
-                        return res.status(500).json({ message: 'Error retrieving ownership details', error: ownershipErr });
-                    });
+                    }
                 }
 
-                asset.ownershipDetails = ownershipResults[0] || null;
-
-                // Commit the transaction and return the asset details with ownership
-                connection.commit((commitErr) => {
-                    if (commitErr) {
+                // Execute the ownership query based on the asset type
+                db.plantcare.query(ownershipQuery, [assetOwnershipId], (ownershipErr, ownershipResults) => {
+                    if (ownershipErr) {
                         return connection.rollback(() => {
                             connection.release();
-                            return res.status(500).json({ message: 'Commit error', error: commitErr });
+                            return res.status(500).json({ message: 'Error retrieving ownership details', error: ownershipErr });
                         });
                     }
-                    connection.release();
-                    return res.status(200).json(asset);
+
+                    asset.ownershipDetails = ownershipResults[0] || null;
+
+                    // Commit the transaction and return the asset details with ownership
+                    connection.commit((commitErr) => {
+                        if (commitErr) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                return res.status(500).json({ message: 'Commit error', error: commitErr });
+                            });
+                        }
+                        connection.release();
+                        return res.status(200).json(asset);
+                    });
                 });
             });
-        });
         });
     });
 };
@@ -655,11 +656,11 @@ exports.updateFixedAsset = (req, res) => {
                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
             }
 
-        let updateAssetQuery = '';
-        let updateParams = [];
+            let updateAssetQuery = '';
+            let updateParams = [];
 
-        if (category === 'Land') {
-            updateAssetQuery = `
+            if (category === 'Land') {
+                updateAssetQuery = `
                 UPDATE landfixedasset lfa
                 JOIN fixedasset fa ON fa.id = lfa.fixedAssetId
                 SET lfa.district = COALESCE(NULLIF(?, ''), lfa.district),
@@ -671,187 +672,187 @@ exports.updateFixedAsset = (req, res) => {
                     lfa.perennialCrop = COALESCE(NULLIF(?, ''), lfa.perennialCrop)
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-            updateParams = [
-                assetData.district,
-                assetData.extentha,
-                assetData.extentac,
-                assetData.extentp,
-                assetData.ownership,
-                assetData.landFenced,
-                assetData.perennialCrop,
-                userId,
-                assetData.faId
-            ];
+                updateParams = [
+                    assetData.district,
+                    assetData.extentha,
+                    assetData.extentac,
+                    assetData.extentp,
+                    assetData.ownership,
+                    assetData.landFenced,
+                    assetData.perennialCrop,
+                    userId,
+                    assetData.faId
+                ];
 
-            db.plantcare.query(updateAssetQuery, updateParams, (queryErr) => {
-                if (queryErr) {
-                    connection.release();
-                    return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
-                }
+                db.plantcare.query(updateAssetQuery, updateParams, (queryErr) => {
+                    if (queryErr) {
+                        connection.release();
+                        return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
+                    }
 
-                // Proceed with ownership updates based on the ownership type
-                const ownershipDetails = assetData.ownershipDetails || {};
-                // const { ownership, oldOwnership } = assetData;
-                const ownership= assetData.ownership
-                const oldOwnership = assetData.oldOwnership
-                function formatDateToMySQLDateOnly(date) {
-                    const d = new Date(date);
-                    return d.toISOString().slice(0, 10); // Get only the date part (YYYY-MM-DD)
-                }
-                const formatToMySQLDateTime = (date) => {
-                    if (!date) return null; // Handle null/undefined values
-                    return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-                };
+                    // Proceed with ownership updates based on the ownership type
+                    const ownershipDetails = assetData.ownershipDetails || {};
+                    // const { ownership, oldOwnership } = assetData;
+                    const ownership = assetData.ownership
+                    const oldOwnership = assetData.oldOwnership
+                    function formatDateToMySQLDateOnly(date) {
+                        const d = new Date(date);
+                        return d.toISOString().slice(0, 10); // Get only the date part (YYYY-MM-DD)
+                    }
+                    const formatToMySQLDateTime = (date) => {
+                        if (!date) return null; // Handle null/undefined values
+                        return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
+                    };
 
-                if (ownership !== oldOwnership) {
-                    let deleteQueries = [];
-                    let insertQueries = [];
-                    let insertParams = [];
+                    if (ownership !== oldOwnership) {
+                        let deleteQueries = [];
+                        let insertQueries = [];
+                        let insertParams = [];
 
-                    if (ownership === 'Own') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
-                        ];
+                        if (ownership === 'Own') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershipownerfixedasset (landAssetId, issuedDate, estimateValue)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        
-                        insertParams.push([
-                            assetData.id,
-                            formatToMySQLDateTime(ownershipDetails.issuedDate || null),
-                            ownershipDetails.estimateValue || null
-                        ]);
 
-                    } else if (ownership === 'Lease') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
-                        ];
+                            insertParams.push([
+                                assetData.id,
+                                formatToMySQLDateTime(ownershipDetails.issuedDate || null),
+                                ownershipDetails.estimateValue || null
+                            ]);
 
-                        insertQueries.push(`
+                        } else if (ownership === 'Lease') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
+                            ];
+
+                            insertQueries.push(`
                             INSERT INTO ownershipleastfixedasset (landAssetId, startDate, durationYears, durationMonths, leastAmountAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.startDate || null,
-                            ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
-                            ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
-                            ownershipDetails.leastAmountAnnually || null
-                        ]);
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.startDate || null,
+                                ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
+                                ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
+                                ownershipDetails.leastAmountAnnually || null
+                            ]);
 
-                    } else if (ownership === 'Permited') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
-                        ];
+                        } else if (ownership === 'Permited') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE landAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershippermitfixedasset (landAssetId, issuedDate, permitFeeAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            formatToMySQLDateTime(ownershipDetails.issuedDate || null),
-                            ownershipDetails.permitFeeAnnually || null
-                        ]);
+                            insertParams.push([
+                                assetData.id,
+                                formatToMySQLDateTime(ownershipDetails.issuedDate || null),
+                                ownershipDetails.permitFeeAnnually || null
+                            ]);
 
-                    } else if (ownership === 'Shared') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`
-                        ];
+                        } else if (ownership === 'Shared') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE landAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershipsharedfixedasset (landAssetId, paymentAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.paymentAnnually || null
-                        ]);
-                    }
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.paymentAnnually || null
+                            ]);
+                        }
 
-                    // Execute delete and insert queries
-                    executeDeleteAndInsertQueries(res, deleteQueries, [assetData.id, ], insertQueries, insertParams, updateAssetQuery, updateParams);
-                } else {
-                    // Ownership type did not change, update relevant fields directly
-                    let ownershipUpdateQueries = [];
-                    let ownershipUpdateParams = [];
+                        // Execute delete and insert queries
+                        executeDeleteAndInsertQueries(res, deleteQueries, [assetData.id,], insertQueries, insertParams, updateAssetQuery, updateParams);
+                    } else {
+                        // Ownership type did not change, update relevant fields directly
+                        let ownershipUpdateQueries = [];
+                        let ownershipUpdateParams = [];
 
-                    if (ownership === 'Own') {
-                        ownershipUpdateQueries.push(`
+                        if (ownership === 'Own') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipownerfixedasset 
                             SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate),
                                 estimateValue = COALESCE(NULLIF(?, ''), estimateValue)
                             WHERE landAssetId = ?`);
-                            
-                            const formattedIssuedDate = formatDateToMySQLDateOnly(ownershipDetails.issuedDate || null);
-                        ownershipUpdateParams.push([
-                            formattedIssuedDate,
-                            ownershipDetails.estimateValue || null,
-                            assetId
-                        ]);
 
-                    } else if (ownership === 'Lease') {
-                        ownershipUpdateQueries.push(`
+                            const formattedIssuedDate = formatDateToMySQLDateOnly(ownershipDetails.issuedDate || null);
+                            ownershipUpdateParams.push([
+                                formattedIssuedDate,
+                                ownershipDetails.estimateValue || null,
+                                assetId
+                            ]);
+
+                        } else if (ownership === 'Lease') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipleastfixedasset 
                             SET startDate = COALESCE(NULLIF(?, ''), startDate),
                                 durationYears = COALESCE(NULLIF(?, ''), durationYears),
                                 durationMonths = COALESCE(NULLIF(?, ''), durationMonths),
                                 leastAmountAnnually = COALESCE(NULLIF(?, ''), leastAmountAnnually)
                             WHERE landAssetId = ?`);
-                        // ownershipUpdateParams.push([
-                        //     formatToMySQLDateTime(ownershipDetails.startDate || null),
-                        //     ownershipDetails.durationYears || null,
-                        //     ownershipDetails.durationMonths || null,
-                        //     ownershipDetails.leastAmountAnnually || null,
-                        //     assetId
-                        // ]);
-                        ownershipUpdateParams.push([
-                            formatToMySQLDateTime(ownershipDetails.startDate || null),
-                            ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
-                            ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
-                            ownershipDetails.leastAmountAnnually || null,
-                            assetId
-                        ]);
+                            // ownershipUpdateParams.push([
+                            //     formatToMySQLDateTime(ownershipDetails.startDate || null),
+                            //     ownershipDetails.durationYears || null,
+                            //     ownershipDetails.durationMonths || null,
+                            //     ownershipDetails.leastAmountAnnually || null,
+                            //     assetId
+                            // ]);
+                            ownershipUpdateParams.push([
+                                formatToMySQLDateTime(ownershipDetails.startDate || null),
+                                ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
+                                ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
+                                ownershipDetails.leastAmountAnnually || null,
+                                assetId
+                            ]);
 
-                    } else if (ownership === 'Permited') {
-                        ownershipUpdateQueries.push(`
+                        } else if (ownership === 'Permited') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershippermitfixedasset 
                             SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate),
                                 permitFeeAnnually = COALESCE(NULLIF(?, ''), permitFeeAnnually)
                             WHERE landAssetId = ?`);
-                        ownershipUpdateParams.push([
-                            formatToMySQLDateTime(ownershipDetails.issuedDate || null),
-                            ownershipDetails.permitFeeAnnually || null,
-                            assetId
-                        ]);
+                            ownershipUpdateParams.push([
+                                formatToMySQLDateTime(ownershipDetails.issuedDate || null),
+                                ownershipDetails.permitFeeAnnually || null,
+                                assetId
+                            ]);
 
-                    } else if (ownership === 'Shared') {
-                        ownershipUpdateQueries.push(`
+                        } else if (ownership === 'Shared') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipsharedfixedasset
                             SET paymentAnnually = COALESCE(NULLIF(?, ''), paymentAnnually)
                             WHERE landAssetId = ?`);
-                        ownershipUpdateParams.push([
-                            ownershipDetails.paymentAnnually || null,
-                            assetId
-                        ]);
-                    }
+                            ownershipUpdateParams.push([
+                                ownershipDetails.paymentAnnually || null,
+                                assetId
+                            ]);
+                        }
 
-                    // Execute ownership updates
-                    executeUpdateQueries(res, assetId, ownershipUpdateQueries, ownershipUpdateParams, updateAssetQuery, updateParams);
-                }
-            });
-        } else if (category === 'Building and Infrastructures') {
-            updateAssetQuery = `
+                        // Execute ownership updates
+                        executeUpdateQueries(res, assetId, ownershipUpdateQueries, ownershipUpdateParams, updateAssetQuery, updateParams);
+                    }
+                });
+            } else if (category === 'Building and Infrastructures') {
+                updateAssetQuery = `
                 UPDATE buildingfixedasset bfa
                 JOIN fixedasset fa ON fa.id = bfa.fixedAssetId
                 SET bfa.type = COALESCE(NULLIF(?, ''), bfa.type),
@@ -861,155 +862,155 @@ exports.updateFixedAsset = (req, res) => {
                     bfa.district = COALESCE(NULLIF(?, ''), bfa.district)
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-            updateParams = [
-                assetData.type,
-                assetData.floorArea,
-                assetData.ownership,
-                assetData.generalCondition,
-                assetData.district,
-                userId,
-                assetData.faId
-            ];
+                updateParams = [
+                    assetData.type,
+                    assetData.floorArea,
+                    assetData.ownership,
+                    assetData.generalCondition,
+                    assetData.district,
+                    userId,
+                    assetData.faId
+                ];
 
-            // Execute the buildingfixedasset update query
-            db.plantcare.query(updateAssetQuery, updateParams, (queryErr, result) => {
-                if (queryErr) {
-                    console.error("Error executing updateAssetQuery:", queryErr);
-                    connection.release();
-                    return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
-                }
+                // Execute the buildingfixedasset update query
+                db.plantcare.query(updateAssetQuery, updateParams, (queryErr, result) => {
+                    if (queryErr) {
+                        console.error("Error executing updateAssetQuery:", queryErr);
+                        connection.release();
+                        return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
+                    }
 
-                function formatDateToMySQLDateOnly(date) {
-                    const d = new Date(date);
-                    return d.toISOString().slice(0, 10); // Get only the date part (YYYY-MM-DD)
-                }
-                const formatToMySQLDateTime = (date) => {
-                    if (!date) return null; // Handle null/undefined values
-                    return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-                };
+                    function formatDateToMySQLDateOnly(date) {
+                        const d = new Date(date);
+                        return d.toISOString().slice(0, 10); // Get only the date part (YYYY-MM-DD)
+                    }
+                    const formatToMySQLDateTime = (date) => {
+                        if (!date) return null; // Handle null/undefined values
+                        return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
+                    };
 
 
-                // Proceed with ownership updates
-                const ownershipDetails = assetData.ownershipDetails || {};
-                const { ownership, oldOwnership } = assetData;
+                    // Proceed with ownership updates
+                    const ownershipDetails = assetData.ownershipDetails || {};
+                    const { ownership, oldOwnership } = assetData;
 
-                if (ownership !== oldOwnership) {
-                    let deleteQueries = [];
-                    let insertQueries = [];
-                    let insertParams = [];
-                    
+                    if (ownership !== oldOwnership) {
+                        let deleteQueries = [];
+                        let insertQueries = [];
+                        let insertParams = [];
 
-                    if (ownership === 'Own Building (with title ownership)') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
-                        ];
 
-                        insertQueries.push(`
+                        if (ownership === 'Own Building (with title ownership)') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
+                            ];
+
+                            insertQueries.push(`
                             INSERT INTO ownershipownerfixedasset (buildingAssetId, issuedDate, estimateValue)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.issuedDate || null,
-                            ownershipDetails.estimateValue || null
-                        ]);
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.issuedDate || null,
+                                ownershipDetails.estimateValue || null
+                            ]);
 
-                    } else if (ownership === 'Leased Building') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
-                        ];
+                        } else if (ownership === 'Leased Building') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershipleastfixedasset (buildingAssetId, startDate, durationYears, durationMonths, leastAmountAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.startDate || null,
-                            // ownershipDetails.durationYears || null,
-                            // ownershipDetails.durationMonths || null,
-                            ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
-                            ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
-                            ownershipDetails.leastAmountAnnually || null
-                        ]);
-                    } else if (ownership === 'Permit Building') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
-                        ];
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.startDate || null,
+                                // ownershipDetails.durationYears || null,
+                                // ownershipDetails.durationMonths || null,
+                                ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
+                                ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
+                                ownershipDetails.leastAmountAnnually || null
+                            ]);
+                        } else if (ownership === 'Permit Building') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershipsharedfixedasset WHERE buildingAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershippermitfixedasset (buildingAssetId, issuedDate, permitFeeAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.issuedDate || null,
-                            ownershipDetails.permitFeeAnnually || null,
-                        ]);
-                    } else if (ownership === 'Shared / No Ownership') {
-                        deleteQueries = [
-                            `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
-                            `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`
-                        ];
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.issuedDate || null,
+                                ownershipDetails.permitFeeAnnually || null,
+                            ]);
+                        } else if (ownership === 'Shared / No Ownership') {
+                            deleteQueries = [
+                                `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
+                                `DELETE FROM ownershippermitfixedasset WHERE buildingAssetId = ?`
+                            ];
 
-                        insertQueries.push(`
+                            insertQueries.push(`
                             INSERT INTO ownershipsharedfixedasset (buildingAssetId, paymentAnnually)
                             VALUES (?, COALESCE(NULLIF(?, ''), NULL))
                         `);
-                        insertParams.push([
-                            assetData.id,
-                            ownershipDetails.paymentAnnually || null,
-                        ]);
-                    }
+                            insertParams.push([
+                                assetData.id,
+                                ownershipDetails.paymentAnnually || null,
+                            ]);
+                        }
 
-                    executeDeleteAndInsertQueries(res, deleteQueries, [assetData.id], insertQueries, insertParams, updateAssetQuery, updateParams);
-                } else {
-                    let ownershipUpdateQueries = [];
-                    let ownershipUpdateParams = [];
+                        executeDeleteAndInsertQueries(res, deleteQueries, [assetData.id], insertQueries, insertParams, updateAssetQuery, updateParams);
+                    } else {
+                        let ownershipUpdateQueries = [];
+                        let ownershipUpdateParams = [];
 
-                    if (ownership === 'Own Building (with title ownership)') {
-                        ownershipUpdateQueries.push(`
+                        if (ownership === 'Own Building (with title ownership)') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipownerfixedasset 
                             SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate),
                                 estimateValue = COALESCE(NULLIF(?, ''), estimateValue)
                             WHERE buildingAssetId = ?`);
-                        ownershipUpdateParams.push([
-                           formatToMySQLDateTime(ownershipDetails.issuedDate || null),
-                            ownershipDetails.estimateValue || null,
-                            assetId
-                        ]);
-                    } else if (ownership === 'Leased Building') {
-                        ownershipUpdateQueries.push(`
+                            ownershipUpdateParams.push([
+                                formatToMySQLDateTime(ownershipDetails.issuedDate || null),
+                                ownershipDetails.estimateValue || null,
+                                assetId
+                            ]);
+                        } else if (ownership === 'Leased Building') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipleastfixedasset 
                             SET startDate = COALESCE(NULLIF(?, ''), startDate),
                                 durationYears = COALESCE(NULLIF(?, ''), durationYears),
                                 durationMonths = COALESCE(NULLIF(?, ''), durationMonths),
                                 leastAmountAnnually = COALESCE(NULLIF(?, ''), leastAmountAnnually)
                             WHERE buildingAssetId = ?`);
-                        ownershipUpdateParams.push([
-                            formatToMySQLDateTime(ownershipDetails.startDate || null),
-                            ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
-                            ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
-                            ownershipDetails.leastAmountAnnually || null,
-                            assetId
-                        ]);
-                    } else if (ownership === 'Permit Building') {
-                        let formattedIssuedDate = ownershipDetails.issuedDate;
+                            ownershipUpdateParams.push([
+                                formatToMySQLDateTime(ownershipDetails.startDate || null),
+                                ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',
+                                ownershipDetails.durationMonths !== undefined ? String(ownershipDetails.durationMonths) : '0',
+                                ownershipDetails.leastAmountAnnually || null,
+                                assetId
+                            ]);
+                        } else if (ownership === 'Permit Building') {
+                            let formattedIssuedDate = ownershipDetails.issuedDate;
 
-                        if (formattedIssuedDate) {
-                            const dateObj = new Date(formattedIssuedDate);
-                            formattedIssuedDate = dateObj.toISOString().split('T')[0]; // Format to 'YYYY-MM-DD'
-                        } else {
-                            formattedIssuedDate = null; // If no date is provided, set it to null
-                        }
-                        ownershipUpdateQueries.push(`
+                            if (formattedIssuedDate) {
+                                const dateObj = new Date(formattedIssuedDate);
+                                formattedIssuedDate = dateObj.toISOString().split('T')[0]; // Format to 'YYYY-MM-DD'
+                            } else {
+                                formattedIssuedDate = null; // If no date is provided, set it to null
+                            }
+                            ownershipUpdateQueries.push(`
                             UPDATE  ownershippermitfixedasset 
                             SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate),
                                 permitFeeAnnually = COALESCE(NULLIF(?, ''), permitFeeAnnually)
@@ -1019,22 +1020,22 @@ exports.updateFixedAsset = (req, res) => {
                                 ownershipDetails.permitFeeAnnually || null,
                                 assetId
                             ]);
-                    } else if (ownership === 'Shared / No Ownership') {
-                        ownershipUpdateQueries.push(`
+                        } else if (ownership === 'Shared / No Ownership') {
+                            ownershipUpdateQueries.push(`
                             UPDATE ownershipsharedfixedasset
                             SET paymentAnnually = COALESCE(NULLIF(?, ''), paymentAnnually)
                             WHERE buildingAssetId = ?`);
-                        ownershipUpdateParams.push([
-                            ownershipDetails.paymentAnnually || null,
-                            assetId
-                        ]);
+                            ownershipUpdateParams.push([
+                                ownershipDetails.paymentAnnually || null,
+                                assetId
+                            ]);
+                        }
+                        executeUpdateQueries(res, assetId, ownershipUpdateQueries, ownershipUpdateParams, updateAssetQuery, updateParams);
                     }
-                    executeUpdateQueries(res, assetId, ownershipUpdateQueries, ownershipUpdateParams, updateAssetQuery, updateParams);
-                }
-            });
-        } else if (category === 'Machine and Vehicles' || category === 'Tools') {
+                });
+            } else if (category === 'Machine and Vehicles' || category === 'Tools') {
 
-            const updateAssetQuery = `
+                const updateAssetQuery = `
                 UPDATE machtoolsfixedasset mtfa
                 JOIN fixedasset fa ON fa.id = mtfa.fixedAssetId
                 SET mtfa.asset = COALESCE(NULLIF(?, ''), mtfa.asset),
@@ -1047,81 +1048,81 @@ exports.updateFixedAsset = (req, res) => {
                     mtfa.mentionOther = COALESCE(NULLIF(?, ''), mtfa.mentionOther)
                 WHERE fa.userId = ? AND fa.id = ?`;
 
-            const updateParams = [
-                assetData.asset,
-                assetData.assetType,
-                assetData.brand,
-                assetData.numberOfUnits,
-                assetData.unitPrice,
-                assetData.totalPrice,
-                assetData.warranty,
-                assetData.mentionOther,
-                userId,
-                assetData.faId
-            ];
+                const updateParams = [
+                    assetData.asset,
+                    assetData.assetType,
+                    assetData.brand,
+                    assetData.numberOfUnits,
+                    assetData.unitPrice,
+                    assetData.totalPrice,
+                    assetData.warranty,
+                    assetData.mentionOther,
+                    userId,
+                    assetData.faId
+                ];
 
 
-            const warrantyDetails = assetData.ownershipDetails || {};
+                const warrantyDetails = assetData.ownershipDetails || {};
 
-            const formatToMySQLDateTime = (date) => {
-                if (!date) return null; // Handle null/undefined values
-                return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-            };
-          
+                const formatToMySQLDateTime = (date) => {
+                    if (!date) return null; // Handle null/undefined values
+                    return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
+                };
 
-            // const warrantyQuery = `
-            //     UPDATE machtoolsfixedassetwarranty 
-            //     SET purchaseDate = COALESCE(NULLIF(?, ''), purchaseDate),
-            //         expireDate = COALESCE(NULLIF(?, ''), expireDate),
-            //         warrantystatus = COALESCE(NULLIF(?, ''), warrantystatus)
-            //     WHERE machToolsId = ?`;
-             const warrantyQuery = `
+
+                // const warrantyQuery = `
+                //     UPDATE machtoolsfixedassetwarranty 
+                //     SET purchaseDate = COALESCE(NULLIF(?, ''), purchaseDate),
+                //         expireDate = COALESCE(NULLIF(?, ''), expireDate),
+                //         warrantystatus = COALESCE(NULLIF(?, ''), warrantystatus)
+                //     WHERE machToolsId = ?`;
+                const warrantyQuery = `
                     UPDATE machtoolsfixedassetwarranty
                     SET purchaseDate = ?, 
                         expireDate = ?, 
                         warrantystatus = ?
                     WHERE machToolsId = ?`;
-                    ;
+                ;
 
-            const warrantyParams = [
-                formatToMySQLDateTime(warrantyDetails.purchaseDate) || null,
-                formatToMySQLDateTime(warrantyDetails.expireDate) || null,
-                warrantyDetails.warrantystatus || null,
-                assetId
-            ];
+                const warrantyParams = [
+                    formatToMySQLDateTime(warrantyDetails.purchaseDate) || null,
+                    formatToMySQLDateTime(warrantyDetails.expireDate) || null,
+                    warrantyDetails.warrantystatus || null,
+                    assetId
+                ];
 
-            console.log("params", warrantyParams)
-            // Execute the update queries in sequence with enhanced error logging
-            db.plantcare.query(updateAssetQuery, updateParams, (queryErr) => {
-                if (queryErr) {
-                    console.error('Error executing updateAssetQuery:', queryErr);
-                    connection.release();
-                    return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
-                }
-
-                db.plantcare.query(warrantyQuery, warrantyParams, (warrantyErr) => {
-                    if (warrantyErr) {
-                        console.error('Error executing warrantyQuery:', warrantyErr);
+                console.log("params", warrantyParams)
+                // Execute the update queries in sequence with enhanced error logging
+                db.plantcare.query(updateAssetQuery, updateParams, (queryErr) => {
+                    if (queryErr) {
+                        console.error('Error executing updateAssetQuery:', queryErr);
                         connection.release();
-                        return connection.rollback(() => res.status(500).json({ message: 'Error updating warranty details', error: warrantyErr }));
+                        return connection.rollback(() => res.status(500).json({ message: 'Error updating asset', error: queryErr }));
                     }
 
-                    connection.commit((commitErr) => {
-                        if (commitErr) {
-                            console.error('Error committing transaction:', commitErr);
+                    db.plantcare.query(warrantyQuery, warrantyParams, (warrantyErr) => {
+                        if (warrantyErr) {
+                            console.error('Error executing warrantyQuery:', warrantyErr);
                             connection.release();
-                            return connection.rollback(() => res.status(500).json({ message: 'Commit error', error: commitErr }));
+                            return connection.rollback(() => res.status(500).json({ message: 'Error updating warranty details', error: warrantyErr }));
                         }
-                        connection.release();
-                        return res.status(200).json({ message: 'Asset and ownership details updated successfully.' });
+
+                        connection.commit((commitErr) => {
+                            if (commitErr) {
+                                console.error('Error committing transaction:', commitErr);
+                                connection.release();
+                                return connection.rollback(() => res.status(500).json({ message: 'Commit error', error: commitErr }));
+                            }
+                            connection.release();
+                            return res.status(200).json({ message: 'Asset and ownership details updated successfully.' });
+                        });
                     });
                 });
-            });
-        } else {
-            connection.release();
-            return res.status(400).json({ message: 'Invalid category provided.' });
-        }
-    });
+            } else {
+                connection.release();
+                return res.status(400).json({ message: 'Invalid category provided.' });
+            }
+        });
 
     });
 };

@@ -18,25 +18,28 @@ exports.upload = multer({
 
 exports.uploadImage = asyncHandler(async (req, res) => {
     try {
-
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded.' });
         }
-
         const { slaveId, farmId, onCulscropID } = req.body;
-        const ownerId = req.user.ownerId
-        console.log("req body",ownerId, farmId, onCulscropID)
+        const ownerId = req.user.ownerId;
+        const userId = req.user.id;
+
+        console.log("req body", ownerId, farmId, onCulscropID);
+
         if (!slaveId) {
             return res.status(400).json({ message: 'No slaveId provided.' });
         }
 
         const imageBuffer = req.file.buffer;
         const fileName = req.file.originalname;
-        // const image = await uploadFileToS3(imageBuffer, fileName, `taskimages/image/owner${ownerId}/farm${farmId}/onCulscropID${onCulscropID}`);
+
         const image = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/farm${farmId}/onCulscropID${onCulscropID}`);
 
+        // Determine staffId based on whether user is owner or staff
+        const staffId = (ownerId === userId) ? null : userId;
 
-        const result = await imageupDao.insertTaskImage(slaveId, image);
+        const result = await imageupDao.insertTaskImage(slaveId, image, staffId);
 
         res.status(200).json({
             message: 'Image uploaded successfully.',
@@ -52,7 +55,6 @@ exports.uploadImage = asyncHandler(async (req, res) => {
                 message: 'File size exceeds the maximum allowed size of 10 MB.',
             });
         }
-
         console.error('Error during image upload:', error);
         res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }

@@ -1,4 +1,4 @@
-const db = require('../startup/database'); 
+const db = require('../startup/database');
 
 exports.getRequiredImages = (cropId) => {
     return new Promise((resolve, reject) => {
@@ -14,20 +14,19 @@ exports.getRequiredImages = (cropId) => {
                 reject(new Error('Error fetching required images: ' + err.message));
             } else {
                 if (results.length > 0) {
-                    resolve(results[0].reqImages); 
+                    resolve(results[0].reqImages);
                 } else {
-                    resolve(null); 
+                    resolve(null);
                 }
             }
         });
     });
 };
 
-exports.insertTaskImage = (slaveId, image) => {
+exports.insertTaskImage = (slaveId, image, staffId) => {
     return new Promise((resolve, reject) => {
-        const query = 'INSERT INTO taskimages (slaveId, image) VALUES (?, ?)';
-
-        db.plantcare.query(query, [slaveId, image], (err, result) => {
+        const query = 'INSERT INTO taskimages (slaveId, staffId, image) VALUES (?, ?, ?)';
+        db.plantcare.query(query, [slaveId, staffId, image], (err, result) => {
             if (err) {
                 reject(new Error('Error inserting image into taskimages: ' + err.message));
             } else {

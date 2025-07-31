@@ -37,5 +37,29 @@ router.get('/get-renew', auth, farmEp.getrenew);
 
 router.delete('/delete-farm/:farmId', auth, farmEp.deleteFarm);
 
+router.get('/select-farm', auth, farmEp.getSelectFarm);
+
+/////currect asset
+
+router.post('/currentAsset/:farmId', auth, farmEp.handleAddFixedAsset);
+
+router.get("/assets/:farmId", auth, farmEp.getAssetsByCategory);
+
+router.get(
+    "/currentAsset/:farmId",
+    auth,
+    farmEp.getAllCurrentAssets
+);
+
+
+///fixAsset
+
+
+router.get('/fixed-assets/:category/:farmId', auth, farmEp.getFixedAssetsByCategory);
+
+///fetch farmId
+
+router.get('/get-farmName/:farmId', auth, farmEp.getFarmName);
+
 
 module.exports = router;

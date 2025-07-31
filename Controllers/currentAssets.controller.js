@@ -43,6 +43,7 @@ exports.handleAddFixedAsset = (req, res) => {
     const {
         category,
         asset,
+        farmId,
         brand,
         batchNum,
         volume,
@@ -137,11 +138,11 @@ exports.handleAddFixedAsset = (req, res) => {
         } else {
 
             const insertSql = `
-                INSERT INTO currentasset (userId, category, asset, brand, batchNum, unitVolume, unit, numOfUnit, unitPrice, total, purchaseDate, expireDate, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO currentasset (userId,farmId, category, asset, brand, batchNum, unitVolume, unit, numOfUnit, unitPrice, total, purchaseDate, expireDate, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
             `;
             const insertValues = [
-                userId, category, asset, brand, batchNum, volumeInt, unit,
+                userId, farmId, category, asset, brand, batchNum, volumeInt, unit,
                 numberOfUnits, unitPrice, totalPrice, formattedPurchaseDate, formattedExpireDate, status
             ];
 

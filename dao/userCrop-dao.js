@@ -716,3 +716,58 @@ exports.getUploadedImagesCount = (userId, cropId) => {
 }
 
 // hrg
+
+// exports.getTaskImage = (slaveId) => {
+//     return new Promise((resolve, reject) => {
+//         const sql = `
+//             SELECT 
+//                 id,
+//                 slaveId,
+//                 staffId,
+//                 image,
+//                 createdAt
+//             FROM taskimages 
+//             WHERE slaveId = ?
+//             ORDER BY createdAt DESC
+//         `;
+
+//         db.plantcare.query(sql, [slaveId], (err, results) => {
+//             if (err) {
+//                 console.error("Database error in getTaskImage:", err);
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
+exports.getTaskImage = (slaveId) => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT 
+                ti.id,
+                ti.slaveId,
+                ti.staffId,
+                ti.image,
+                ti.createdAt,
+                CASE 
+                    WHEN ti.staffId IS NULL THEN 'You'
+                    ELSE CONCAT(fs.firstName, ' ', fs.lastName)
+                END AS uploadedBy
+            FROM taskimages ti
+            LEFT JOIN farmstaff fs ON ti.staffId = fs.id
+            WHERE ti.slaveId = ?
+            ORDER BY ti.createdAt DESC
+        `;
+
+        db.plantcare.query(sql, [slaveId], (err, results) => {
+            if (err) {
+                console.error("Database error in getTaskImage:", err);
+                reject(err);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};

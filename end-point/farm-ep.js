@@ -3,7 +3,7 @@ const farmDao = require("../dao/farm-dao");
 const { createFarm, createPayment, signupCheckerSchema, updateFarm, createStaffMember, getSlaveCropCalendarDaysSchema } = require('../validations/farm-validation');
 const delectfilesOnS3 = require('../Middlewares/s3delete');
 const delectfloders3 = require('../Middlewares/s3folderdelete')
-
+const db = require("../startup/database");
 
 
 const {
@@ -833,6 +833,397 @@ exports.deleteFarm = asyncHandler(async (req, res) => {
         res.status(500).json({
             status: "error",
             error: "Internal Server Error"
+        });
+    }
+});
+
+exports.getSelectFarm = asyncHandler(async (req, res) => {
+    try {
+        const ownerId = req.user.ownerId;
+        const selectFarm = await farmDao.getSelectFarm(ownerId);
+
+        console.log('Select Farm', selectFarm);
+
+        // Return the farm data for dropdown
+        return res.status(200).json({
+            status: "success",
+            message: "Farms retrieved successfully",
+            data: selectFarm
+        });
+
+    } catch (err) {
+        console.error("Error:", err);
+        if (err.isJoi) {
+            return res.status(400).json({
+                status: "error",
+                message: err.details[0].message,
+            });
+        }
+        return res.status(500).json({
+            status: "error",
+            message: "Error retrieving farms.",
+        });
+    }
+});
+
+
+////currect asset
+
+// exports.handleAddFixedAsset = (req, res) => {
+
+//     const farmId = req.params;
+
+//     const userId = req.user.id;
+//     const {
+//         category,
+//         asset,
+
+//         brand,
+//         batchNum,
+//         volume,
+//         unit,
+//         numberOfUnits,
+//         unitPrice,
+//         totalPrice,
+//         purchaseDate,
+//         expireDate,
+//         warranty,
+//         status
+//     } = req.body;
+
+//     const volumeInt = parseInt(volume, 10);
+//     if (isNaN(volumeInt)) {
+//         return res.status(400).json({ status: 'error', message: 'Volume must be a valid number.' });
+//     }
+
+//     const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
+//     const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
+
+//     const checkSql = `SELECT * FROM currentasset WHERE userId = ? AND category = ? AND asset = ? AND brand = ? AND batchNum = ?`;
+
+//     db.plantcare.query(checkSql, [userId, category, asset, brand, batchNum], (err, results) => {
+
+//         if (err) {
+//             console.error('Error checking asset:', err);
+//             return res.status(500).json({ status: 'error', message: 'Error checking asset: ' + err.message });
+//         }
+
+//         if (results.length > 0) {
+//             const existingAsset = results[0];
+
+//             const updatedNumOfUnits = parseFloat(existingAsset.numOfUnit) + parseFloat(numberOfUnits);
+//             const updatedTotalPrice = (parseFloat(existingAsset.total) + parseFloat(totalPrice)).toFixed(2);
+
+//             const updateSql = `
+//                 UPDATE currentasset
+//                 SET numOfUnit = ?, total = ?, unitVolume = ?, unitPrice = ?, purchaseDate = ?, expireDate = ?, status = ?
+//                 WHERE id = ?
+//             `;
+//             const updateValues = [
+//                 updatedNumOfUnits.toFixed(2),
+//                 updatedTotalPrice,
+//                 volumeInt,
+//                 unitPrice,
+//                 formattedPurchaseDate,
+//                 formattedExpireDate,
+//                 status,
+//                 existingAsset.id
+//             ];
+
+//             db.plantcare.query(updateSql, updateValues, (updateErr, updateResult) => {
+//                 if (updateErr) {
+//                     console.error('Error updating asset:', updateErr);
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'Error updating asset: ' + updateErr.message,
+//                     });
+//                 }
+
+//                 if (updateResult.affectedRows === 0) {
+//                     console.log('No rows were updated');
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'No asset was updated. Please check if the asset exists.',
+//                     });
+//                 }
+
+//                 const recordSql = `
+//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
+//                     VALUES (?, ?, 0, ?)
+//                 `;
+//                 const recordValues = [existingAsset.id, numberOfUnits, totalPrice];
+
+//                 db.plantcare.query(recordSql, recordValues, (recordErr) => {
+//                     if (recordErr) {
+//                         console.error('Error adding asset record:', recordErr);
+//                         return res.status(500).json({
+//                             status: 'error',
+//                             message: 'Error adding asset record: ' + recordErr.message,
+//                         });
+//                     }
+
+//                     res.status(200).json({
+//                         status: 'success',
+//                         message: 'Asset updated successfully',
+//                     });
+//                 });
+//             });
+
+//         } else {
+
+//             const insertSql = `
+//                 INSERT INTO currentasset (userId,farmId, category, asset, brand, batchNum, unitVolume, unit, numOfUnit, unitPrice, total, purchaseDate, expireDate, status)
+//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+//             `;
+//             const insertValues = [
+//                 userId, farmId, category, asset, brand, batchNum, volumeInt, unit,
+//                 numberOfUnits, unitPrice, totalPrice, formattedPurchaseDate, formattedExpireDate, status
+//             ];
+
+//             db.plantcare.query(insertSql, insertValues, (insertErr, insertResult) => {
+//                 if (insertErr) {
+//                     console.error('Error inserting new asset:', insertErr);
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'Error inserting new asset: ' + insertErr.message,
+//                     });
+//                 }
+
+//                 const newRecordSql = `
+//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
+//                     VALUES (?, ?, 0, ?)
+//                 `;
+//                 const newRecordValues = [insertResult.insertId, numberOfUnits, totalPrice];
+
+//                 db.plantcare.query(newRecordSql, newRecordValues, (newRecordErr) => {
+//                     if (newRecordErr) {
+//                         console.error('Error adding new asset record:', newRecordErr);
+//                         return res.status(500).json({
+//                             status: 'error',
+//                             message: 'Error adding new asset record: ' + newRecordErr.message,
+//                         });
+//                     }
+
+//                     res.status(201).json({
+//                         status: 'success',
+//                         message: 'New asset created successfully',
+//                     });
+//                 });
+//             });
+//         }
+//     });
+// };
+
+exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
+    try {
+        const farmId = req.params.farmId;
+        const userId = req.user.id;
+        const {
+            category,
+            asset,
+            brand,
+            batchNum,
+            volume,
+            unit,
+            numberOfUnits,
+            unitPrice,
+            totalPrice,
+            purchaseDate,
+            expireDate,
+            warranty,
+            status
+        } = req.body;
+
+        // Validate volume
+        const volumeInt = parseInt(volume, 10);
+        if (isNaN(volumeInt)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Volume must be a valid number.'
+            });
+        }
+
+        // Format dates
+        const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
+        const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
+
+        // Create new asset data
+        const assetData = {
+            userId: userId,
+            farmId: farmId,
+            category: category,
+            asset: asset,
+            brand: brand,
+            batchNum: batchNum,
+            unitVolume: volumeInt,
+            unit: unit,
+            numOfUnit: numberOfUnits,
+            unitPrice: unitPrice,
+            total: totalPrice,
+            purchaseDate: formattedPurchaseDate,
+            expireDate: formattedExpireDate,
+            status: status
+        };
+
+        const insertResult = await farmDao.createNewAsset(assetData);
+
+        // Add record for new asset
+        const recordData = {
+            currentAssetId: insertResult.insertId,
+            numOfPlusUnit: numberOfUnits,
+            numOfMinUnit: 0,
+            totalPrice: totalPrice
+        };
+
+        await farmDao.addAssetRecord(recordData);
+
+        res.status(201).json({
+            status: 'success',
+            message: 'New asset created successfully',
+        });
+
+    } catch (err) {
+        console.error("Error:", err);
+        return res.status(500).json({
+            status: "error",
+            message: "Error adding fixed asset.",
+        });
+    }
+});
+
+
+exports.getAssetsByCategory = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const farmId = req.params.farmId;
+
+        const { category } = await getAssetsByCategorySchema.validateAsync(
+            req.query
+        );
+        const assets = await farmDao.getAssetsByCategory(userId, category, farmId);
+
+        if (assets.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No assets found for this category.",
+            });
+        }
+        return res.status(200).json({
+            assets,
+        });
+    } catch (err) {
+        console.error("Error fetching assets by category:", err);
+
+        if (err.isJoi) {
+            return res.status(400).json({
+                status: "error",
+                message: err.details[0].message,
+            });
+        }
+
+        res.status(500).json({
+            status: "error",
+            message: "Server error, please try again later.",
+        });
+    }
+});
+
+
+exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
+    try {
+
+        const userId = req.user.id;
+        const farmId = req.params.farmId;
+
+        const results = await farmDao.getAllCurrentAssets(userId, farmId);
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No assets found for the user",
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            currentAssetsByCategory: results,
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: "error",
+            message: `An error occurred: ${err.message}`,
+        });
+    }
+});
+
+
+exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
+    console.log("///////////////////")
+    try {
+        const userId = req.user.id;
+        const { category, farmId } = req.params;
+
+
+
+        const results = await farmDao.getFixedAssetsByCategory(userId, category, farmId);
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No fixed assets found for this category",
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            fixedAssets: results,
+        });
+    } catch (err) {
+        if (err.message === 'Invalid category provided.') {
+            return res.status(400).json({
+                status: "error",
+                message: err.message,
+            });
+        }
+
+        res.status(500).json({
+            status: "error",
+            message: `An error occurred: ${err.message}`,
+        });
+    }
+});
+
+
+exports.getFarmName = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const farmId = req.params.farmId;
+
+        console.log("Fetching farm for userId:", userId, "farmId:", farmId);
+
+        const farms = await farmDao.getFarmName(userId, farmId);
+        console.log("farms", farms);
+
+        if (!farms || farms.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No farm found",
+                data: null
+            });
+        }
+
+        // Return consistent response format
+        res.status(200).json({
+            status: "success",
+            message: "Farm retrieved successfully",
+            data: farms[0] // Return single farm object since we're querying by specific farmId
+        });
+    } catch (error) {
+        console.error("Error fetching farm:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch farm",
+            data: null
         });
     }
 });

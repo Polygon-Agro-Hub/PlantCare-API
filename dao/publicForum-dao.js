@@ -160,6 +160,7 @@ exports.getRepliesByChatId = (chatId) => {
   return new Promise((resolve, reject) => {
     const sql = `
       SELECT 
+      r.id,
           r.replyId, 
           r.replyStaffId,
           r.replyMessage, 
@@ -225,7 +226,7 @@ exports.createReply = (chatId, replyId, replyMessage, userId, role) => {
       if (err) {
         reject(err);
       } else {
-        resolve(result.insertId); 
+        resolve(result.insertId);
       }
     });
   });
@@ -250,9 +251,9 @@ exports.createPost = (userId, heading, message, postimage, ownerId, role) => {
     let sql;
     let values;
 
-    if (role==="Owner") {
+    if (role === "Owner") {
       sql =
-      "INSERT INTO publicforumposts (userId, heading, message, postimage) VALUES (?, ?, ?, ?)"
+        "INSERT INTO publicforumposts (userId, heading, message, postimage) VALUES (?, ?, ?, ?)"
       values = [userId, heading, message, postimage];
     } else {
       sql =
@@ -264,7 +265,7 @@ exports.createPost = (userId, heading, message, postimage, ownerId, role) => {
       if (err) {
         reject(err);
       } else {
-        resolve(result.insertId); 
+        resolve(result.insertId);
       }
     });
   });
@@ -277,7 +278,7 @@ exports.deletePost = (postId) => {
       if (err) {
         reject(err);
       } else {
-        resolve(result.affectedRows > 0); 
+        resolve(result.affectedRows > 0);
       }
     });
   });
@@ -285,7 +286,7 @@ exports.deletePost = (postId) => {
 
 exports.getPostbyId = (postId) => {
   console.log("postid", postId)
-   return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const sql = `SELECT * FROM publicforumposts WHERE id = ?`;
     db.plantcare.query(sql, [postId], (err, result) => {
       if (err) {
@@ -306,13 +307,61 @@ exports.updatePost = (postId, heading, message, postimage) => {
       SET heading = ?, message = ?, postimage = ?
       WHERE id = ?
     `;
-    
+
     // If postimage is null (no new image), pass NULL in the query
     db.plantcare.query(sql, [heading, message, postimage || null, postId], (err, result) => {
       if (err) {
         reject(err);
       } else {
         resolve(result); // Return result of the update operation
+      }
+    });
+  });
+};
+
+
+
+
+// Update the reply message
+exports.editReply = (replyId, newMessage) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE publicforumreplies 
+      SET replyMessage = ?, createdAt = NOW() 
+      WHERE id = ?
+    `;
+
+    db.plantcare.query(sql, [newMessage, replyId], (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        if (result.affectedRows === 0) {
+          resolve(null); // No rows updated
+        } else {
+          // Return the updated reply
+          const getSql = `SELECT * FROM publicforumreplies WHERE id = ?`;
+          db.plantcare.query(getSql, [replyId], (err, updatedReply) => {
+            if (err) reject(err);
+            resolve(updatedReply[0]);
+          });
+        }
+      }
+    });
+  });
+};
+
+
+
+
+// Delete the reply
+exports.deleteReply = (id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "DELETE FROM publicforumreplies WHERE id = ?";
+    db.plantcare.query(sql, [id], (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result.affectedRows > 0);
       }
     });
   });
