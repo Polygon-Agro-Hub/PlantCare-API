@@ -17,6 +17,7 @@ exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
     await getAllCurrentAssetsSchema.validateAsync({ userId: req.user.id });
 
     const userId = req.user.id; 
+    console.log(userId, "userId in getAllCurrentAssets");
 
     const results = await currentAssetsDao.getAllCurrentAssets(userId);
 

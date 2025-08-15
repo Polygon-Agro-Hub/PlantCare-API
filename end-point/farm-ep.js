@@ -1196,7 +1196,7 @@ exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
 
 exports.getFarmName = asyncHandler(async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
         console.log("Fetching farm for userId:", userId, "farmId:", farmId);
