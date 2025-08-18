@@ -76,6 +76,7 @@ COALESCE(
           ...post,
           postimage: post.postimage ? post.postimage.toString("base64") : null,
         }));
+        console.log("posts", posts)
         resolve(posts);
       }
     });
