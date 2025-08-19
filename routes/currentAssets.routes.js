@@ -4,7 +4,7 @@ const currentAssetController = require("../Controllers/currentAssets.controller"
 const authMiddleware = require("../Middlewares/auth.middleware");
 const currentAssetsEp = require("../end-point/currentAsset-ep");
 
-// router.post('/currentAsset', authMiddleware, currentAssetController.handleAddFixedAsset);
+router.post('/currentAsset', authMiddleware, currentAssetController.handleAddFixedAsset);
 
 router.get("/assets", authMiddleware, currentAssetsEp.getAssetsByCategory);
 

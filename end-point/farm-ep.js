@@ -1017,7 +1017,8 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
 exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
-        const userId = req.user.id;
+        const userId = req.user.ownerId;  // Should be the owner's ID from users table
+        const staffId = req.user.id;
         const {
             category,
             asset,
@@ -1050,6 +1051,7 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
         // Create new asset data
         const assetData = {
             userId: userId,
+            staffId: staffId,
             farmId: farmId,
             category: category,
             asset: asset,
@@ -1132,7 +1134,7 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
 exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
     try {
 
-        const userId = req.user.id;
+        const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
         const results = await farmDao.getAllCurrentAssets(userId, farmId);
@@ -1160,7 +1162,7 @@ exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
 exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
     console.log("///////////////////")
     try {
-        const userId = req.user.id;
+        const userId = req.user.ownerId;
         const { category, farmId } = req.params;
 
 

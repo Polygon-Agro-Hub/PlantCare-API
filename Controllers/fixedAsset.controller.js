@@ -10,6 +10,8 @@ const formatDate = (dateString) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 };
 
+
+
 exports.addFixedAsset = (req, res) => {
     const { error } = addFixedAssetSchema.validate(req.body);
     if (error) {
@@ -17,7 +19,8 @@ exports.addFixedAsset = (req, res) => {
         return res.status(400).json({ message: errorMessages });
     }
 
-    const userId = req.user.id;
+    const userId = req.user.ownerId;  // Should be the owner's ID from users table
+    const staffId = req.user.id;
     const {
         category,
         ownership,
@@ -68,16 +71,33 @@ exports.addFixedAsset = (req, res) => {
                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
             }
 
-            const fixedAssetSql = `INSERT INTO fixedasset (userId, category,farmId) VALUES (?, ?,?)`;
-            db.plantcare.query(fixedAssetSql, [userId, category, farmId], (fixedAssetErr, fixedAssetResult) => {
+            // Determine if staffId should be included (only if different from userId and valid)
+            const includeStaffId = staffId && staffId !== userId;
+
+            // Build the SQL query dynamically based on whether to include staffId
+            let fixedAssetSql, fixedAssetParams;
+
+            if (includeStaffId) {
+                fixedAssetSql = `INSERT INTO fixedasset (userId, staffId, category, farmId) VALUES (?, ?, ?, ?)`;
+                fixedAssetParams = [userId, staffId, category, farmId];
+            } else {
+                fixedAssetSql = `INSERT INTO fixedasset (userId, category, farmId) VALUES (?, ?, ?)`;
+                fixedAssetParams = [userId, category, farmId];
+            }
+
+            db.plantcare.query(fixedAssetSql, fixedAssetParams, (fixedAssetErr, fixedAssetResult) => {
                 if (fixedAssetErr) {
                     return connection.rollback(() => {
                         connection.release();
-                        return res.status(500).json({ message: 'Error inserting into fixedasset table', error: fixedAssetErr });
+                        return res.status(500).json({
+                            message: 'Error inserting into fixedasset table',
+                            error: fixedAssetErr
+                        });
                     });
                 }
 
                 const fixedAssetId = fixedAssetResult.insertId;
+
 
                 if (category === 'Building and Infrastructures') {
                     const buildingSql = `INSERT INTO buildingfixedasset (fixedAssetId, type, floorArea, ownership, generalCondition, district)
