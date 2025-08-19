@@ -34,6 +34,7 @@ const createFarm = Joi.object({
                 phoneCode: Joi.string().required(),
                 phoneNumber: Joi.string().required(),
                 role: Joi.string().required(),
+                nic: Joi.string().required(),
                 image: Joi.string().allow(null).optional(),
             })
         )
