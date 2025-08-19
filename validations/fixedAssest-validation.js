@@ -39,6 +39,7 @@ exports.deleteFixedAssetSchema = Joi.object({
 
 exports.addFixedAssetSchema = Joi.object({
     asset: Joi.string().allow('').label("Asset"),
+    farmId: Joi.number(),
     assetType: Joi.string().allow('').label("Asset Type"),
     assetname: Joi.string().allow('').label("Asset Name"),
     brand: Joi.string().allow('').label("Brand"),

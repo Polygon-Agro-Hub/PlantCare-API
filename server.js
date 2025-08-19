@@ -101,8 +101,8 @@
 
 
 const express = require("express");
-const cors = require("cors"); 
-const { plantcare, collectionofficer, marketPlace,  admin } = require("./startup/database"); 
+const cors = require("cors");
+const { plantcare, collectionofficer, marketPlace, admin } = require("./startup/database");
 
 require("dotenv").config();
 
@@ -114,6 +114,7 @@ const cropRoutes = require("./routes/cropRoutes");
 const MarketPriceRoutes = require("./routes/marketPriceRoutes");
 const complainRoutes = require("./routes/complainRoutes");
 const heathRoutes = require("./routes/heathRoutes");
+const farmRoutes = require("./routes/farm.routes")
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -181,13 +182,15 @@ app.use(process.env.AUTHOR, calendartaskImages);
 const reportRoutes = require("./routes/reportRoutes");
 app.use(process.env.AUTHOR, reportRoutes);
 
-app.get("/test",(req,res)=>{
+app.get("/test", (req, res) => {
     res.json("test run!")
 })
 app.use("/api/news", newsRoutes);
 app.use("/api/crop", cropRoutes);
 app.use("/api/market-price", MarketPriceRoutes);
 app.use("/api/complain", complainRoutes);
+
+app.use("/api/farm", farmRoutes);
 
 app.use("", heathRoutes);
 

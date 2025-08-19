@@ -22,3 +22,9 @@ exports.createPostSchema = Joi.object({
   heading: Joi.string().required().label("Heading"),
   message: Joi.string().required().label("Message"),
 });
+
+exports.updatepostschema = Joi.object({
+   heading: Joi.string().required().label("Heading"),
+  message: Joi.string().required().label("Message"),
+prepostimage: Joi.string().allow(null, '').label("prepostimage")
+})

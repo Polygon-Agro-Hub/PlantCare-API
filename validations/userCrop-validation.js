@@ -60,6 +60,7 @@ exports.enrollSchema = Joi.object({
 
 exports.getSlaveCropCalendarDaysSchema = Joi.object({
     cropCalendarId: Joi.string().required().label("Crop Calendar ID"),
+    farmId: Joi.number().integer().required()
 });
 
 exports.updateCropCalendarStatusSchema = Joi.object({

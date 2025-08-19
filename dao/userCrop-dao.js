@@ -113,16 +113,35 @@ exports.getCropCalendarFeed = (userId, cropId) => {
 };
 
 
-exports.getOngoingCultivationsByUserId = (userId, callback) => {
+// exports.getOngoingCultivationsByUserId = (userId, callback) => {
+//     const sql = `
+//     SELECT * 
+//     FROM ongoingcultivations c 
+//     JOIN ongoingcultivationscrops oc ON c.id = oc.ongoingCultivationId
+//     JOIN cropcalender cc ON oc.cropCalendar = cc.id
+//     JOIN cropvariety cr ON cc.cropVarietyId = cr.id 
+//     WHERE c.userId = ?
+//   `;
+//     db.plantcare.query(sql, [userId], (err, results) => {
+//         if (err) {
+//             console.error("Database error:", err);
+//             return callback(err, null);
+//         }
+//         callback(null, results);
+//     });
+// };
+
+exports.getOngoingCultivationsByUserId = (ownerId, farmId, callback) => {
     const sql = `
     SELECT * 
     FROM ongoingcultivations c 
     JOIN ongoingcultivationscrops oc ON c.id = oc.ongoingCultivationId
     JOIN cropcalender cc ON oc.cropCalendar = cc.id
     JOIN cropvariety cr ON cc.cropVarietyId = cr.id 
-    WHERE c.userId = ?
+    WHERE c.userId = ? AND oc.farmId = ?
+    ORDER BY oc.cultivationIndex
   `;
-    db.plantcare.query(sql, [userId], (err, results) => {
+    db.plantcare.query(sql, [ownerId, farmId], (err, results) => {
         if (err) {
             console.error("Database error:", err);
             return callback(err, null);
@@ -130,7 +149,6 @@ exports.getOngoingCultivationsByUserId = (userId, callback) => {
         callback(null, results);
     });
 };
-
 
 const query = (sql, params) => {
     return new Promise((resolve, reject) => {
@@ -229,7 +247,7 @@ exports.getEnrollOngoingCultivationCropByid = (id) => {
 exports.updateOngoingCultivationCrop = (onCulscropID, extentha, extentac, extentp) => {
     return new Promise((resolve, reject) => {
         const sql = "UPDATE ongoingcultivationscrops SET extentha = ?, extentac=?, extentp=? WHERE id = ?";
-        db.plantcare.query(sql, [extentha, extentac, extentp,  onCulscropID], (err, results) => {
+        db.plantcare.query(sql, [extentha, extentac, extentp, onCulscropID], (err, results) => {
             if (err) {
                 reject(err);
             } else {
@@ -453,31 +471,95 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID) => {
     });
 };
 
-exports.getSlaveCropCalendarDaysByUserAndCrop = (userId, cropCalendarId) => {
+// exports.getSlaveCropCalendarDaysByUserAndCrop = (userId, cropCalendarId) => {
+//     return new Promise((resolve, reject) => {
+//         const sql = `
+//           SELECT * 
+//           FROM slavecropcalendardays 
+//           WHERE userId = ? AND cropCalendarId = ?
+//       `;
+//         db.plantcare.query(sql, [userId, cropCalendarId], (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
+exports.getSlaveCropCalendarDaysByUserAndCrop = (userId, cropCalendarId, farmId) => {
     return new Promise((resolve, reject) => {
-        const sql = `
-          SELECT * 
-          FROM slavecropcalendardays 
-          WHERE userId = ? AND cropCalendarId = ?
-      `;
-        db.plantcare.query(sql, [userId, cropCalendarId], (err, results) => {
+        // First, get the onCulscropID from ongoingcultivationscrops table
+        const getOnCulscropIdSql = `
+            SELECT id as onCulscropID 
+            FROM ongoingcultivationscrops 
+            WHERE cropCalendar = ? AND farmId = ?
+            LIMIT 1
+        `;
+
+        db.plantcare.query(getOnCulscropIdSql, [cropCalendarId, farmId], (err, onCulscropResults) => {
             if (err) {
                 reject(err);
-            } else {
-                resolve(results);
+                return;
             }
+
+            if (onCulscropResults.length === 0) {
+                resolve([]); // No matching ongoingcultivationscrops record found
+                return;
+            }
+
+            const onCulscropID = onCulscropResults[0].onCulscropID;
+
+            // Then, get the slave crop calendar days using the onCulscropID
+            const getSlaveCropDaysSql = `
+                SELECT * 
+                FROM slavecropcalendardays 
+                WHERE userId = ? AND onCulscropID = ?
+                ORDER BY taskIndex ASC
+            `;
+
+            db.plantcare.query(getSlaveCropDaysSql, [userId, onCulscropID], (err, results) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(results);
+                }
+            });
         });
     });
 };
 
-exports.getSlaveCropCalendarPrgress = (userId, cropCalendarId) => {
+
+// exports.getSlaveCropCalendarPrgress = (userId, cropCalendarId, farmId) => {
+//     return new Promise((resolve, reject) => {
+//         const sql = `
+//         SELECT sc.status, ocs.farmId
+//         FROM slavecropcalendardays sc
+//         LEFT JOIN ongoingcultivationscrops ocs ON ocs.id = sc.onCulscropID
+//         WHERE sc.userId = ? AND sc.cropCalendarId = ?
+//     `;
+//         db.plantcare.query(sql, [userId, cropCalendarId], (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// }
+exports.getSlaveCropCalendarPrgress = (userId, cropCalendarId, farmId) => {
     return new Promise((resolve, reject) => {
         const sql = `
-        SELECT status
-        FROM slavecropcalendardays 
-        WHERE userId = ? AND cropCalendarId = ?
-    `;
-        db.plantcare.query(sql, [userId, cropCalendarId], (err, results) => {
+        SELECT sc.status, ocs.farmId
+        FROM slavecropcalendardays sc
+        LEFT JOIN ongoingcultivationscrops ocs ON ocs.id = sc.onCulscropID
+        WHERE sc.userId = ? 
+        AND sc.cropCalendarId = ?
+        AND ocs.cropCalendar = ?
+        AND ocs.farmId = ?
+        `;
+        db.plantcare.query(sql, [userId, cropCalendarId, cropCalendarId, farmId], (err, results) => {
             if (err) {
                 reject(err);
             } else {
@@ -634,3 +716,58 @@ exports.getUploadedImagesCount = (userId, cropId) => {
 }
 
 // hrg
+
+// exports.getTaskImage = (slaveId) => {
+//     return new Promise((resolve, reject) => {
+//         const sql = `
+//             SELECT 
+//                 id,
+//                 slaveId,
+//                 staffId,
+//                 image,
+//                 createdAt
+//             FROM taskimages 
+//             WHERE slaveId = ?
+//             ORDER BY createdAt DESC
+//         `;
+
+//         db.plantcare.query(sql, [slaveId], (err, results) => {
+//             if (err) {
+//                 console.error("Database error in getTaskImage:", err);
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
+exports.getTaskImage = (slaveId) => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT 
+                ti.id,
+                ti.slaveId,
+                ti.staffId,
+                ti.image,
+                ti.createdAt,
+                CASE 
+                    WHEN ti.staffId IS NULL THEN 'You'
+                    ELSE CONCAT(fs.firstName, ' ', fs.lastName)
+                END AS uploadedBy
+            FROM taskimages ti
+            LEFT JOIN farmstaff fs ON ti.staffId = fs.id
+            WHERE ti.slaveId = ?
+            ORDER BY ti.createdAt DESC
+        `;
+
+        db.plantcare.query(sql, [slaveId], (err, results) => {
+            if (err) {
+                console.error("Database error in getTaskImage:", err);
+                reject(err);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};

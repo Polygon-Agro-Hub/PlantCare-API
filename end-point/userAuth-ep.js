@@ -7,6 +7,8 @@ const signupDao = require('../dao/userAuth-dao');
 const ValidationSchema = require('../validations/userAuth-validation')
 const uploadFileToS3 = require('../Middlewares/s3upload');
 const delectfilesOnS3 = require('../Middlewares/s3delete')
+const delectfloders3 = require('../Middlewares/s3folderdelete')
+
 
 exports.loginUser = async (req, res) => {
     console.log("hittt")
@@ -22,17 +24,44 @@ exports.loginUser = async (req, res) => {
         }
 
         const user = users[0];
+        console.log("user", user)
+        // const token = jwt.sign({
+        //     id: user.id, phoneNumber: user.phoneNumber, membership: user.membership,
+        //     paymentActiveStatus: user.paymentActiveStatus,
+        //     farmCount: user.farmCount
+        // },
+        //     process.env.JWT_SECRET || Tl, {
+        //     expiresIn: "8h",
+        // }
+        // );
+        const token = jwt.sign({
+            id: user.id, phoneNumber: user.phoneNumber, membership: user.membership, ownerId: user.ownerId, role:user.role, farmId:user.farmId
 
-        const token = jwt.sign({ id: user.id, phoneNumber: user.phoneNumber },
+        },
             process.env.JWT_SECRET || Tl, {
             expiresIn: "8h",
         }
+
         );
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "Tl");
+        const { membership, paymentActiveStatus, farmCount } = decoded;
+        console.log("decodeeeeeeeee", decoded)
+
+
+        console.log("------token----------", token)
 
         res.status(200).json({
             status: "success",
             message: "Login successful",
             token,
+            user: {
+                membership: user.membership,
+                paymentActiveStatus: user.paymentActiveStatus,
+                farmCount: user.farmCount,
+                role: user.role,
+                farmId: user.farmId
+            }
         });
     } catch (err) {
         console.error("hi.... Error:", err);
@@ -100,22 +129,74 @@ exports.SignupUser = asyncHandler(async (req, res) => {
     }
 });
 
+// exports.getProfileDetails = asyncHandler(async (req, res) => {
+//     try {
+//          const token = req.headers.authorization?.split(" ")[1];
+//          const decoded = jwt.verify(token, process.env.JWT_SECRET || "Tl");
+
+//         const {  membership, paymentActiveStatus, farmCount } = decoded;
+//         console.log(decoded)
+//         const userId = req.user.id;
+//         // Retrieve user profile from the database using the DAO function
+//         const user = await userProfileDao.getUserProfileById(userId);
+
+//         if (!user) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "User not found",
+//             });
+//         }
+
+//         res.status(200).json({
+//             status: "success",
+//             user: user,
+//             usermembership: {
+//  membership: membership,
+//                 paymentActiveStatus: paymentActiveStatus,
+//                 farmCount : farmCount
+//             }
+//         });
+//     } catch (err) {
+//         console.error("Error fetching profile details:", err);
+//         res.status(500).json({
+//             status: "error",
+//             message: "An error occurred while fetching profile details.",
+//         });
+//     }
+// });
+
+
 exports.getProfileDetails = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
+        const ownerId = req.user.ownerId
+        const userrole = req.user.role
+
         // Retrieve user profile from the database using the DAO function
-        const user = await userProfileDao.getUserProfileById(userId);
+        const user = await userProfileDao.getUserProfileById(userId, ownerId, userrole);
+
+        console.log("usetttt", user)
 
         if (!user) {
             return res.status(404).json({
-                status: "error",
+                status: "error",    
                 message: "User not found",
             });
         }
 
+        // Extract the additional fields from the user object
+        const { id, membership, paymentActiveStatus, farmCount,role, ...userProfile } = user;
+
         res.status(200).json({
             status: "success",
-            user: user,
+            user: userProfile,
+            usermembership: {
+                id: id,
+                membership: membership,
+                paymentActiveStatus: paymentActiveStatus,
+                farmCount: farmCount,
+                role: role
+            }
         });
     } catch (err) {
         console.error("Error fetching profile details:", err);
@@ -267,6 +348,7 @@ exports.registerBankDetails = async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
+    const ownerId = req.user.ownerId;
 
     try {
         const bankDetailsExist = await userAuthDao.checkBankDetailsExist(userId);
@@ -287,7 +369,7 @@ exports.registerBankDetails = async (req, res) => {
             );
 
             await new Promise((resolve, reject) => {
-                userAuthDao.createQrCode(userId)
+                userAuthDao.createQrCode(userId, ownerId)
                     .then(successMessage => {
                         console.log("QR code created successfully:", successMessage);
                         resolve(successMessage);
@@ -330,6 +412,8 @@ exports.registerBankDetails = async (req, res) => {
 exports.uploadProfileImage = async (req, res) => {
     try {
         const userId = req.user.id;
+        const ownerId = req.user.ownerId
+        console.log("ownerID", ownerId)
 
         // console.log("R2_ACCOUNT_ID", process.env.R2_ACCOUNT_ID);
         // console.log("R2_BUCKET_NAME", process.env.R2_BUCKET_NAME);
@@ -343,13 +427,15 @@ exports.uploadProfileImage = async (req, res) => {
             delectfilesOnS3(existingProfileImage);
         }
 
+        // await delectfloders3(`users/profile-images/owner${ownerId}/user${userId}`)
+
         let profileImageUrl = null;
 
         if (req.file) {
             const fileName = req.file.originalname;
             const imageBuffer = req.file.buffer;
 
-            const uploadedImage = await uploadFileToS3(imageBuffer, fileName, "users/profile-images");
+            const uploadedImage = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/user${userId}`);
             profileImageUrl = uploadedImage;
         } else {
         }
