@@ -396,7 +396,8 @@ exports.createFarmWithStaff = async (farmData) => {
                 return {
                     ...staff,
                     phoneCode: phoneCode,
-                    phoneNumber: phoneNumber
+                    phoneNumber: phoneNumber,
+                    nic: staff.nic || null // Ensure NIC is properly handled
                 };
             });
         }
@@ -432,21 +433,28 @@ exports.createFarmWithStaff = async (farmData) => {
         if (farmData.staff && farmData.staff.length > 0) {
             const insertStaffSql = `
                 INSERT INTO farmstaff 
-                (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, nic, image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
             for (const staff of farmData.staff) {
-                const [staffResult] = await connection.promise().query(insertStaffSql, [
-                    farmData.userId,
-                    farmId,
-                    staff.firstName,
-                    staff.lastName,
-                    staff.phoneCode,     // Use the phoneCode from frontend
-                    staff.phoneNumber,   // Use the phoneNumber from frontend
-                    staff.role,
-                    staff.image || null
-                ]);
+                console.log('Inserting staff member:', staff); // Debug log
+
+                const staffValues = [
+                    farmData.userId,      // ownerId
+                    farmId,               // farmId
+                    staff.firstName,      // firstName
+                    staff.lastName,       // lastName
+                    staff.phoneCode,      // phoneCode
+                    staff.phoneNumber,    // phoneNumber
+                    staff.role,           // role
+                    staff.nic || null,    // nic - THIS WAS THE MISSING PARAMETER
+                    staff.image || null   // image
+                ];
+
+                console.log('Staff values being inserted:', staffValues); // Debug log
+
+                const [staffResult] = await connection.promise().query(insertStaffSql, staffValues);
                 staffIds.push(staffResult.insertId);
             }
         }
@@ -1647,29 +1655,65 @@ exports.getSelectFarm = async (ownerId) => {
 
 exports.createNewAsset = async (assetData) => {
     return new Promise((resolve, reject) => {
-        const query = `
-            INSERT INTO currentasset (userId, farmId, category, asset, brand, batchNum, 
-                                    unitVolume, unit, numOfUnit, unitPrice, total, 
-                                    purchaseDate, expireDate, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        // Determine if we should include staffId in the query
+        const includeStaffId = assetData.staffId && assetData.staffId !== assetData.userId;
 
-        const values = [
-            assetData.userId,
-            assetData.farmId,
-            assetData.category,
-            assetData.asset,
-            assetData.brand,
-            assetData.batchNum,
-            assetData.unitVolume,
-            assetData.unit,
-            assetData.numOfUnit,
-            assetData.unitPrice,
-            assetData.total,
-            assetData.purchaseDate,
-            assetData.expireDate,
-            assetData.status
-        ];
+        // Build dynamic query based on whether to include staffId
+        let query, values;
+
+        if (includeStaffId) {
+            query = `
+                INSERT INTO currentasset (
+                    userId, staffId, farmId, category, asset, brand, batchNum, 
+                    unitVolume, unit, numOfUnit, unitPrice, total, 
+                    purchaseDate, expireDate, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            values = [
+                assetData.userId,
+                assetData.staffId,
+                assetData.farmId,
+                assetData.category,
+                assetData.asset,
+                assetData.brand,
+                assetData.batchNum,
+                assetData.unitVolume,
+                assetData.unit,
+                assetData.numOfUnit,
+                assetData.unitPrice,
+                assetData.total,
+                assetData.purchaseDate,
+                assetData.expireDate,
+                assetData.status
+            ];
+        } else {
+            query = `
+                INSERT INTO currentasset (
+                    userId, farmId, category, asset, brand, batchNum, 
+                    unitVolume, unit, numOfUnit, unitPrice, total, 
+                    purchaseDate, expireDate, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            values = [
+                assetData.userId,
+                assetData.farmId,
+                assetData.category,
+                assetData.asset,
+                assetData.brand,
+                assetData.batchNum,
+                assetData.unitVolume,
+                assetData.unit,
+                assetData.numOfUnit,
+                assetData.unitPrice,
+                assetData.total,
+                assetData.purchaseDate,
+                assetData.expireDate,
+                assetData.status
+            ];
+        }
+
+        console.log('Executing query:', query);
+        console.log('With values:', values);
 
         db.plantcare.query(query, values, (error, results) => {
             if (error) {
@@ -1681,7 +1725,6 @@ exports.createNewAsset = async (assetData) => {
         });
     });
 };
-
 exports.addAssetRecord = async (recordData) => {
     return new Promise((resolve, reject) => {
         const query = `
