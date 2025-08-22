@@ -696,6 +696,48 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
 // });
 
 
+// exports.getrenew = asyncHandler(async (req, res) => {
+//     try {
+//         const userId = req.user.ownerId;
+//         const farmData = await farmDao.getrenew(userId);
+
+//         if (!farmData) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Farm not found",
+//                 needsRenewal: true
+//             });
+//         }
+
+//         // Check renewal status based on isBlock field
+//         // isBlock = 0 means active, isBlock = 1 means needs renewal
+//         const needsRenewal = farmData.isBlock === 1;
+
+//         res.status(200).json({
+//             success: true,
+//             data: {
+//                 id: farmData.id,
+//                 userId: farmData.userId,
+//                 farmName: farmData.farmName,
+//                 needsRenewal: needsRenewal,
+//                 status: needsRenewal ? 'blocked' : 'active',
+//                 isBlock: farmData.isBlock,
+//                 district: farmData.district,
+//                 city: farmData.city,
+//                 staffCount: farmData.staffCount,
+//                 appUserCount: farmData.appUserCount,
+//                 daysRemaining: farmData.daysRemaining
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching user farm:", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch user farm"
+//         });
+//     }
+// });
 exports.getrenew = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.ownerId;
@@ -709,9 +751,12 @@ exports.getrenew = asyncHandler(async (req, res) => {
             });
         }
 
-        // Check renewal status based on isBlock field
-        // isBlock = 0 means active, isBlock = 1 means needs renewal
-        const needsRenewal = farmData.isBlock === 1;
+        // Conditions for renewal
+        const isExpired = new Date(farmData.expireDate) < new Date();
+        const isInactive = farmData.activeStatus === 0;
+        const isBlocked = farmData.isBlock === 1;
+
+        const needsRenewal = isExpired || isInactive || isBlocked;
 
         res.status(200).json({
             success: true,
@@ -719,13 +764,16 @@ exports.getrenew = asyncHandler(async (req, res) => {
                 id: farmData.id,
                 userId: farmData.userId,
                 farmName: farmData.farmName,
-                needsRenewal: needsRenewal,
+                needsRenewal,
                 status: needsRenewal ? 'blocked' : 'active',
                 isBlock: farmData.isBlock,
                 district: farmData.district,
                 city: farmData.city,
                 staffCount: farmData.staffCount,
-                appUserCount: farmData.appUserCount
+                appUserCount: farmData.appUserCount,
+                daysRemaining: farmData.daysRemaining,
+                expireDate: farmData.expireDate,
+                activeStatus: farmData.activeStatus
             }
         });
 
