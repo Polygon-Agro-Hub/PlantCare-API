@@ -1453,6 +1453,15 @@ exports.getrenew = async (userId) => {
             JOIN membershippayment mp ON f.userId = mp.userId
             WHERE f.userId = ?
             ORDER BY mp.id DESC
+
+exports.getrenew = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT id, userId, farmName, isBlock, district, city, 
+                   staffCount, appUserCount, imageId
+            FROM farms
+            WHERE userId = ?
+            ORDER BY id DESC
             LIMIT 1
         `;
         db.plantcare.query(query, [userId], (error, results) => {

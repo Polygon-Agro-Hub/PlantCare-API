@@ -335,7 +335,6 @@ const usersSql = `
     ORDER BY mp.id DESC
     LIMIT 1
 `;
-
             db.plantcare.query(usersSql, [userId], (err, userResults) => {
                 if (err) return reject(err);
 
