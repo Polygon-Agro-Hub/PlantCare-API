@@ -1411,6 +1411,49 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 //     });
 // };
 
+// exports.getrenew = async (userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT id, userId, farmName, isBlock, district, city, 
+//                    staffCount, appUserCount, imageId
+//             FROM farms
+//             WHERE userId = ?
+//             ORDER BY id DESC
+//             LIMIT 1
+//         `;
+//         db.plantcare.query(query, [userId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching user farm:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results.length > 0 ? results[0] : null);
+//             }
+//         });
+//     });
+// };
+exports.getrenew = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                f.id, 
+                f.userId, 
+                f.farmName, 
+                f.isBlock, 
+                f.district, 
+                f.city, 
+                f.staffCount, 
+                f.appUserCount, 
+                f.imageId,
+                mp.id AS membershipId,
+                mp.createdAt,
+                mp.expireDate,
+                mp.activeStatus,
+                DATEDIFF(mp.expireDate, NOW()) AS daysRemaining
+            FROM farms f
+            JOIN membershippayment mp ON f.userId = mp.userId
+            WHERE f.userId = ?
+            ORDER BY mp.id DESC
+
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
