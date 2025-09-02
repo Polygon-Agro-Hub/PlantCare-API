@@ -1457,11 +1457,25 @@ exports.getrenew = async (userId) => {
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT id, userId, farmName, isBlock, district, city, 
-                   staffCount, appUserCount, imageId
-            FROM farms
-            WHERE userId = ?
-            ORDER BY id DESC
+            SELECT 
+                f.id, 
+                f.userId, 
+                f.farmName, 
+                f.isBlock, 
+                f.district, 
+                f.city, 
+                f.staffCount, 
+                f.appUserCount, 
+                f.imageId,
+                mp.id AS membershipId,
+                mp.createdAt,
+                mp.expireDate,
+                mp.activeStatus,
+                DATEDIFF(mp.expireDate, NOW()) AS daysRemaining
+            FROM farms f
+            JOIN membershippayment mp ON f.userId = mp.userId
+            WHERE f.userId = ?
+            ORDER BY mp.id DESC
             LIMIT 1
         `;
         db.plantcare.query(query, [userId], (error, results) => {
@@ -1474,6 +1488,8 @@ exports.getrenew = async (userId) => {
         });
     });
 };
+
+
 
 // exports.deleteFarm = (farmId) => {
 //     return new Promise((resolve, reject) => {
