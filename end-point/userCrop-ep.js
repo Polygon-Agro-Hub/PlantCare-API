@@ -268,44 +268,7 @@ exports.getOngoingCultivationCropByid = asyncHandler(async (req, res) => {
 });
 
 
-// exports.UpdateOngoingCultivationScrops = asyncHandler(async (req, res) => {
-//     try {
-//         const { extentha, extentac, extentp, startedAt, onCulscropID } = req.body;
-//         if (!extentha || !extentac || !extentp || !startedAt) {
-//             return res.status(400).json({ message: "Extent and Start Date are required." });
-//         }
 
-//         const results = await cropDao.updateOngoingCultivationCrop(onCulscropID, extentha, extentac, extentp, startedAt);
-
-//         if (results.affectedRows === 0) {
-//             return res.status(404).json({ message: "Ongoing cultivation crop not found or not updated." });
-//         }
-
-//         const slaveCropDays = await cropDao.getSlaveCropCalendarDays(onCulscropID);
-
-//         if (slaveCropDays.length === 0) {
-//             return res.status(404).json({ message: "No related records found in slavecropcalendardays." });
-//         }
-
-//         for (const cropDay of slaveCropDays) {
-//             const { id, days } = cropDay;
-//             const newStartingDate = new Date(startedAt);
-//             newStartingDate.setDate(newStartingDate.getDate() + days);
-
-//             const formattedDate = newStartingDate.toISOString().split('T')[0];
-
-//             const updateResult = await cropDao.updateSlaveCropCalendarDay(id, formattedDate);
-//             if (updateResult.affectedRows === 0) {
-//                 console.error("Failed to update slavecropcalendardays for ID:", id);
-//             }
-//         }
-
-//         res.status(200).json({ message: "Ongoing cultivation crop and slavecropcalendardays updated successfully.", results });
-//     } catch (err) {
-//         console.error("Error updating ongoing cultivation crop:", err);
-//         res.status(500).json({ message: "Server error. Unable to update ongoing cultivation crop." });
-//     }
-// });
 
 exports.UpdateOngoingCultivationScrops = asyncHandler(async (req, res) => {
     try {
@@ -328,37 +291,6 @@ exports.UpdateOngoingCultivationScrops = asyncHandler(async (req, res) => {
 });
 
 
-// exports.getSlaveCropCalendarDaysByUserAndCrop = asyncHandler(async (req, res) => {
-//     try {
-//         await getSlaveCropCalendarDaysSchema.validateAsync(req.params);
-
-//         const userId = req.user.id;
-//         const cropCalendarId = req.params.cropCalendarId;
-
-//         const results = await cropDao.getSlaveCropCalendarDaysByUserAndCrop(userId, cropCalendarId);
-
-//         if (results.length === 0) {
-//             return res.status(404).json({
-//                 message: "No records found for the given userId and cropCalendarId.",
-//             });
-//         }
-
-
-//         return res.status(200).json(results);
-
-//     } catch (err) {
-//         console.error("Error in getSlaveCropCalendarDaysByUserAndCrop:", err);
-
-//         if (err.isJoi) {
-//             return res.status(400).json({
-//                 status: 'error',
-//                 message: err.details[0].message,
-//             });
-//         }
-
-//         return res.status(500).json({ message: "Internal Server Error!" });
-//     }
-// });
 
 exports.getSlaveCropCalendarDaysByUserAndCrop = asyncHandler(async (req, res) => {
     try {
@@ -506,26 +438,7 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
                     });
             }
 
-            // if (lastCompletedTask && currentTask && lastCompletedTask.status === "completed") {
-            //     const previousCreatedAt = new Date(lastCompletedTask.createdAt);
-            //     const taskDays = currentTask.days;
-            //     const nextTaskStartDate = new Date(
-            //         previousCreatedAt.getTime() + taskDays * 24 * 60 * 60 * 1000
-            //     );
-            //     const currentDate = new Date();
-            //     const remainingTime = nextTaskStartDate - currentDate;
 
-            //     const remainingDays = Math.floor(remainingTime / (24 * 60 * 60 * 1000));
-            //     console.log("re", remainingDays)
-
-            //     if (remainingDays > 0) {
-            //         return res
-            //             .status(400)
-            //             .json({
-            //                 message: `You need to wait ${remainingDays} days before marking this task as completed.`,
-            //             });
-            //     }
-            // }
         }
 
         const updateResults = await cropDao.updateTaskStatus(id, status);
@@ -588,37 +501,7 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
     }
 });
 
-// exports.addGeoLocation = asyncHandler(async (req, res) => {
-//     try {
-//         const { latitude, longitude, taskId } = req.body;
-//         const taskExists = await cropDao.checkTaskExists(taskId);
 
-//         if (!taskExists) {
-//             return res.status(404).json({
-//                 status: "error",
-//                 message: `No task found for taskId ${taskId}. Please ensure the taskId is correct.`,
-//             });
-//         }
-
-//         const results = await cropDao.addGeoLocation(taskId, longitude, latitude);
-
-//         if (results.affectedRows === 0) {
-//             return res.status(400).json({
-//                 status: "error",
-//                 message: "Failed to insert geo location.",
-//             });
-//         }
-
-//         res.status(200).json({
-//             status: "success",
-//             message: "Geo-location added successfully.",
-//             data: results,
-//         });
-//     } catch (err) {
-//         console.error("Error fetching geo location details:", err);
-//         res.status(500).json({ message: "Internal Server Error!" });
-//     }
-// });
 exports.addGeoLocation = asyncHandler(async (req, res) => {
     try {
         const { latitude, longitude, taskId, onCulscropID } = req.body;

@@ -25,17 +25,9 @@ exports.loginUser = async (req, res) => {
 
         const user = users[0];
         console.log("user", user)
-        // const token = jwt.sign({
-        //     id: user.id, phoneNumber: user.phoneNumber, membership: user.membership,
-        //     paymentActiveStatus: user.paymentActiveStatus,
-        //     farmCount: user.farmCount
-        // },
-        //     process.env.JWT_SECRET || Tl, {
-        //     expiresIn: "8h",
-        // }
-        // );
+
         const token = jwt.sign({
-            id: user.id, phoneNumber: user.phoneNumber, membership: user.membership, ownerId: user.ownerId, role:user.role, farmId:user.farmId
+            id: user.id, phoneNumber: user.phoneNumber, membership: user.membership, ownerId: user.ownerId, role: user.role, farmId: user.farmId
 
         },
             process.env.JWT_SECRET || Tl, {
@@ -87,7 +79,7 @@ exports.SignupUser = asyncHandler(async (req, res) => {
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
 
-        // Check if the phone number already exists in the database
+
         const existingUser = await userAuthDao.checkUserByPhoneNumber(
             formattedPhoneNumber
         );
@@ -129,41 +121,7 @@ exports.SignupUser = asyncHandler(async (req, res) => {
     }
 });
 
-// exports.getProfileDetails = asyncHandler(async (req, res) => {
-//     try {
-//          const token = req.headers.authorization?.split(" ")[1];
-//          const decoded = jwt.verify(token, process.env.JWT_SECRET || "Tl");
 
-//         const {  membership, paymentActiveStatus, farmCount } = decoded;
-//         console.log(decoded)
-//         const userId = req.user.id;
-//         // Retrieve user profile from the database using the DAO function
-//         const user = await userProfileDao.getUserProfileById(userId);
-
-//         if (!user) {
-//             return res.status(404).json({
-//                 status: "error",
-//                 message: "User not found",
-//             });
-//         }
-
-//         res.status(200).json({
-//             status: "success",
-//             user: user,
-//             usermembership: {
-//  membership: membership,
-//                 paymentActiveStatus: paymentActiveStatus,
-//                 farmCount : farmCount
-//             }
-//         });
-//     } catch (err) {
-//         console.error("Error fetching profile details:", err);
-//         res.status(500).json({
-//             status: "error",
-//             message: "An error occurred while fetching profile details.",
-//         });
-//     }
-// });
 
 
 exports.getProfileDetails = asyncHandler(async (req, res) => {
@@ -179,13 +137,13 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
 
         if (!user) {
             return res.status(404).json({
-                status: "error",    
+                status: "error",
                 message: "User not found",
             });
         }
 
         // Extract the additional fields from the user object
-        const { id, membership, paymentActiveStatus, farmCount,role, ...userProfile } = user;
+        const { id, membership, paymentActiveStatus, farmCount, role, ...userProfile } = user;
 
         res.status(200).json({
             status: "success",
@@ -280,9 +238,7 @@ exports.signupChecker = asyncHandler(async (req, res) => {
 exports.updateFirstLastName = asyncHandler(async (req, res) => {
     try {
         console.log("Hitt update")
-        // const { firstName, lastName, buidingname, streetname, city , district } =
-        // await ValidationSchema.updateFirstLastNameSchema.validateAsync(req.body);
-        // console.log("Hiiii")
+
 
         const sanitizedBody = Object.fromEntries(
             Object.entries(req.body).map(([key, value]) => [key, value === "" ? null : value])
@@ -391,7 +347,7 @@ exports.registerBankDetails = async (req, res) => {
                 },
             });
         } catch (transactionErr) {
-            // Rollback the transaction on error
+
             await db.plantcare.promise().rollback();
             console.error("Error during transaction:", transactionErr);
             return res.status(500).json({
