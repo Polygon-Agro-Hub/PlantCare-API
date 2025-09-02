@@ -628,6 +628,85 @@ exports.getMemberShip = async (userId) => {
 };
 
 
+// exports.createPaymentAndUpdateMembership = async (paymentData) => {
+//     let connection;
+
+//     try {
+//         // Get connection from pool
+//         connection = await new Promise((resolve, reject) => {
+//             db.plantcare.getConnection((err, conn) => {
+//                 if (err) return reject(err);
+//                 resolve(conn);
+//             });
+//         });
+
+//         // Start transaction
+//         await new Promise((resolve, reject) => {
+//             connection.beginTransaction(err => {
+//                 if (err) return reject(err);
+//                 resolve(true);
+//             });
+//         });
+
+//         // Insert payment record
+//         const insertPaymentSql = `
+//             INSERT INTO membershippayment 
+//             (userId, payment, plan, expireDate, activeStatus)
+//             VALUES (?, ?, ?, ?, 1)
+//         `;
+
+//         const paymentValues = [
+//             paymentData.userId,
+//             paymentData.payment,
+//             paymentData.plan,
+//             paymentData.expireDate
+//         ];
+
+//         const [paymentResult] = await connection.promise().query(insertPaymentSql, paymentValues);
+//         const paymentId = paymentResult.insertId;
+
+//         // Update user membership to 'Pro'
+//         const updateUserSql = `
+//             UPDATE users 
+//             SET membership = 'Pro'
+//             WHERE id = ?
+//         `;
+
+//         const [userResult] = await connection.promise().query(updateUserSql, [paymentData.userId]);
+
+//         // Commit transaction
+//         await new Promise((resolve, reject) => {
+//             connection.commit(err => {
+//                 if (err) return reject(err);
+//                 resolve(true);
+//             });
+//         });
+
+//         return {
+//             success: true,
+//             paymentId,
+//             userUpdated: userResult.affectedRows > 0,
+//             message: 'Payment processed and membership updated successfully'
+//         };
+
+//     } catch (error) {
+//         // Rollback transaction if connection exists
+//         if (connection) {
+//             await new Promise(resolve => {
+//                 connection.rollback(() => resolve(true));
+//             });
+//         }
+//         console.error('Database error:', error);
+//         throw error;
+
+//     } finally {
+//         // Release connection back to pool
+//         if (connection) {
+//             connection.release();
+//         }
+//     }
+// };
+
 exports.createPaymentAndUpdateMembership = async (paymentData) => {
     let connection;
 
@@ -648,7 +727,17 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             });
         });
 
-        // Insert payment record
+        // Check if user has existing payments (for reference/logging)
+        const checkExistingPaymentsSql = `
+            SELECT COUNT(*) as paymentCount 
+            FROM membershippayment 
+            WHERE userId = ?
+        `;
+
+        const [existingPayments] = await connection.promise().query(checkExistingPaymentsSql, [paymentData.userId]);
+        const isFirstPayment = existingPayments[0].paymentCount === 0;
+
+        // Insert new payment record (always create new row)
         const insertPaymentSql = `
             INSERT INTO membershippayment 
             (userId, payment, plan, expireDate, activeStatus)
@@ -665,7 +754,7 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         const [paymentResult] = await connection.promise().query(insertPaymentSql, paymentValues);
         const paymentId = paymentResult.insertId;
 
-        // Update user membership to 'Pro'
+        // Update user membership to 'Pro' (or extend existing Pro membership)
         const updateUserSql = `
             UPDATE users 
             SET membership = 'Pro'
@@ -673,6 +762,7 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         `;
 
         const [userResult] = await connection.promise().query(updateUserSql, [paymentData.userId]);
+
 
         // Commit transaction
         await new Promise((resolve, reject) => {
@@ -686,7 +776,11 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             success: true,
             paymentId,
             userUpdated: userResult.affectedRows > 0,
-            message: 'Payment processed and membership updated successfully'
+            isFirstPayment,
+            totalPayments: existingPayments[0].paymentCount + 1,
+            message: isFirstPayment
+                ? 'First payment processed and membership updated to Pro successfully'
+                : 'Additional payment processed successfully - membership extended'
         };
 
     } catch (error) {
@@ -698,7 +792,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         }
         console.error('Database error:', error);
         throw error;
-
     } finally {
         // Release connection back to pool
         if (connection) {
@@ -1390,35 +1483,30 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 
 //////////////renew
 
-// exports.getrenew = async (userId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//             SELECT id, userId, expireDate, activeStatus, plan, payment
-//             FROM membershippayment
-//             WHERE userId = ? AND activeStatus = 1
-//             ORDER BY expireDate DESC
-//             LIMIT 1
-//         `;
 
-//         db.plantcare.query(query, [userId], (error, results) => {
-//             if (error) {
-//                 console.error("Error fetching user membership:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results.length > 0 ? results[0] : null);
-//             }
-//         });
-//     });
-// };
 
 // exports.getrenew = async (userId) => {
 //     return new Promise((resolve, reject) => {
 //         const query = `
-//             SELECT id, userId, farmName, isBlock, district, city, 
-//                    staffCount, appUserCount, imageId
-//             FROM farms
-//             WHERE userId = ?
-//             ORDER BY id DESC
+//             SELECT 
+//                 f.id, 
+//                 f.userId, 
+//                 f.farmName, 
+//                 f.isBlock, 
+//                 f.district, 
+//                 f.city, 
+//                 f.staffCount, 
+//                 f.appUserCount, 
+//                 f.imageId,
+//                 mp.id AS membershipId,
+//                 mp.createdAt,
+//                 mp.expireDate,
+//                 mp.activeStatus,
+//                 DATEDIFF(mp.expireDate, NOW()) AS daysRemaining
+//             FROM farms f
+//             JOIN membershippayment mp ON f.userId = mp.userId
+//             WHERE f.userId = ?
+//             ORDER BY mp.id DESC
 //             LIMIT 1
 //         `;
 //         db.plantcare.query(query, [userId], (error, results) => {
@@ -1436,14 +1524,14 @@ exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
             SELECT 
-                f.id, 
-                f.userId, 
-                f.farmName, 
-                f.isBlock, 
-                f.district, 
-                f.city, 
-                f.staffCount, 
-                f.appUserCount, 
+                f.id,
+                f.userId,
+                f.farmName,
+                f.isBlock,
+                f.district,
+                f.city,
+                f.staffCount,
+                f.appUserCount,
                 f.imageId,
                 mp.id AS membershipId,
                 mp.createdAt,
@@ -1453,9 +1541,10 @@ exports.getrenew = async (userId) => {
             FROM farms f
             JOIN membershippayment mp ON f.userId = mp.userId
             WHERE f.userId = ?
-            ORDER BY mp.id DESC
+            ORDER BY mp.createdAt DESC
             LIMIT 1
         `;
+
         db.plantcare.query(query, [userId], (error, results) => {
             if (error) {
                 console.error("Error fetching user farm:", error);
