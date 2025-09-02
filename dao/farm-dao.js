@@ -1454,6 +1454,32 @@ exports.getrenew = async (userId) => {
             JOIN membershippayment mp ON f.userId = mp.userId
             WHERE f.userId = ?
             ORDER BY mp.id DESC
+<<<<<<< HEAD
+=======
+
+exports.getrenew = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                f.id, 
+                f.userId, 
+                f.farmName, 
+                f.isBlock, 
+                f.district, 
+                f.city, 
+                f.staffCount, 
+                f.appUserCount, 
+                f.imageId,
+                mp.id AS membershipId,
+                mp.createdAt,
+                mp.expireDate,
+                mp.activeStatus,
+                DATEDIFF(mp.expireDate, NOW()) AS daysRemaining
+            FROM farms f
+            JOIN membershippayment mp ON f.userId = mp.userId
+            WHERE f.userId = ?
+            ORDER BY mp.id DESC
+>>>>>>> 1d617eda6fdf15ceb182f7548aaaafd134c4a59a
             LIMIT 1
         `;
         db.plantcare.query(query, [userId], (error, results) => {
@@ -1468,6 +1494,10 @@ exports.getrenew = async (userId) => {
 };
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1d617eda6fdf15ceb182f7548aaaafd134c4a59a
 // exports.deleteFarm = (farmId) => {
 //     return new Promise((resolve, reject) => {
 //         // First check if farm exists
