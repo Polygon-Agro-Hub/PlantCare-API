@@ -382,7 +382,6 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
         await updateCropCalendarStatusSchema.validateAsync(req.body);
 
         const { id, status } = req.body;
-        // const userId = req.user.ownerId;
         console.log(",,,,,,,,,,,,,,,,,,,", id)
         const currentTime = new Date();
 
@@ -560,10 +559,10 @@ exports.getUploadedImagesCount = asyncHandler(async (req, res) => {
 
 exports.getTaskImage = asyncHandler(async (req, res) => {
     try {
-        const { slaveId } = req.params; // Get slaveId from URL params
+        const { slaveId } = req.params;
         console.log("Fetching task images for slaveId:", slaveId);
 
-        // Validate slaveId
+
         if (!slaveId) {
             return res.status(400).json({
                 message: "slaveId is required"

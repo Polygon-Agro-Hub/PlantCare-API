@@ -36,7 +36,7 @@ exports.uploadImage = asyncHandler(async (req, res) => {
 
         const image = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/farm${farmId}/onCulscropID${onCulscropID}`);
 
-        // Determine staffId based on whether user is owner or staff
+
         const staffId = (ownerId === userId) ? null : userId;
 
         const result = await imageupDao.insertTaskImage(slaveId, image, staffId);

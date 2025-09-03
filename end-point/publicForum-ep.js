@@ -142,7 +142,7 @@ exports.deletePost = asyncHandler(async (req, res) => {
     const { postId } = req.params;
     await postsDao.deletePost(postId);
 
-    // Only try to delete the image if postImage exists and is not empty
+
     if (req.body.postImage) {
       await delectfilesOnS3(req.body.postImage);
     }

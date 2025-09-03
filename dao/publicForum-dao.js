@@ -112,13 +112,13 @@ exports.createReply = (chatId, replyId, replyMessage, userId, role) => {
     let sql;
     let values;
 
-    // Check role and insert accordingly
+
     if (role === "Owner") {
       sql = "INSERT INTO publicforumreplies (chatId, replyId, replyMessage) VALUES (?, ?, ?)";
       values = [chatId, replyId, replyMessage];
     } else {
       sql = "INSERT INTO publicforumreplies (chatId, replyId, replyMessage,replyStaffId) VALUES (?, ?, ?, ?)";
-      values = [chatId, replyId, replyMessage, userId]; // Assign staffId if role is not Owner
+      values = [chatId, replyId, replyMessage, userId];
     }
 
     db.plantcare.query(sql, values, (err, result) => {

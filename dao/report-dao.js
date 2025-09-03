@@ -149,7 +149,7 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
     db.collectionofficer.query(query, [userId, registeredFarmerId, createdAtDate], (error, results) => {
       if (error) return reject(error);
 
-      // Debug: Log the raw results to see createdAt values
+
       console.log('Raw query results:', results.map(r => ({ id: r.id, createdAt: r.createdAt })));
 
       const transformedResults = results.flatMap(row => {
@@ -168,7 +168,7 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
           quantity: row.weightA,
           subTotal: (row.unitPriceA * row.weightA).toFixed(2),
           invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt // Added createdAt field
+          createdAt: row.createdAt
         });
 
         if (row.weightB > 0) entries.push({
@@ -184,7 +184,7 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
           quantity: row.weightB,
           subTotal: (row.unitPriceB * row.weightB).toFixed(2),
           invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt // Added createdAt field
+          createdAt: row.createdAt
         });
 
         if (row.weightC > 0) entries.push({
@@ -200,7 +200,7 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
           quantity: row.weightC,
           subTotal: (row.unitPriceC * row.weightC).toFixed(2),
           invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt // Added createdAt field
+          createdAt: row.createdAt
         });
 
         return entries;
@@ -212,7 +212,7 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
   });
 };
 
-// Frontend usage example for displaying createdAt with proper formatting:
+
 function formatDateTime(dateTimeString) {
   const date = new Date(dateTimeString);
   return date.toLocaleString('en-GB', {

@@ -9,7 +9,7 @@ const uploadFileToS3 = require('../Middlewares/s3upload')
 
 exports.loginUser = (phonenumber) => {
     return new Promise((resolve, reject) => {
-        // First, check if the phone number is in the users table
+
         const usersSql = `
             SELECT 
                 u.*, 
@@ -55,12 +55,12 @@ exports.loginUser = (phonenumber) => {
                     return reject(err);
                 }
 
-                // If farmstaff record is found, resolve with farmstaff data
+
                 if (farmstaffResults.length > 0) {
                     return resolve(farmstaffResults);
                 }
 
-                // If no match found in both tables
+
                 resolve([]);
             });
         });
@@ -150,7 +150,7 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
             });
 
         }
-        // If role is 'Manager', 'Super Visor', or 'Labour', get data from farmstaff table
+
         else if (['Manager', 'Supervisor', 'Laboror'].includes(userrole)) {
             const farmstaffSql = `
                 SELECT 

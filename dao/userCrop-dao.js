@@ -526,8 +526,6 @@ exports.getUploadedImagesCount = (userId, cropId) => {
     });
 }
 
-// hrg
-
 
 
 exports.getTaskImage = (slaveId) => {

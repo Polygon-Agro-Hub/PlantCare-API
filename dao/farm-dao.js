@@ -419,13 +419,13 @@ exports.createOngoingCultivation = (userId) => {
     return query(sql, [userId]);
 };
 
-// Updated: Check crop count for specific farm
+
 exports.checkCropCountByFarm = (cultivationId, farmId) => {
     const sql = "SELECT COUNT(id) as count FROM ongoingcultivationscrops WHERE ongoingCultivationId = ? AND farmId = ?";
     return query(sql, [cultivationId, farmId]);
 };
 
-// Updated: Check enrolled crops for specific farm
+
 exports.checkEnrollCropByFarm = (cultivationId, farmId) => {
     const sql = "SELECT cropCalendar, id FROM ongoingcultivationscrops WHERE ongoingCultivationId = ? AND farmId = ?";
     return query(sql, [cultivationId, farmId]);
@@ -614,7 +614,7 @@ exports.phoneNumberChecker = (phoneNumber) => {
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
         console.log("DAO - formatted phone number:", formattedPhoneNumber);
 
-        // Check both users table and farmstaff table
+
         const checkQuery = `
             SELECT phoneNumber FROM users WHERE phoneNumber = ?
             UNION
@@ -669,7 +669,7 @@ exports.updateFarm = async (farmData) => {
             });
         });
 
-        // Start transaction
+
         await new Promise((resolve, reject) => {
             connection.beginTransaction(err => {
                 if (err) return reject(err);
@@ -708,13 +708,12 @@ exports.updateFarm = async (farmData) => {
             farmData.city,
             farmData.staffCount,
             farmData.farmImage,
-            farmData.farmId, // This should match whatever you're passing from the endpoint
+            farmData.farmId,
             farmData.userId
         ];
 
         const [updateResult] = await connection.promise().query(updateFarmSql, farmValues);
 
-        // Check if any rows were affected
         if (updateResult.affectedRows === 0) {
             throw new Error('No farm was updated. Please check if the farm exists and you have permission to update it.');
         }

@@ -15,11 +15,11 @@ exports.getUserWithBankDetails = async (req, res) => {
   }
 
   try {
-    // Fetch the raw user data with bank details from the DAO layer
+
     const rows = await transactionDAO.getUserWithBankDetailsById(userId, centerId, companyId);
     console.log('rows:', rows);
 
-    // If no user found, return a 404 response
+
     if (rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }

@@ -22,7 +22,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
 
         console.log('User ID:', userId);
 
-        // Validate input
+
         const { value, error } = createFarm.validate(input);
         if (error) {
             return res.status(400).json({
@@ -46,10 +46,10 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             city,
             staffCount,
             appUserCount,
-            staff // Array of staff objects
+            staff
         } = value;
 
-        // Create farm and staff in a transaction
+
         const result = await farmDao.createFarmWithStaff({
             userId,
             farmName,
@@ -111,7 +111,6 @@ exports.getFarmById = asyncHandler(async (req, res) => {
         const farmId = req.params.id;
         const userId = req.user.id;
 
-        // Get farm data with staff
         const farmData = await farmDao.getFarmByIdWithStaff(farmId, userId);
 
         if (!farmData) {
@@ -157,7 +156,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 
         console.log('Payment request data:', input);
 
-        // Validate input using Joi schema
         const { value, error } = createPayment.validate(input);
         if (error) {
             return res.status(400).json({
@@ -168,7 +166,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 
         const { payment, plan, expireDate } = value;
 
-        // Create payment and update user membership
         const result = await farmDao.createPaymentAndUpdateMembership({
             userId,
             payment,
@@ -201,9 +198,9 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        const farmId = req.params.farmId; // Get farmId from route parameter
+        const farmId = req.params.farmId;
 
-        // Validate farmId
+
         if (!farmId) {
             return res.status(400).json({
                 status: "error",
@@ -211,7 +208,6 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
             });
         }
 
-        // Validate farmId is a number (if needed)
         if (isNaN(farmId)) {
             return res.status(400).json({
                 status: "error",

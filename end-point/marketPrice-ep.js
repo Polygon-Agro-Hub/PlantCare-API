@@ -16,7 +16,6 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
         .json({ status: "error", message: error.details[0].message });
     }
 
-    // Determine if user is owner (userId === staffId) or staff
     const isOwner = userId === staffId;
     const results = await getAllMarketData(userId, isOwner ? null : farmId);
 
