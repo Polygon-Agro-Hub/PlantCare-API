@@ -130,6 +130,8 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId
         const userrole = req.user.role
 
+        console.log("iiiiiiiiiiiiiiiiiii", userId, ownerId, userrole)
+
         // Retrieve user profile from the database using the DAO function
         const user = await userProfileDao.getUserProfileById(userId, ownerId, userrole);
 

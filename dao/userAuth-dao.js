@@ -100,55 +100,126 @@ exports.insertUser = (firstName, lastName, phoneNumber, NICnumber, district, far
 
 
 exports.getUserProfileById = (userId, ownerId, userrole) => {
+    //     return new Promise((resolve, reject) => {
+
+    //         // If role is 'Owner', get data from users table
+    //         if (userrole === 'Owner') {
+
+    //             const usersSql = `
+    //     SELECT 
+    //         u.id,
+    //         u.firstName,
+    //         u.lastName,
+    //         u.phoneNumber,
+    //         u.NICnumber,
+    //         u.district,
+    //         LEFT(u.profileImage, 256) AS profileImage,
+    //         LEFT(u.farmerQr, 256) AS farmerQr,
+    //         u.membership,
+    //         mp.activeStatus,
+    //         'Owner' AS role
+    //     FROM users u
+    //     JOIN membershippayment mp ON u.id = mp.userId
+    //     WHERE u.id = ?
+    //     ORDER BY mp.id DESC
+    //     LIMIT 1
+    // `;
+    //             db.plantcare.query(usersSql, [userId], (err, userResults) => {
+    //                 if (err) return reject(err);
+
+    //                 if (userResults.length > 0) {
+    //                     const user = userResults[0];
+
+    //                     const farmCountSql = "SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?";
+    //                     db.plantcare.query(farmCountSql, [userId], (err, farmCountResults) => {
+    //                         if (err) return reject(err);
+
+    //                         const farmCount = farmCountResults[0].farmCount || 0;
+    //                         const userProfile = {
+    //                             ...user,
+    //                             membership: user.membership || null,
+    //                             paymentActiveStatus: user.activeStatus === 1 ? 1 : 0,
+    //                             farmCount,
+    //                             role: user.role
+    //                         };
+    //                         console.log("ownerrrrr")
+    //                         resolve(userProfile);
+    //                     });
+    //                 } else {
+    //                     resolve(null);
+    //                 }
+    //             });
+
+    //         }
     return new Promise((resolve, reject) => {
 
         // If role is 'Owner', get data from users table
         if (userrole === 'Owner') {
 
-            const usersSql = `
-    SELECT 
-        u.id,
-        u.firstName,
-        u.lastName,
-        u.phoneNumber,
-        u.NICnumber,
-        u.district,
-        LEFT(u.profileImage, 256) AS profileImage,
-        LEFT(u.farmerQr, 256) AS farmerQr,
-        u.membership,
-        mp.activeStatus,
-        'Owner' AS role
-    FROM users u
-    JOIN membershippayment mp ON u.id = mp.userId
-    WHERE u.id = ?
-    ORDER BY mp.id DESC
-    LIMIT 1
-`;
-            db.plantcare.query(usersSql, [userId], (err, userResults) => {
+            // First, check if user exists in users table
+            const checkUserSql = "SELECT id, firstName, lastName, membership FROM users WHERE id = ?";
+            db.plantcare.query(checkUserSql, [userId], (err, checkResults) => {
                 if (err) return reject(err);
 
-                if (userResults.length > 0) {
-                    const user = userResults[0];
+                console.log("User exists check:", checkResults);
 
-                    const farmCountSql = "SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?";
-                    db.plantcare.query(farmCountSql, [userId], (err, farmCountResults) => {
+                // Check if payment records exist
+                const checkPaymentSql = "SELECT id, userId, activeStatus FROM membershippayment WHERE userId = ? ORDER BY id DESC LIMIT 1";
+                db.plantcare.query(checkPaymentSql, [userId], (err, paymentResults) => {
+                    if (err) return reject(err);
+
+                    console.log("Payment records check:", paymentResults);
+
+                    // Now run the original query with LEFT JOIN
+                    const usersSql = `
+                        SELECT 
+                            u.id,
+                            u.firstName,
+                            u.lastName,
+                            u.phoneNumber,
+                            u.NICnumber,
+                            u.district,
+                            LEFT(u.profileImage, 256) AS profileImage,
+                            LEFT(u.farmerQr, 256) AS farmerQr,
+                            u.membership,
+                            COALESCE(mp.activeStatus, 0) as activeStatus,
+                            'Owner' AS role
+                        FROM users u
+                        LEFT JOIN membershippayment mp ON u.id = mp.userId
+                        WHERE u.id = ?
+                        ORDER BY mp.id DESC
+                        LIMIT 1
+                    `;
+
+                    db.plantcare.query(usersSql, [userId], (err, userResults) => {
                         if (err) return reject(err);
 
-                        const farmCount = farmCountResults[0].farmCount || 0;
-                        const userProfile = {
-                            ...user,
-                            membership: user.membership || null,
-                            paymentActiveStatus: user.activeStatus === 1 ? 1 : 0,
-                            farmCount,
-                            role: user.role
-                        };
-                        resolve(userProfile);
-                    });
-                } else {
-                    resolve(null);
-                }
-            });
+                        console.log("Final query results:", userResults);
 
+                        if (userResults.length > 0) {
+                            const user = userResults[0];
+
+                            const farmCountSql = "SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?";
+                            db.plantcare.query(farmCountSql, [userId], (err, farmCountResults) => {
+                                if (err) return reject(err);
+
+                                const farmCount = farmCountResults[0].farmCount || 0;
+                                const userProfile = {
+                                    ...user,
+                                    membership: user.membership || null,
+                                    paymentActiveStatus: user.activeStatus === 1 ? 1 : 0,
+                                    farmCount,
+                                    role: user.role
+                                };
+                                console.log("ownerrrrr")
+                                resolve(userProfile);
+                            });
+                        } else {
+                            resolve(null);
+                        }
+                    });
+                });
+            });
         }
 
         else if (['Manager', 'Supervisor', 'Laboror'].includes(userrole)) {
