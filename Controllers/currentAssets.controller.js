@@ -37,6 +37,151 @@ exports.getAllCurrentAssets = async (req, res) => {
 
 
 
+// exports.handleAddFixedAsset = (req, res) => {
+
+
+//     const userId = req.user.ownerId;
+//     const staffId = req.user.id;
+//     const {
+//         category,
+//         asset,
+//         farmId,
+//         brand,
+//         batchNum,
+//         volume,
+//         unit,
+//         numberOfUnits,
+//         unitPrice,
+//         totalPrice,
+//         purchaseDate,
+//         expireDate,
+//         warranty,
+//         status
+//     } = req.body;
+
+//     const volumeInt = parseInt(volume, 10);
+//     if (isNaN(volumeInt)) {
+//         return res.status(400).json({ status: 'error', message: 'Volume must be a valid number.' });
+//     }
+
+//     const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
+//     const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
+
+//     const checkSql = `SELECT * FROM currentasset WHERE userId = ? AND category = ? AND asset = ? AND brand = ? AND batchNum = ?`;
+
+//     db.plantcare.query(checkSql, [userId, category, asset, brand, batchNum], (err, results) => {
+
+//         if (err) {
+//             console.error('Error checking asset:', err);
+//             return res.status(500).json({ status: 'error', message: 'Error checking asset: ' + err.message });
+//         }
+
+//         if (results.length > 0) {
+//             const existingAsset = results[0];
+
+//             const updatedNumOfUnits = parseFloat(existingAsset.numOfUnit) + parseFloat(numberOfUnits);
+//             const updatedTotalPrice = (parseFloat(existingAsset.total) + parseFloat(totalPrice)).toFixed(2);
+
+//             const updateSql = `
+//                 UPDATE currentasset
+//                 SET numOfUnit = ?, total = ?, unitVolume = ?, unitPrice = ?, purchaseDate = ?, expireDate = ?, status = ?
+//                 WHERE id = ?
+//             `;
+//             const updateValues = [
+//                 updatedNumOfUnits.toFixed(2),
+//                 updatedTotalPrice,
+//                 volumeInt,
+//                 unitPrice,
+//                 formattedPurchaseDate,
+//                 formattedExpireDate,
+//                 status,
+//                 existingAsset.id
+//             ];
+
+//             db.plantcare.query(updateSql, updateValues, (updateErr, updateResult) => {
+//                 if (updateErr) {
+//                     console.error('Error updating asset:', updateErr);
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'Error updating asset: ' + updateErr.message,
+//                     });
+//                 }
+
+//                 if (updateResult.affectedRows === 0) {
+//                     console.log('No rows were updated');
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'No asset was updated. Please check if the asset exists.',
+//                     });
+//                 }
+
+//                 const recordSql = `
+//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
+//                     VALUES (?, ?, 0, ?)
+//                 `;
+//                 const recordValues = [existingAsset.id, numberOfUnits, totalPrice];
+
+//                 db.plantcare.query(recordSql, recordValues, (recordErr) => {
+//                     if (recordErr) {
+//                         console.error('Error adding asset record:', recordErr);
+//                         return res.status(500).json({
+//                             status: 'error',
+//                             message: 'Error adding asset record: ' + recordErr.message,
+//                         });
+//                     }
+
+//                     res.status(200).json({
+//                         status: 'success',
+//                         message: 'Asset updated successfully',
+//                     });
+//                 });
+//             });
+
+//         } else {
+
+//             const insertSql = `
+//                 INSERT INTO currentasset (userId,farmId, category, asset, brand, batchNum, unitVolume, unit, numOfUnit, unitPrice, total, purchaseDate, expireDate, status)
+//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+//             `;
+//             const insertValues = [
+//                 userId, farmId, category, asset, brand, batchNum, volumeInt, unit,
+//                 numberOfUnits, unitPrice, totalPrice, formattedPurchaseDate, formattedExpireDate, status
+//             ];
+
+//             db.plantcare.query(insertSql, insertValues, (insertErr, insertResult) => {
+//                 if (insertErr) {
+//                     console.error('Error inserting new asset:', insertErr);
+//                     return res.status(500).json({
+//                         status: 'error',
+//                         message: 'Error inserting new asset: ' + insertErr.message,
+//                     });
+//                 }
+
+//                 const newRecordSql = `
+//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
+//                     VALUES (?, ?, 0, ?)
+//                 `;
+//                 const newRecordValues = [insertResult.insertId, numberOfUnits, totalPrice];
+
+//                 db.plantcare.query(newRecordSql, newRecordValues, (newRecordErr) => {
+//                     if (newRecordErr) {
+//                         console.error('Error adding new asset record:', newRecordErr);
+//                         return res.status(500).json({
+//                             status: 'error',
+//                             message: 'Error adding new asset record: ' + newRecordErr.message,
+//                         });
+//                     }
+
+//                     res.status(201).json({
+//                         status: 'success',
+//                         message: 'New asset created successfully',
+//                     });
+//                 });
+//             });
+//         }
+//     });
+// };
+
 exports.handleAddFixedAsset = (req, res) => {
     const userId = req.user.ownerId;  // Should be the owner's ID from users table
     const staffId = req.user.id;      // Staff's ID from farmstaff table

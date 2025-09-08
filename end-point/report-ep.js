@@ -93,7 +93,53 @@ exports.GetFarmerReportDetails = async (req, res) => {
   }
 };
 
-
+// exports.getTransactionHistory = async (req, res) => {
+//   try {
+//     const userId = req.user.id; // Get authenticated user's ID from request
+//     const {date} = req.query;
+   
+//     console.log('Request to get transaction history:', userId, date);
+   
+//     const transactions = await transactionDAO.getTransactionHistoryByUserIdAndDate(userId, date);
+   
+//     // Format the response data to include all necessary fields including centerId and companyId
+//     const formattedTransactions = transactions.map(transaction => ({
+//       registeredFarmerId: transaction.registeredFarmerId,
+//       collectionOfficerId: transaction.collectionOfficerId,
+//       invNo: transaction.invNo,
+//       userId: transaction.userId,
+//       firstName: transaction.firstName,
+//       lastName: transaction.lastName,
+//       phoneNumber: transaction.phoneNumber,
+//       profileImage: transaction.profileImage,
+//       address: transaction.address,
+//       NICnumber: transaction.NICnumber,
+//       totalAmount: parseFloat(transaction.totalAmount || 0).toFixed(2),
+//       cropRecordCount: transaction.cropRecordCount,
+//       accountNumber: transaction.accountNumber,
+//       accountHolderName: transaction.accountHolderName,
+//       bankName: transaction.bankName,
+//       branchName: transaction.branchName,
+//       empId: transaction.empId,
+//       centerId: transaction.centerId,
+//       companyId: transaction.companyId,
+//       transactionDate: transaction.transactionDate
+//     }));
+   
+//     return res.status(200).json({
+//       success: true,
+//       count: formattedTransactions.length,
+//       data: formattedTransactions
+//     });
+//   } catch (error) {
+//     console.error('Error getting transaction history:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Server error while retrieving transaction history',
+//       error: error.message
+//     });
+//   }
+// };
 
 exports.getTransactionHistory = async (req, res) => {
   try {
@@ -102,11 +148,18 @@ exports.getTransactionHistory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+
     console.log('Request to get transaction history:', userId, page, limit);
 
     const transactions = await transactionDAO.getTransactionHistoryByUserId(userId, limit, offset);
     const totalCount = await transactionDAO.getTransactionCountByUserId(userId);
 
+   
+    console.log('Request to get transaction history:', userId, page, limit);
+   
+    const transactions = await transactionDAO.getTransactionHistoryByUserId(userId, limit, offset);
+    const totalCount = await transactionDAO.getTransactionCountByUserId(userId);
+   
     const formattedTransactions = transactions.map(transaction => ({
       registeredFarmerId: transaction.registeredFarmerId,
       collectionOfficerId: transaction.collectionOfficerId,

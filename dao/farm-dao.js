@@ -915,6 +915,27 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 //////////////renew
 
 
+// exports.getrenew = async (userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT id, userId, farmName, isBlock, district, city, 
+//                    staffCount, appUserCount, imageId
+//             FROM farms
+//             WHERE userId = ?
+//             ORDER BY id DESC
+//             LIMIT 1
+//         `;
+//         db.plantcare.query(query, [userId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching user farm:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results.length > 0 ? results[0] : null);
+//             }
+//         });
+//     });
+// };
+
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -950,9 +971,89 @@ exports.getrenew = async (userId) => {
         });
     });
 };
+// exports.deleteFarm = (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         // First check if farm exists
+//         const checkSql = "SELECT id FROM farms WHERE id = ?";
+//         db.plantcare.query(checkSql, [farmId], (err, checkResult) => {
+//             if (err) {
+//                 reject(err);
+//                 return;
+//             }
 
+//             if (checkResult.length === 0) {
+//                 resolve(false); // Farm doesn't exist
+//                 return;
+//             }
 
+//             // Farm exists, proceed with deletion
+//             const deleteSql = "DELETE FROM farms WHERE id = ?";
+//             db.plantcare.query(deleteSql, [farmId], (err, result) => {
+//                 if (err) {
+//                     reject(err);
+//                 } else {
+//                     resolve(result.affectedRows > 0);
+//                 }
+//             });
+//         });
+//     });
+// };
 
+// exports.deleteFarm = (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         // First check if farm exists and get its details
+//         const checkSql = "SELECT id, userId, farmIndex FROM farms WHERE id = ?";
+//         db.plantcare.query(checkSql, [farmId], (err, checkResult) => {
+//             if (err) {
+//                 reject(err);
+//                 return;
+//             }
+
+//             if (checkResult.length === 0) {
+//                 resolve(false); // Farm doesn't exist
+//                 return;
+//             }
+
+//             const farmToDelete = checkResult[0];
+//             const { userId, farmIndex } = farmToDelete;
+
+//             // Delete the farm first
+//             const deleteSql = "DELETE FROM farms WHERE id = ?";
+//             db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+//                 if (err) {
+//                     reject(err);
+//                     return;
+//                 }
+
+//                 if (deleteResult.affectedRows === 0) {
+//                     resolve(false);
+//                     return;
+//                 }
+
+//                 // Now update farmIndex for remaining farms of the same user
+//                 // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
+//                 const updateIndexSql = `
+//                     UPDATE farms 
+//                     SET farmIndex = farmIndex - 1 
+//                     WHERE userId = ? AND farmIndex > ?
+//                 `;
+
+//                 db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+//                     if (err) {
+//                         console.error("Error updating farm indexes:", err);
+//                         // Even if index update fails, the farm was deleted successfully
+//                         // We'll still return true but log the error
+//                         resolve(true);
+//                         return;
+//                     }
+
+//                     console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
+//                     resolve(true);
+//                 });
+//             });
+//         });
+//     });
+// };
 
 exports.deleteFarm = (farmId) => {
     return new Promise((resolve, reject) => {

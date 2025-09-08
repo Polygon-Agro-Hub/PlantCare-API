@@ -1,6 +1,59 @@
 const db = require("../startup/database");
 
 
+// exports.getTransactionHistoryByUserIdAndDate = (userId, date) => {
+//   console.log('DAO: getTransactionHistoryByUserIdAndDate', userId, date);
+//   return new Promise((resolve, reject) => {
+//     const query = `
+//           SELECT DISTINCT
+//               RFP.id AS registeredFarmerId,
+//               RFP.collectionOfficerId,
+//               RFP.invNo,
+//               U.id AS userId,
+//               U.firstName,
+//               U.lastName,
+//               U.phoneNumber,
+//               U.profileImage,
+//               CONCAT_WS(', ', U.houseNo, U.streetName, U.city, U.district) AS address,
+//               U.NICnumber,
+//               COALESCE(
+//                   (SELECT 
+//                       SUM(gradeAprice * gradeAquan) + 
+//                       SUM(gradeBprice * gradeBquan) + 
+//                       SUM(gradeCprice * gradeCquan)
+//                    FROM farmerpaymentscrops 
+//                    WHERE registerFarmerId = RFP.id), 0
+//               ) AS totalAmount,
+//               COALESCE(
+//                   (SELECT COUNT(id) 
+//                    FROM farmerpaymentscrops 
+//                    WHERE registerFarmerId = RFP.id), 0
+//               ) AS cropRecordCount,
+//               (SELECT accNumber FROM plant_care.userbankdetails WHERE userId = U.id LIMIT 1) AS accountNumber,
+//               (SELECT accHolderName FROM plant_care.userbankdetails WHERE userId = U.id LIMIT 1) AS accountHolderName,
+//               (SELECT bankName FROM plant_care.userbankdetails WHERE userId = U.id LIMIT 1) AS bankName,
+//               (SELECT branchName FROM plant_care.userbankdetails WHERE userId = U.id LIMIT 1) AS branchName,
+//               CO.empId,
+//               CO.centerId,
+//               CO.companyId,
+//               DATE(RFP.createdAt) AS transactionDate
+//           FROM registeredfarmerpayments RFP
+//           INNER JOIN plant_care.users U ON RFP.userId = U.id
+//           INNER JOIN collectionofficer CO ON RFP.collectionOfficerId = CO.id
+//           WHERE U.id = ?
+//             AND DATE(RFP.createdAt) = ?
+//           ORDER BY RFP.id
+//       `;
+
+//     db.collectionofficer.query(query, [userId, date], (error, results) => {
+//       if (error) {
+//         return reject(error);
+//       }
+//       console.log('Result of transaction history:', results);
+//       resolve(results);
+//     });
+//   });
+// };
 exports.getTransactionHistoryByUserId = (userId, limit, offset) => {
   console.log('DAO: getTransactionHistoryByUserId', userId, limit, offset);
   return new Promise((resolve, reject) => {
