@@ -70,6 +70,57 @@ exports.loginUser = async (req, res) => {
 };
 
 
+// exports.SignupUser = asyncHandler(async (req, res) => {
+//     try {
+//         const { firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage } =
+//             await ValidationSchema.signupUserSchema.validateAsync(req.body);
+
+//         console.log("Signup User Data:", req.body);
+
+//         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
+
+
+//         const existingUser = await userAuthDao.checkUserByPhoneNumber(
+//             formattedPhoneNumber
+//         );
+
+//         if (existingUser.length > 0) {
+//             return res.status(400).json({
+//                 message: "This mobile number exists in the database, please try another number!",
+//             });
+//         }
+
+//         const result = await userAuthDao.insertUser(
+//             firstName,
+//             lastName,
+//             formattedPhoneNumber,
+//             NICnumber,
+//             district,
+//             farmerLanguage
+//         );
+
+//         const payload = {
+//             id: result.insertId,
+//             phoneNumber: formattedPhoneNumber,
+//         };
+//         const token = jwt.sign(payload, process.env.JWT_SECRET, {
+//             expiresIn: "24h",
+//         });
+
+//         res.status(200).json({
+//             message: "User registered successfully!",
+//             result,
+//             token,
+//         });
+//     } catch (err) {
+//         console.error("Error in SignUp:", err);
+//         if (err.isJoi) {
+//             return res.status(400).json({ message: err.details[0].message });
+//         }
+//         res.status(500).json({ message: "Internal Server Error!" });
+//     }
+// });
+
 exports.SignupUser = asyncHandler(async (req, res) => {
     try {
         const { firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage } =
@@ -78,7 +129,6 @@ exports.SignupUser = asyncHandler(async (req, res) => {
         console.log("Signup User Data:", req.body);
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
-
 
         const existingUser = await userAuthDao.checkUserByPhoneNumber(
             formattedPhoneNumber
@@ -99,18 +149,41 @@ exports.SignupUser = asyncHandler(async (req, res) => {
             farmerLanguage
         );
 
+        console.log("User insertion result:", result);
+        const newUserId = result.insertId;
+
+        // Create COMPLETE JWT payload like in login
         const payload = {
-            id: result.insertId,
+            id: newUserId,
             phoneNumber: formattedPhoneNumber,
+            membership: 'Basic',        // ✅ Add default membership
+            ownerId: newUserId,         // ✅ Add ownerId (same as id for owners)
+            role: 'Owner',              // ✅ Add default role
+            farmId: null                // ✅ Add farmId (null for new users)
         };
+
+        console.log("JWT Payload:", payload);
+
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: "24h",
         });
+
+        // Verify token creation
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Decoded signup token:", decoded);
 
         res.status(200).json({
             message: "User registered successfully!",
             result,
             token,
+            user: {
+                id: newUserId,
+                firstName,
+                lastName,
+                phoneNumber: formattedPhoneNumber,
+                membership: 'Basic',
+                role: 'Owner'
+            }
         });
     } catch (err) {
         console.error("Error in SignUp:", err);
