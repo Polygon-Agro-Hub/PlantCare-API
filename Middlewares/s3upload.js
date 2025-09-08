@@ -60,7 +60,7 @@
 //     const fileExtension = fileName.split(".").pop(); // Get file extension
 //     const uniqueFileName = `${uuidv4()}.${fileExtension}`; // Generate a unique file name
 //     const key = `${keyPrefix}/${uniqueFileName}`;
-    
+
 //     const putObjectParams = {
 //       Bucket: process.env.AWS_S3_BUCKET_NAME,
 //       Key: key, // Full path in the bucket
@@ -72,7 +72,7 @@
 //     // Create and send the PutObjectCommand
 //     const command = new PutObjectCommand(putObjectParams);
 //     await s3Client.send(command);
-    
+
 //     // Construct the URL manually since v3 doesn't return the URL directly
 //     const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 //     return fileUrl;
@@ -91,7 +91,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const r2Client = new S3Client({
   region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`, 
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
@@ -107,11 +107,11 @@ const r2Client = new S3Client({
  */
 const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
   try {
-    const fileExtension = fileName.split(".").pop(); 
-    const uniqueFileName = `${uuidv4()}.${fileExtension}`; 
+    const fileExtension = fileName.split(".").pop();
+    const uniqueFileName = `${uuidv4()}.${fileExtension}`;
     const key = `${keyPrefix}/${uniqueFileName}`;
-    
-    // Determine content type based on file extension
+
+
     const getContentType = (ext) => {
       const mimeTypes = {
         'jpg': 'image/jpeg',
@@ -128,7 +128,7 @@ const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
       };
       return mimeTypes[ext.toLowerCase()] || 'application/octet-stream';
     };
-    
+
     const putObjectParams = {
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
@@ -137,10 +137,10 @@ const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
     };
     const command = new PutObjectCommand(putObjectParams);
     await r2Client.send(command);
-    
+
     const domain = process.env.R2_ENDPOINT.replace('https://', '');
     const fileUrl = `https://${domain}/${key}`;
-    
+
     return fileUrl;
   } catch (error) {
     console.error("Error uploading to R2:", error);
@@ -148,4 +148,4 @@ const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
   }
 };
 
-module.exports = uploadFileToS3;
+module.exports = uploadFileToS3;

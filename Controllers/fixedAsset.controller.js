@@ -829,13 +829,7 @@ exports.updateFixedAsset = (req, res) => {
                                 durationMonths = COALESCE(NULLIF(?, ''), durationMonths),
                                 leastAmountAnnually = COALESCE(NULLIF(?, ''), leastAmountAnnually)
                             WHERE landAssetId = ?`);
-                            // ownershipUpdateParams.push([
-                            //     formatToMySQLDateTime(ownershipDetails.startDate || null),
-                            //     ownershipDetails.durationYears || null,
-                            //     ownershipDetails.durationMonths || null,
-                            //     ownershipDetails.leastAmountAnnually || null,
-                            //     assetId
-                            // ]);
+
                             ownershipUpdateParams.push([
                                 formatToMySQLDateTime(ownershipDetails.startDate || null),
                                 ownershipDetails.durationYears !== undefined ? String(ownershipDetails.durationYears) : '0',

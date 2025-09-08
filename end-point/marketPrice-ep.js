@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const { getAllMarketSchema } = require("../validations/marketPrice-validation");
 const { getAllMarketData } = require("../dao/marketPrice-dao");
 
+
 // exports.getAllMarket = asyncHandler(async (req, res) => {
 //   try {
 //     const userId = req.user.ownerId;
@@ -66,7 +67,6 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
         .json({ status: "error", message: error.details[0].message });
     }
 
-    // Determine if user is owner (userId === staffId) or staff
     const isOwner = userId === staffId;
     const results = await getAllMarketData(userId, isOwner ? null : farmId);
 
