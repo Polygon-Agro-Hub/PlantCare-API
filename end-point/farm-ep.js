@@ -22,7 +22,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
 
         console.log('User ID:', userId);
 
-        // Validate input
+
         const { value, error } = createFarm.validate(input);
         if (error) {
             return res.status(400).json({
@@ -46,10 +46,10 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             city,
             staffCount,
             appUserCount,
-            staff // Array of staff objects
+            staff
         } = value;
 
-        // Create farm and staff in a transaction
+
         const result = await farmDao.createFarmWithStaff({
             userId,
             farmName,
@@ -111,7 +111,6 @@ exports.getFarmById = asyncHandler(async (req, res) => {
         const farmId = req.params.id;
         const userId = req.user.id;
 
-        // Get farm data with staff
         const farmData = await farmDao.getFarmByIdWithStaff(farmId, userId);
 
         if (!farmData) {
@@ -157,7 +156,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 
         console.log('Payment request data:', input);
 
-        // Validate input using Joi schema
         const { value, error } = createPayment.validate(input);
         if (error) {
             return res.status(400).json({
@@ -168,7 +166,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 
         const { payment, plan, expireDate } = value;
 
-        // Create payment and update user membership
         const result = await farmDao.createPaymentAndUpdateMembership({
             userId,
             payment,
@@ -201,9 +198,9 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
 exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        const farmId = req.params.farmId; // Get farmId from route parameter
+        const farmId = req.params.farmId;
 
-        // Validate farmId
+
         if (!farmId) {
             return res.status(400).json({
                 status: "error",
@@ -211,7 +208,6 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
             });
         }
 
-        // Validate farmId is a number (if needed)
         if (isNaN(farmId)) {
             return res.status(400).json({
                 status: "error",
@@ -289,11 +285,7 @@ exports.enroll = asyncHandler(async (req, res) => {
         const cropCountResult = await farmDao.checkCropCountByFarm(cultivationId, farmId);
         const cropCount = cropCountResult[0].count;
 
-        // if (cropCount >= 3) {
-        //     return res
-        //         .status(400)
-        //         .json({ message: "You have already enrolled in 3 crops for this farm" });
-        // }
+
 
         // Updated: Check enrolled crops for specific farm
         const enrolledCrops = await farmDao.checkEnrollCropByFarm(cultivationId, farmId);
@@ -486,67 +478,7 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
 
 
 
-// exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-//     console.log('Staff member creation request:', req.body);
-//     try {
-//         const userId = req.user.id;
-//         const { farmId } = req.params; // Get farmId from URL params
-//         console.log('User ID:', userId, 'Farm ID:', farmId);
 
-//         // Create input object for validation
-//         const input = {
-//             ...req.body,
-//             farmId // Include farmId in input for validation
-//         };
-
-//         // Validate input (you'll need to create/update your validation schema)
-//         const { value, error } = createStaffMember.validate(input); // Note: changed from createFarm
-//         if (error) {
-//             return res.status(400).json({
-//                 status: "error",
-//                 message: error.details[0].message,
-//             });
-//         }
-
-//         console.log("Validated input:", value);
-
-//         const {
-//             firstName,
-//             lastName,
-//             phoneNumber,
-//             countryCode,
-//             role
-//         } = value;
-
-//         // Create staff member
-//         const result = await farmDao.CreateStaffMember({
-//             userId,
-//             farmId,
-//             firstName,
-//             lastName,
-//             phoneNumber,
-//             countryCode,
-//             role
-//         });
-
-//         console.log("Staff member creation result:", result);
-
-//         res.status(201).json({
-//             status: "success",
-//             message: "Staff member created successfully.",
-//             staffId: result.staffId,
-//             data: result.data
-//         });
-
-//     } catch (err) {
-//         console.error("Error creating staff member:", err);
-//         res.status(500).json({
-//             status: "error",
-//             message: "Internal Server Error",
-//             error: process.env.NODE_ENV === 'development' ? err.message : undefined
-//         });
-//     }
-// });
 
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
     console.log('Staff member creation request:', req.body);
@@ -657,43 +589,7 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
 
 /////////////renew
 
-// exports.getrenew = asyncHandler(async (req, res) => {
-//     try {
-//         const userId = req.user.ownerId;
-//         const membershipData = await farmDao.getrenew(userId);
 
-//         if (!membershipData) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Membership not found",
-//                 needsRenewal: true
-//             });
-//         }
-
-//         // Check if renewal is needed based on expireDate
-//         const currentDate = new Date();
-//         const expireDate = new Date(membershipData.expireDate);
-//         const needsRenewal = currentDate > expireDate;
-
-//         res.status(200).json({
-//             success: true,
-//             data: {
-//                 id: membershipData.id,
-//                 userId: membershipData.userId,
-//                 expireDate: membershipData.expireDate,
-//                 needsRenewal: needsRenewal,
-//                 status: needsRenewal ? 'expired' : 'active',
-//                 daysRemaining: needsRenewal ? 0 : Math.ceil((expireDate - currentDate) / (1000 * 60 * 60 * 24))
-//             }
-//         });
-//     } catch (error) {
-//         console.error("Error fetching user membership:", error);
-//         res.status(500).json({
-//             success: false,
-//             message: "Failed to fetch user membership"
-//         });
-//     }
-// });
 
 
 // exports.getrenew = asyncHandler(async (req, res) => {
@@ -786,52 +682,7 @@ exports.getrenew = asyncHandler(async (req, res) => {
     }
 });
 
-// exports.deleteFarm = asyncHandler(async (req, res) => {
-//     console.log("Deleting farm...");
-//     console.log("Request params:", req.params);
-//     console.log("Req body:", req.body);
 
-//     try {
-//         const { farmId } = req.params; // Fixed: removed .farmId
-//         const ownerId = req.user.ownerId;
-
-//         console.log("Farm ID:", farmId);
-//         console.log("Owner ID:", ownerId);
-
-//         // Delete farm from database
-//         const deleteResult = await farmDao.deleteFarm(farmId);
-
-//         if (!deleteResult) {
-//             return res.status(404).json({
-//                 status: "error",
-//                 message: "Farm not found or already deleted"
-//             });
-//         }
-
-//         // Delete S3 folder
-//         await delectfloders3(`plantcareuser/owner${ownerId}/farm${farmId}`);
-
-//         res.status(200).json({
-//             status: "success",
-//             message: "Farm deleted successfully"
-//         });
-
-//     } catch (err) {
-//         console.error("Error deleting farm:", err);
-
-//         if (err.isJoi) {
-//             return res.status(400).json({
-//                 status: "error",
-//                 message: err.details[0].message,
-//             });
-//         }
-
-//         res.status(500).json({
-//             status: "error",
-//             error: "Internal Server Error"
-//         });
-//     }
-// });
 
 exports.deleteFarm = asyncHandler(async (req, res) => {
     console.log("Deleting farm...");
@@ -917,150 +768,7 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
 
 ////currect asset
 
-// exports.handleAddFixedAsset = (req, res) => {
 
-//     const farmId = req.params;
-
-//     const userId = req.user.id;
-//     const {
-//         category,
-//         asset,
-
-//         brand,
-//         batchNum,
-//         volume,
-//         unit,
-//         numberOfUnits,
-//         unitPrice,
-//         totalPrice,
-//         purchaseDate,
-//         expireDate,
-//         warranty,
-//         status
-//     } = req.body;
-
-//     const volumeInt = parseInt(volume, 10);
-//     if (isNaN(volumeInt)) {
-//         return res.status(400).json({ status: 'error', message: 'Volume must be a valid number.' });
-//     }
-
-//     const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
-//     const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
-
-//     const checkSql = `SELECT * FROM currentasset WHERE userId = ? AND category = ? AND asset = ? AND brand = ? AND batchNum = ?`;
-
-//     db.plantcare.query(checkSql, [userId, category, asset, brand, batchNum], (err, results) => {
-
-//         if (err) {
-//             console.error('Error checking asset:', err);
-//             return res.status(500).json({ status: 'error', message: 'Error checking asset: ' + err.message });
-//         }
-
-//         if (results.length > 0) {
-//             const existingAsset = results[0];
-
-//             const updatedNumOfUnits = parseFloat(existingAsset.numOfUnit) + parseFloat(numberOfUnits);
-//             const updatedTotalPrice = (parseFloat(existingAsset.total) + parseFloat(totalPrice)).toFixed(2);
-
-//             const updateSql = `
-//                 UPDATE currentasset
-//                 SET numOfUnit = ?, total = ?, unitVolume = ?, unitPrice = ?, purchaseDate = ?, expireDate = ?, status = ?
-//                 WHERE id = ?
-//             `;
-//             const updateValues = [
-//                 updatedNumOfUnits.toFixed(2),
-//                 updatedTotalPrice,
-//                 volumeInt,
-//                 unitPrice,
-//                 formattedPurchaseDate,
-//                 formattedExpireDate,
-//                 status,
-//                 existingAsset.id
-//             ];
-
-//             db.plantcare.query(updateSql, updateValues, (updateErr, updateResult) => {
-//                 if (updateErr) {
-//                     console.error('Error updating asset:', updateErr);
-//                     return res.status(500).json({
-//                         status: 'error',
-//                         message: 'Error updating asset: ' + updateErr.message,
-//                     });
-//                 }
-
-//                 if (updateResult.affectedRows === 0) {
-//                     console.log('No rows were updated');
-//                     return res.status(500).json({
-//                         status: 'error',
-//                         message: 'No asset was updated. Please check if the asset exists.',
-//                     });
-//                 }
-
-//                 const recordSql = `
-//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
-//                     VALUES (?, ?, 0, ?)
-//                 `;
-//                 const recordValues = [existingAsset.id, numberOfUnits, totalPrice];
-
-//                 db.plantcare.query(recordSql, recordValues, (recordErr) => {
-//                     if (recordErr) {
-//                         console.error('Error adding asset record:', recordErr);
-//                         return res.status(500).json({
-//                             status: 'error',
-//                             message: 'Error adding asset record: ' + recordErr.message,
-//                         });
-//                     }
-
-//                     res.status(200).json({
-//                         status: 'success',
-//                         message: 'Asset updated successfully',
-//                     });
-//                 });
-//             });
-
-//         } else {
-
-//             const insertSql = `
-//                 INSERT INTO currentasset (userId,farmId, category, asset, brand, batchNum, unitVolume, unit, numOfUnit, unitPrice, total, purchaseDate, expireDate, status)
-//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
-//             `;
-//             const insertValues = [
-//                 userId, farmId, category, asset, brand, batchNum, volumeInt, unit,
-//                 numberOfUnits, unitPrice, totalPrice, formattedPurchaseDate, formattedExpireDate, status
-//             ];
-
-//             db.plantcare.query(insertSql, insertValues, (insertErr, insertResult) => {
-//                 if (insertErr) {
-//                     console.error('Error inserting new asset:', insertErr);
-//                     return res.status(500).json({
-//                         status: 'error',
-//                         message: 'Error inserting new asset: ' + insertErr.message,
-//                     });
-//                 }
-
-//                 const newRecordSql = `
-//                     INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice)
-//                     VALUES (?, ?, 0, ?)
-//                 `;
-//                 const newRecordValues = [insertResult.insertId, numberOfUnits, totalPrice];
-
-//                 db.plantcare.query(newRecordSql, newRecordValues, (newRecordErr) => {
-//                     if (newRecordErr) {
-//                         console.error('Error adding new asset record:', newRecordErr);
-//                         return res.status(500).json({
-//                             status: 'error',
-//                             message: 'Error adding new asset record: ' + newRecordErr.message,
-//                         });
-//                     }
-
-//                     res.status(201).json({
-//                         status: 'success',
-//                         message: 'New asset created successfully',
-//                     });
-//                 });
-//             });
-//         }
-//     });
-// };
 
 exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
     try {

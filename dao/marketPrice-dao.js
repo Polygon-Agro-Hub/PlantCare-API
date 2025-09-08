@@ -58,7 +58,6 @@ const getAllMarketData = (userId, farmId) => {
 
     const params = [userId];
 
-    // Add farm filter only if farmId is provided (for staff users)
     if (farmId) {
       sql += ` AND ocs.farmId = ?`;
       params.push(farmId);

@@ -1,355 +1,4 @@
-// const db = require("../startup/database");
-
-// exports.createFarmWithStaff = (farmData) => {
-//     return new Promise((resolve, reject) => {
-//         let connection;
-
-//         db.plantcare.getConnection((err, conn) => {
-//             if (err) {
-//                 return reject(new Error(`Database connection error: ${err.message}`));
-//             }
-//             connection = conn;
-
-//             connection.beginTransaction(async (beginErr) => {
-//                 if (beginErr) {
-//                     connection.release();
-//                     return reject(new Error(`Transaction start error: ${beginErr.message}`));
-//                 }
-
-//                 try {
-//                     // Insert farm
-//                     const insertFarmSql = `
-//                         INSERT INTO farms 
-//                         (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount)
-//                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-//                     `;
-
-//                     const farmValues = [
-//                         farmData.userId,
-//                         farmData.farmName,
-//                         farmData.farmIndex,
-//                         farmData.extentha,
-//                         farmData.extentac,
-//                         farmData.extentp,
-//                         farmData.district,
-//                         farmData.plotNo,
-//                         farmData.street,
-//                         farmData.city,
-//                         farmData.staffCount,
-//                         farmData.appUserCount
-//                     ];
-
-//                     const [farmResult] = await connection.promise().query(insertFarmSql, farmValues);
-//                     const farmId = farmResult.insertId;
-//                     const staffIds = [];
-
-//                     // Insert staff if provided
-//                     if (farmData.staff && Array.isArray(farmData.staff) && farmData.staff.length > 0) {
-//                         const insertStaffSql = `
-//                             INSERT INTO farmstaff 
-//                             (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image)
-//                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-//                         `;
-
-//                         for (const staff of farmData.staff) {
-//                             const staffValues = [
-//                                 farmData.userId,
-//                                 farmId,
-//                                 staff.firstName,
-//                                 staff.lastName,
-//                                 staff.phoneCode,
-//                                 staff.phoneNumber,
-//                                 staff.role,
-//                                 staff.image || null
-//                             ];
-
-//                             const [staffResult] = await connection.promise().query(insertStaffSql, staffValues);
-//                             staffIds.push(staffResult.insertId);
-//                         }
-//                     }
-
-//                     connection.commit((commitErr) => {
-//                         if (commitErr) {
-//                             return connection.rollback(() => {
-//                                 connection.release();
-//                                 reject(new Error(`Commit error: ${commitErr.message}`));
-//                             });
-//                         }
-
-//                         connection.release();
-//                         resolve({
-//                             success: true,
-//                             farmId,
-//                             staffIds,
-//                             message: 'Farm and staff created successfully'
-//                         });
-//                     });
-//                 } catch (error) {
-//                     connection.rollback(() => {
-//                         connection.release();
-//                         reject(new Error(`Database operation error: ${error.message}`));
-//                     });
-//                 }
-//             });
-//         });
-//     });
-// };
-
-// const db = require("../startup/database");
-
-// exports.createFarmWithStaff = async (farmData) => {
-//     let connection;
-
-//     try {
-//         // Get connection from pool
-//         connection = await new Promise((resolve, reject) => {
-//             db.plantcare.getConnection((err, conn) => {
-//                 if (err) return reject(err);
-//                 resolve(conn);
-//             });
-//         });
-
-//         // Start transaction
-//         await new Promise((resolve, reject) => {
-//             connection.beginTransaction(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         // Format phone numbers and validate
-//         if (farmData.staff && Array.isArray(farmData.staff)) {
-//             farmData.staff = farmData.staff.map(staff => {
-//                 // Ensure phone number has +94 prefix
-//                 let phoneNumber = staff.phoneNumber;
-//                 if (!phoneNumber.startsWith('+94')) {
-//                     if (phoneNumber.startsWith('0')) {
-//                         phoneNumber = '+94' + phoneNumber.substring(1);
-//                     } else {
-//                         phoneNumber = '+94' + phoneNumber;
-//                     }
-//                 }
-//                 return {
-//                     ...staff,
-//                     phoneNumber: phoneNumber.replace(/\D/g, '') // Remove non-digit characters
-//                 };
-//             });
-//         }
-
-//         // Insert farm
-//         const insertFarmSql = `
-//             INSERT INTO farms 
-//             (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount,imageId)
-//             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
-//         `;
-
-//         const farmValues = [
-//             farmData.userId,
-//             farmData.farmName,
-//             farmData.farmIndex,
-//             farmData.extentha,
-//             farmData.extentac,
-//             farmData.extentp,
-//             farmData.district,
-//             farmData.plotNo,
-//             farmData.street,
-//             farmData.city,
-//             farmData.staffCount,
-//             farmData.appUserCount,
-//             farmData.farmImage
-//         ];
-
-//         const [farmResult] = await connection.promise().query(insertFarmSql, farmValues);
-//         const farmId = farmResult.insertId;
-//         const staffIds = [];
-
-//         // Insert staff if provided
-//         if (farmData.staff && farmData.staff.length > 0) {
-//             const insertStaffSql = `
-//                 INSERT INTO farmstaff 
-//                 (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image)
-//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-//             `;
-
-//             for (const staff of farmData.staff) {
-//                 const [staffResult] = await connection.promise().query(insertStaffSql, [
-//                     farmData.userId,
-//                     farmId,
-//                     staff.firstName,
-//                     staff.lastName,
-//                     '+94', // Hardcoded as we've formatted the number
-//                     staff.phoneNumber.replace('+94', ''), // Store without country code
-//                     staff.role,
-//                     staff.image || null
-//                 ]);
-//                 staffIds.push(staffResult.insertId);
-//             }
-//         }
-
-//         // Commit transaction
-//         await new Promise((resolve, reject) => {
-//             connection.commit(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         return {
-//             success: true,
-//             farmId,
-//             staffIds,
-//             message: 'Farm and staff created successfully'
-//         };
-
-//     } catch (error) {
-//         // Rollback transaction if connection exists
-//         if (connection) {
-//             await new Promise(resolve => {
-//                 connection.rollback(() => resolve(true));
-//             });
-//         }
-//         console.error('Database error:', error);
-//         throw error;
-
-//     } finally {
-//         // Release connection back to pool
-//         if (connection) {
-//             connection.release();
-//         }
-//     }
-// };
-
-
 const db = require("../startup/database");
-
-// exports.createFarmWithStaff = async (farmData) => {
-//     let connection;
-
-//     try {
-//         // Get connection from pool
-//         connection = await new Promise((resolve, reject) => {
-//             db.plantcare.getConnection((err, conn) => {
-//                 if (err) return reject(err);
-//                 resolve(conn);
-//             });
-//         });
-
-//         // Start transaction
-//         await new Promise((resolve, reject) => {
-//             connection.beginTransaction(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         // Get the current farm count for this user to generate farmIndex
-//         const getFarmCountSql = `SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?`;
-//         const [countResult] = await connection.promise().query(getFarmCountSql, [farmData.userId]);
-//         const currentFarmCount = countResult[0].farmCount;
-//         const nextFarmIndex = currentFarmCount + 1;
-
-//         // Format phone numbers and validate
-//         if (farmData.staff && Array.isArray(farmData.staff)) {
-//             farmData.staff = farmData.staff.map(staff => {
-//                 // Ensure phone number has +94 prefix
-//                 let phoneNumber = staff.phoneNumber;
-//                 if (!phoneNumber.startsWith('+94')) {
-//                     if (phoneNumber.startsWith('0')) {
-//                         phoneNumber = '+94' + phoneNumber.substring(1);
-//                     } else {
-//                         phoneNumber = '+94' + phoneNumber;
-//                     }
-//                 }
-//                 return {
-//                     ...staff,
-//                     phoneNumber: phoneNumber.replace(/\D/g, '') // Remove non-digit characters
-//                 };
-//             });
-//         }
-
-//         // Insert farm with auto-generated farmIndex
-//         const insertFarmSql = `
-//             INSERT INTO farms 
-//             (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount, imageId)
-//             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-//         `;
-
-//         const farmValues = [
-//             farmData.userId,
-//             farmData.farmName,
-//             nextFarmIndex, // Auto-generated farmIndex
-//             farmData.extentha,
-//             farmData.extentac,
-//             farmData.extentp,
-//             farmData.district,
-//             farmData.plotNo,
-//             farmData.street,
-//             farmData.city,
-//             farmData.staffCount,
-//             farmData.appUserCount,
-//             farmData.farmImage
-//         ];
-
-//         const [farmResult] = await connection.promise().query(insertFarmSql, farmValues);
-//         const farmId = farmResult.insertId;
-//         const staffIds = [];
-
-//         // Insert staff if provided
-//         if (farmData.staff && farmData.staff.length > 0) {
-//             const insertStaffSql = `
-//                 INSERT INTO farmstaff 
-//                 (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image)
-//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-//             `;
-
-//             for (const staff of farmData.staff) {
-//                 const [staffResult] = await connection.promise().query(insertStaffSql, [
-//                     farmData.userId,
-//                     farmId,
-//                     staff.firstName,
-//                     staff.lastName,
-//                     '+94', // Hardcoded as we've formatted the number
-//                     staff.phoneNumber.replace('+94', ''), // Store without country code
-//                     staff.role,
-//                     staff.image || null
-//                 ]);
-//                 staffIds.push(staffResult.insertId);
-//             }
-//         }
-
-//         // Commit transaction
-//         await new Promise((resolve, reject) => {
-//             connection.commit(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         return {
-//             success: true,
-//             farmId,
-//             farmIndex: nextFarmIndex, // Return the generated farmIndex
-//             staffIds,
-//             message: 'Farm and staff created successfully'
-//         };
-
-//     } catch (error) {
-//         // Rollback transaction if connection exists
-//         if (connection) {
-//             await new Promise(resolve => {
-//                 connection.rollback(() => resolve(true));
-//             });
-//         }
-//         console.error('Database error:', error);
-//         throw error;
-
-//     } finally {
-//         // Release connection back to pool
-//         if (connection) {
-//             connection.release();
-//         }
-//     }
-// };
 
 
 exports.createFarmWithStaff = async (farmData) => {
@@ -493,24 +142,7 @@ exports.createFarmWithStaff = async (farmData) => {
     }
 };
 
-// exports.getAllFarmByUserId = async (userId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//         SELECT id,userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount, imageId
-//         FROM farms
-//         WHERE userId = ?
-//         ORDER BY createdAt DESC
-//       `;
-//         db.plantcare.query(query, [userId], (error, results) => {
-//             if (error) {
-//                 console.error("Error fetching farms:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results);
-//             }
-//         });
-//     });
-// };
+
 
 exports.getAllFarmByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
@@ -628,6 +260,7 @@ exports.getMemberShip = async (userId) => {
 };
 
 
+
 exports.createPaymentAndUpdateMembership = async (paymentData) => {
     let connection;
 
@@ -648,7 +281,17 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             });
         });
 
-        // Insert payment record
+        // Check if user has existing payments (for reference/logging)
+        const checkExistingPaymentsSql = `
+            SELECT COUNT(*) as paymentCount 
+            FROM membershippayment 
+            WHERE userId = ?
+        `;
+
+        const [existingPayments] = await connection.promise().query(checkExistingPaymentsSql, [paymentData.userId]);
+        const isFirstPayment = existingPayments[0].paymentCount === 0;
+
+        // Insert new payment record (always create new row)
         const insertPaymentSql = `
             INSERT INTO membershippayment 
             (userId, payment, plan, expireDate, activeStatus)
@@ -665,7 +308,7 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         const [paymentResult] = await connection.promise().query(insertPaymentSql, paymentValues);
         const paymentId = paymentResult.insertId;
 
-        // Update user membership to 'Pro'
+        // Update user membership to 'Pro' (or extend existing Pro membership)
         const updateUserSql = `
             UPDATE users 
             SET membership = 'Pro'
@@ -673,6 +316,7 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         `;
 
         const [userResult] = await connection.promise().query(updateUserSql, [paymentData.userId]);
+
 
         // Commit transaction
         await new Promise((resolve, reject) => {
@@ -686,7 +330,11 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             success: true,
             paymentId,
             userUpdated: userResult.affectedRows > 0,
-            message: 'Payment processed and membership updated successfully'
+            isFirstPayment,
+            totalPayments: existingPayments[0].paymentCount + 1,
+            message: isFirstPayment
+                ? 'First payment processed and membership updated to Pro successfully'
+                : 'Additional payment processed successfully - membership extended'
         };
 
     } catch (error) {
@@ -698,7 +346,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         }
         console.error('Database error:', error);
         throw error;
-
     } finally {
         // Release connection back to pool
         if (connection) {
@@ -711,25 +358,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
 
 ////cultivation
 
-// exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
-//     const sql = `
-//         SELECT * 
-//         FROM ongoingcultivations c 
-//         JOIN ongoingcultivationscrops oc ON c.id = oc.ongoingCultivationId
-//         JOIN cropcalender cc ON oc.cropCalendar = cc.id
-//         JOIN cropvariety cr ON cc.cropVarietyId = cr.id 
-//         WHERE c.userId = ? AND oc.farmId = ?
-//         ORDER BY oc.ongoingCultivationId ASC, oc.cropCalendar ASC, oc.farmId ASC
-//     `;
-
-//     db.plantcare.query(sql, [userId, farmId], (err, results) => {
-//         if (err) {
-//             console.error("Database error:", err);
-//             return callback(err, null);
-//         }
-//         callback(null, results);
-//     });
-// };
 
 exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
     const sql = `
@@ -791,13 +419,13 @@ exports.createOngoingCultivation = (userId) => {
     return query(sql, [userId]);
 };
 
-// Updated: Check crop count for specific farm
+
 exports.checkCropCountByFarm = (cultivationId, farmId) => {
     const sql = "SELECT COUNT(id) as count FROM ongoingcultivationscrops WHERE ongoingCultivationId = ? AND farmId = ?";
     return query(sql, [cultivationId, farmId]);
 };
 
-// Updated: Check enrolled crops for specific farm
+
 exports.checkEnrollCropByFarm = (cultivationId, farmId) => {
     const sql = "SELECT cropCalendar, id FROM ongoingcultivationscrops WHERE ongoingCultivationId = ? AND farmId = ?";
     return query(sql, [cultivationId, farmId]);
@@ -986,7 +614,7 @@ exports.phoneNumberChecker = (phoneNumber) => {
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
         console.log("DAO - formatted phone number:", formattedPhoneNumber);
 
-        // Check both users table and farmstaff table
+
         const checkQuery = `
             SELECT phoneNumber FROM users WHERE phoneNumber = ?
             UNION
@@ -1041,7 +669,7 @@ exports.updateFarm = async (farmData) => {
             });
         });
 
-        // Start transaction
+
         await new Promise((resolve, reject) => {
             connection.beginTransaction(err => {
                 if (err) return reject(err);
@@ -1049,8 +677,7 @@ exports.updateFarm = async (farmData) => {
             });
         });
 
-        // Update farm - Change 'farmId' to your actual primary key column name
-        // Common alternatives: 'id', 'farm_id', 'FarmId'
+
         const updateFarmSql = `
             UPDATE farms 
             SET 
@@ -1081,13 +708,12 @@ exports.updateFarm = async (farmData) => {
             farmData.city,
             farmData.staffCount,
             farmData.farmImage,
-            farmData.farmId, // This should match whatever you're passing from the endpoint
+            farmData.farmId,
             farmData.userId
         ];
 
         const [updateResult] = await connection.promise().query(updateFarmSql, farmValues);
 
-        // Check if any rows were affected
         if (updateResult.affectedRows === 0) {
             throw new Error('No farm was updated. Please check if the farm exists and you have permission to update it.');
         }
@@ -1126,108 +752,6 @@ exports.updateFarm = async (farmData) => {
 };
 
 /////////////
-
-// exports.CreateStaffMember = async (farmData) => {
-//     let connection;
-//     try {
-//         // Get connection from pool
-//         connection = await new Promise((resolve, reject) => {
-//             db.plantcare.getConnection((err, conn) => {
-//                 if (err) return reject(err);
-//                 resolve(conn);
-//             });
-//         });
-
-//         // Start transaction
-//         await new Promise((resolve, reject) => {
-//             connection.beginTransaction(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         // Check if farm exists and user has permission
-//         const checkFarmSql = `SELECT id FROM farms WHERE id = ? AND userId = ?`;
-//         const [farmCheck] = await connection.promise().query(checkFarmSql, [farmData.farmId, farmData.userId]);
-
-//         if (farmCheck.length === 0) {
-//             throw new Error('Farm not found or user does not have permission');
-//         }
-
-//         // Check if staff member already exists (optional - based on your business logic)
-//         const checkStaffSql = `
-//             SELECT id FROM farmstaff 
-//             WHERE farmId = ? AND phoneNumber = ? AND phoneCode = ?
-//         `;
-//         const [existingStaff] = await connection.promise().query(checkStaffSql, [
-//             farmData.farmId,
-//             farmData.phoneNumber,
-//             farmData.countryCode
-//         ]);
-
-//         if (existingStaff.length > 0) {
-//             throw new Error('Staff member with this phone number already exists in this farm');
-//         }
-
-//         // Insert staff member
-//         const insertStaffSql = `
-//             INSERT INTO farmstaff 
-//             (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role)
-//             VALUES (?, ?, ?, ?, ?, ?, ?)
-//         `;
-
-//         const staffValues = [
-//             farmData.userId,
-//             farmData.farmId,
-//             farmData.firstName,
-//             farmData.lastName,
-//             farmData.countryCode, // Note: using countryCode for phoneCode
-//             farmData.phoneNumber,
-//             farmData.role
-//         ];
-
-//         const [insertResult] = await connection.promise().query(insertStaffSql, staffValues);
-//         const staffId = insertResult.insertId;
-
-//         // Get the created staff member data
-//         const getStaffSql = `
-//             SELECT id, ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, createdAt
-//             FROM farmstaff 
-//             WHERE id = ?
-//         `;
-//         const [staffData] = await connection.promise().query(getStaffSql, [staffId]);
-
-//         // Commit transaction
-//         await new Promise((resolve, reject) => {
-//             connection.commit(err => {
-//                 if (err) return reject(err);
-//                 resolve(true);
-//             });
-//         });
-
-//         return {
-//             success: true,
-//             staffId: staffId,
-//             data: staffData[0],
-//             message: 'Staff member created successfully'
-//         };
-
-//     } catch (error) {
-//         // Rollback transaction if connection exists
-//         if (connection) {
-//             await new Promise(resolve => {
-//                 connection.rollback(() => resolve(true));
-//             });
-//         }
-//         console.error('Database error:', error);
-//         throw error;
-//     } finally {
-//         // Release connection back to pool
-//         if (connection) {
-//             connection.release();
-//         }
-//     }
-// };
 
 
 exports.CreateStaffMember = async (farmData) => {
@@ -1390,26 +914,6 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 
 //////////////renew
 
-// exports.getrenew = async (userId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//             SELECT id, userId, expireDate, activeStatus, plan, payment
-//             FROM membershippayment
-//             WHERE userId = ? AND activeStatus = 1
-//             ORDER BY expireDate DESC
-//             LIMIT 1
-//         `;
-
-//         db.plantcare.query(query, [userId], (error, results) => {
-//             if (error) {
-//                 console.error("Error fetching user membership:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results.length > 0 ? results[0] : null);
-//             }
-//         });
-//     });
-// };
 
 // exports.getrenew = async (userId) => {
 //     return new Promise((resolve, reject) => {
@@ -1431,18 +935,19 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 //         });
 //     });
 // };
+
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
             SELECT 
-                f.id, 
-                f.userId, 
-                f.farmName, 
-                f.isBlock, 
-                f.district, 
-                f.city, 
-                f.staffCount, 
-                f.appUserCount, 
+                f.id,
+                f.userId,
+                f.farmName,
+                f.isBlock,
+                f.district,
+                f.city,
+                f.staffCount,
+                f.appUserCount,
                 f.imageId,
                 mp.id AS membershipId,
                 mp.createdAt,
@@ -1452,9 +957,10 @@ exports.getrenew = async (userId) => {
             FROM farms f
             JOIN membershippayment mp ON f.userId = mp.userId
             WHERE f.userId = ?
-            ORDER BY mp.id DESC
+            ORDER BY mp.createdAt DESC
             LIMIT 1
         `;
+
         db.plantcare.query(query, [userId], (error, results) => {
             if (error) {
                 console.error("Error fetching user farm:", error);
@@ -1465,9 +971,6 @@ exports.getrenew = async (userId) => {
         });
     });
 };
-
-
-
 // exports.deleteFarm = (farmId) => {
 //     return new Promise((resolve, reject) => {
 //         // First check if farm exists
@@ -1613,8 +1116,7 @@ exports.deleteFarm = (farmId) => {
                         db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
                             if (err) {
                                 console.error("Error updating farm indexes:", err);
-                                // Even if index update fails, the farm was deleted successfully
-                                // We'll still return true but log the error
+
                                 resolve(true);
                                 return;
                             }
