@@ -80,23 +80,66 @@ exports.checkUserByPhoneNumber = (phoneNumber) => {
     });
 };
 
+// exports.insertUser = (firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage) => {
+//     return new Promise((resolve, reject) => {
+//         const query =
+//             "INSERT INTO users(`firstName`, `lastName`, `phoneNumber`, `NICnumber`, `district`, `language`) VALUES(?, ?, ?, ?,?, ?)";
+//         db.plantcare.query(
+//             query, [firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage],
+//             (err, results) => {
+//                 if (err) {
+//                     reject(err);
+//                 } else {
+//                     resolve(results);
+//                 }
+//             }
+//         );
+//     });
+// };
+
+
 exports.insertUser = (firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage) => {
     return new Promise((resolve, reject) => {
-        const query =
-            "INSERT INTO users(`firstName`, `lastName`, `phoneNumber`, `NICnumber`, `district`, `language`) VALUES(?, ?, ?, ?,?, ?)";
-        db.plantcare.query(
-            query, [firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage],
-            (err, results) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(results);
-                }
+        // Add membership field with default value
+        const query = `
+            INSERT INTO users (
+                firstName, 
+                lastName, 
+                phoneNumber, 
+                NICnumber, 
+                district, 
+                language,
+                membership
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Basic')
+        `;
+
+        const values = [firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage];
+
+        console.log("Inserting user with query:", query);
+        console.log("Values:", values);
+
+        db.plantcare.query(query, values, (err, results) => {
+            if (err) {
+                console.error("Database insertion error:", err);
+                reject(err);
+            } else {
+                console.log("Database insertion success:", results);
+
+                // Verify the user was inserted
+                const verifyQuery = "SELECT * FROM users WHERE id = ?";
+                db.plantcare.query(verifyQuery, [results.insertId], (verifyErr, verifyResults) => {
+                    if (verifyErr) {
+                        console.error("Verification error:", verifyErr);
+                        reject(verifyErr);
+                    } else {
+                        console.log("User verification:", verifyResults);
+                        resolve(results);
+                    }
+                });
             }
-        );
+        });
     });
 };
-
 
 
 exports.getUserProfileById = (userId, ownerId, userrole) => {
