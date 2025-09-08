@@ -159,43 +159,6 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
             // First, check if user exists in users table
             const checkUserSql = "SELECT id, firstName, lastName, membership FROM users WHERE id = ?";
             db.plantcare.query(checkUserSql, [userId], (err, checkResults) => {
-            // const usersSql = `
-            //     SELECT 
-            //         id,
-            //         firstName,
-            //         lastName,
-            //         phoneNumber,
-            //         NICnumber,
-            //         district,
-            //         LEFT(profileImage, 256) as profileImage,
-            //         LEFT(farmerQr, 256) as farmerQr,
-            //         membership,
-            //         activeStatus,
-            //         'Owner' AS role
-            //     FROM users 
-            //     JOIN membershippayment mp ON users.id = mp.userId
-            //     WHERE id = ?
-            // `;
-const usersSql = `
-    SELECT 
-        u.id,
-        u.firstName,
-        u.lastName,
-        u.phoneNumber,
-        u.NICnumber,
-        u.district,
-        LEFT(u.profileImage, 256) AS profileImage,
-        LEFT(u.farmerQr, 256) AS farmerQr,
-        u.membership,
-        mp.activeStatus,
-        'Owner' AS role
-    FROM users u
-    JOIN membershippayment mp ON u.id = mp.userId
-    WHERE u.id = ?
-    ORDER BY mp.id DESC
-    LIMIT 1
-`;
-            db.plantcare.query(usersSql, [userId], (err, userResults) => {
                 if (err) return reject(err);
 
                 console.log("User exists check:", checkResults);
