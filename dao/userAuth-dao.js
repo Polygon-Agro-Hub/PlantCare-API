@@ -67,10 +67,31 @@ exports.loginUser = (phonenumber) => {
     });
 };
 
+// exports.checkUserByPhoneNumber = (phoneNumber) => {
+//     return new Promise((resolve, reject) => {
+//         const query = "SELECT * FROM users WHERE phoneNumber = ?";
+//         db.plantcare.query(query, [phoneNumber], (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
 exports.checkUserByPhoneNumber = (phoneNumber) => {
     return new Promise((resolve, reject) => {
-        const query = "SELECT * FROM users WHERE phoneNumber = ?";
-        db.plantcare.query(query, [phoneNumber], (err, results) => {
+        // Check both users and farmstaff tables
+        const query = `
+            SELECT * FROM users WHERE phoneNumber = ?
+            UNION ALL
+            SELECT * FROM farmstaff WHERE CONCAT('+94', phoneNumber) = ?
+        `;
+
+        const formattedPhoneNumber = `+94${phoneNumber}`;
+
+        db.plantcare.query(query, [phoneNumber, formattedPhoneNumber], (err, results) => {
             if (err) {
                 reject(err);
             } else {
@@ -328,25 +349,88 @@ exports.updateUserPhoneNumber = (userId, newPhoneNumber) => {
     });
 };
 
+// exports.checkSignupDetails = (phoneNumber, NICnumber) => {
+//     return new Promise((resolve, reject) => {
+//         let conditions = [];
+//         let params = [];
+
+//         if (phoneNumber) {
+//             const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
+//             conditions.push("phoneNumber = ?");
+//             params.push(formattedPhoneNumber);
+//         }
+
+//         if (NICnumber) {
+//             conditions.push("NICnumber = ?");
+//             params.push(NICnumber);
+//         }
+
+//         const checkQuery = `SELECT * FROM users WHERE ${conditions.join(" OR ")}`;
+
+//         db.plantcare.query(checkQuery, params, (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
 exports.checkSignupDetails = (phoneNumber, NICnumber) => {
     return new Promise((resolve, reject) => {
-        let conditions = [];
-        let params = [];
+        let queries = [];
+        let allParams = [];
 
+        // Always check both tables when phoneNumber is provided
         if (phoneNumber) {
             const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
-            conditions.push("phoneNumber = ?");
-            params.push(formattedPhoneNumber);
+            const phoneDigits = String(phoneNumber).replace(/^\+94/, "").replace(/^\+/, "");
+
+            // Query users table
+            let userConditions = ["phoneNumber = ?"];
+            let userParams = [formattedPhoneNumber];
+
+            if (NICnumber) {
+                userConditions.push("NICnumber = ?");
+                userParams.push(NICnumber);
+            }
+
+            queries.push(`SELECT id, phoneNumber, NICnumber, 'user' as userType FROM users WHERE ${userConditions.join(" OR ")}`);
+            allParams.push(...userParams);
+
+            // Query farmstaff table
+            let farmstaffConditions = ["phoneNumber = ?"];
+            let farmstaffParams = [phoneDigits];
+
+            if (NICnumber) {
+                farmstaffConditions.push("nic = ?");
+                farmstaffParams.push(NICnumber);
+            }
+
+            queries.push(`SELECT id, phoneNumber, nic as NICnumber, 'farmstaff' as userType FROM farmstaff WHERE ${farmstaffConditions.join(" OR ")}`);
+            allParams.push(...farmstaffParams);
+        }
+        // If only NICnumber is provided (no phoneNumber)
+        else if (NICnumber) {
+            queries.push(`SELECT id, phoneNumber, NICnumber, 'user' as userType FROM users WHERE NICnumber = ?`);
+            allParams.push(NICnumber);
+
+            queries.push(`SELECT id, phoneNumber, nic as NICnumber, 'farmstaff' as userType FROM farmstaff WHERE nic = ?`);
+            allParams.push(NICnumber);
         }
 
-        if (NICnumber) {
-            conditions.push("NICnumber = ?");
-            params.push(NICnumber);
+        if (queries.length === 0) {
+            resolve([]);
+            return;
         }
 
-        const checkQuery = `SELECT * FROM users WHERE ${conditions.join(" OR ")}`;
+        const checkQuery = queries.join(" UNION ALL ");
 
-        db.plantcare.query(checkQuery, params, (err, results) => {
+        console.log("Generated query:", checkQuery);
+        console.log("Query parameters:", allParams);
+
+        db.plantcare.query(checkQuery, allParams, (err, results) => {
             if (err) {
                 reject(err);
             } else {
@@ -355,6 +439,7 @@ exports.checkSignupDetails = (phoneNumber, NICnumber) => {
         });
     });
 };
+
 
 
 exports.updateFirstLastName = (userId, firstName, lastName, buidingname, streetname, city, district) => {
