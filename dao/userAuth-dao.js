@@ -156,7 +156,7 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
         // If role is 'Owner', get data from users table
         if (userrole === 'Owner') {
 
-            // First, check if user exists in users table
+
             const checkUserSql = "SELECT id, firstName, lastName, membership FROM users WHERE id = ?";
             db.plantcare.query(checkUserSql, [userId], (err, checkResults) => {
                 if (err) return reject(err);
