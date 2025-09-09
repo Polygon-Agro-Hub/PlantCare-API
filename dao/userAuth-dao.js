@@ -80,23 +80,54 @@ exports.loginUser = (phonenumber) => {
 //     });
 // };
 
+// exports.checkUserByPhoneNumber = (phoneNumber) => {
+//     return new Promise((resolve, reject) => {
+//         // Check both users and farmstaff tables
+//         const query = `
+//             SELECT * FROM users WHERE phoneNumber = ?
+//             UNION ALL
+//             SELECT * FROM farmstaff WHERE CONCAT('+94', phoneNumber) = ?
+//         `;
+
+//         const formattedPhoneNumber = `+94${phoneNumber}`;
+
+//         db.plantcare.query(query, [phoneNumber, formattedPhoneNumber], (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
 exports.checkUserByPhoneNumber = (phoneNumber) => {
     return new Promise((resolve, reject) => {
-        // Check both users and farmstaff tables
-        const query = `
-            SELECT * FROM users WHERE phoneNumber = ?
-            UNION ALL
-            SELECT * FROM farmstaff WHERE CONCAT('+94', phoneNumber) = ?
-        `;
+        // First check users table
+        const userQuery = `SELECT * FROM users WHERE phoneNumber = ?`;
 
-        const formattedPhoneNumber = `+94${phoneNumber}`;
-
-        db.plantcare.query(query, [phoneNumber, formattedPhoneNumber], (err, results) => {
+        db.plantcare.query(userQuery, [phoneNumber], (err, userResults) => {
             if (err) {
-                reject(err);
-            } else {
-                resolve(results);
+                return reject(err);
             }
+
+            // If user found, return immediately
+            if (userResults.length > 0) {
+                return resolve(userResults);
+            }
+
+            // If no user found, check farmstaff table
+            // Remove the extra +94 prefix that's being added
+            const cleanPhoneNumber = phoneNumber.replace(/^\+94/, ''); // Remove +94 if it exists
+            const farmstaffQuery = `SELECT * FROM farmstaff WHERE phoneNumber = ?`;
+
+            db.plantcare.query(farmstaffQuery, [cleanPhoneNumber], (staffErr, staffResults) => {
+                if (staffErr) {
+                    return reject(staffErr);
+                }
+
+                // Combine results (empty array if no matches found)
+                resolve([...userResults, ...staffResults]);
+            });
         });
     });
 };
