@@ -103,6 +103,8 @@
 const express = require("express");
 const cors = require("cors");
 const { plantcare, collectionofficer, marketPlace, admin } = require("./startup/database");
+const helmet = require("helmet");
+
 
 require("dotenv").config();
 
@@ -115,7 +117,7 @@ const MarketPriceRoutes = require("./routes/marketPriceRoutes");
 const complainRoutes = require("./routes/complainRoutes");
 const heathRoutes = require("./routes/heathRoutes");
 const farmRoutes = require("./routes/farm.routes")
-
+app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
