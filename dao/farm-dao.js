@@ -954,6 +954,84 @@ exports.getrenew = async (userId) => {
 
 
 
+// exports.deleteFarm = (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         // First check if farm exists and get its details
+//         const checkSql = "SELECT id, userId, farmIndex FROM farms WHERE id = ?";
+//         db.plantcare.query(checkSql, [farmId], (err, checkResult) => {
+//             if (err) {
+//                 reject(err);
+//                 return;
+//             }
+//             if (checkResult.length === 0) {
+//                 resolve(false); // Farm doesn't exist
+//                 return;
+//             }
+//             const farmToDelete = checkResult[0];
+//             const { userId, farmIndex } = farmToDelete;
+
+//             // Delete related currentasset records first
+//             const deleteCurrentAssetsSql = "DELETE FROM currentasset WHERE farmId = ?";
+//             db.plantcare.query(deleteCurrentAssetsSql, [farmId], (err, currentAssetDeleteResult) => {
+//                 if (err) {
+//                     console.error("Error deleting currentasset records:", err);
+//                     reject(err);
+//                     return;
+//                 }
+
+//                 console.log(`Deleted ${currentAssetDeleteResult.affectedRows} currentasset records for farm ${farmId}`);
+
+//                 // Delete related fixedasset records
+//                 const deleteFixedAssetsSql = "DELETE FROM fixedasset WHERE farmId = ?";
+//                 db.plantcare.query(deleteFixedAssetsSql, [farmId], (err, fixedAssetDeleteResult) => {
+//                     if (err) {
+//                         console.error("Error deleting fixedasset records:", err);
+//                         reject(err);
+//                         return;
+//                     }
+
+//                     console.log(`Deleted ${fixedAssetDeleteResult.affectedRows} fixedasset records for farm ${farmId}`);
+
+//                     // Delete the farm
+//                     const deleteSql = "DELETE FROM farms WHERE id = ?";
+//                     db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+//                         if (err) {
+//                             console.error("Error deleting farm:", err);
+//                             reject(err);
+//                             return;
+//                         }
+//                         if (deleteResult.affectedRows === 0) {
+//                             resolve(false);
+//                             return;
+//                         }
+
+//                         // Now update farmIndex for remaining farms of the same user
+//                         // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
+//                         const updateIndexSql = `
+//                             UPDATE farms 
+//                             SET farmIndex = farmIndex - 1 
+//                             WHERE userId = ? AND farmIndex > ?
+//                         `;
+//                         db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+//                             if (err) {
+//                                 console.error("Error updating farm indexes:", err);
+
+//                                 resolve(true);
+//                                 return;
+//                             }
+
+//                             console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
+//                             console.log(`${currentAssetDeleteResult.affectedRows} currentasset records were deleted.`);
+//                             console.log(`${fixedAssetDeleteResult.affectedRows} fixedasset records were deleted.`);
+//                             resolve(true);
+//                         });
+//                     });
+//                 });
+//             });
+//         });
+//     });
+// };
+
 exports.deleteFarm = (farmId) => {
     return new Promise((resolve, reject) => {
         // First check if farm exists and get its details
@@ -970,60 +1048,95 @@ exports.deleteFarm = (farmId) => {
             const farmToDelete = checkResult[0];
             const { userId, farmIndex } = farmToDelete;
 
-            // Delete related currentasset records first
-            const deleteCurrentAssetsSql = "DELETE FROM currentasset WHERE farmId = ?";
-            db.plantcare.query(deleteCurrentAssetsSql, [farmId], (err, currentAssetDeleteResult) => {
+            // Step 1: Delete slavecropcalendardays records that reference farmstaff from this farm
+            const deleteSlaveCropCalendarSql = `
+                DELETE scd FROM slavecropcalendardays scd
+                INNER JOIN farmstaff fs ON scd.completedStaffId = fs.id
+                WHERE fs.farmId = ?
+            `;
+            db.plantcare.query(deleteSlaveCropCalendarSql, [farmId], (err, slaveCropDeleteResult) => {
                 if (err) {
-                    console.error("Error deleting currentasset records:", err);
+                    console.error("Error deleting slavecropcalendardays records:", err);
                     reject(err);
                     return;
                 }
+                console.log(`Deleted ${slaveCropDeleteResult.affectedRows} slavecropcalendardays records for farm ${farmId}`);
 
-                console.log(`Deleted ${currentAssetDeleteResult.affectedRows} currentasset records for farm ${farmId}`);
+                // Step 2: Delete any other records that might reference farmstaff
+                // Add more DELETE statements here for other tables that reference farmstaff if they exist
 
-                // Delete related fixedasset records
-                const deleteFixedAssetsSql = "DELETE FROM fixedasset WHERE farmId = ?";
-                db.plantcare.query(deleteFixedAssetsSql, [farmId], (err, fixedAssetDeleteResult) => {
+                // Step 3: Delete farmstaff records
+                const deleteFarmStaffSql = "DELETE FROM farmstaff WHERE farmId = ?";
+                db.plantcare.query(deleteFarmStaffSql, [farmId], (err, farmStaffDeleteResult) => {
                     if (err) {
-                        console.error("Error deleting fixedasset records:", err);
+                        console.error("Error deleting farmstaff records:", err);
                         reject(err);
                         return;
                     }
+                    console.log(`Deleted ${farmStaffDeleteResult.affectedRows} farmstaff records for farm ${farmId}`);
 
-                    console.log(`Deleted ${fixedAssetDeleteResult.affectedRows} fixedasset records for farm ${farmId}`);
-
-                    // Delete the farm
-                    const deleteSql = "DELETE FROM farms WHERE id = ?";
-                    db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+                    // Step 4: Delete currentasset records
+                    const deleteCurrentAssetsSql = "DELETE FROM currentasset WHERE farmId = ?";
+                    db.plantcare.query(deleteCurrentAssetsSql, [farmId], (err, currentAssetDeleteResult) => {
                         if (err) {
-                            console.error("Error deleting farm:", err);
+                            console.error("Error deleting currentasset records:", err);
                             reject(err);
                             return;
                         }
-                        if (deleteResult.affectedRows === 0) {
-                            resolve(false);
-                            return;
-                        }
+                        console.log(`Deleted ${currentAssetDeleteResult.affectedRows} currentasset records for farm ${farmId}`);
 
-                        // Now update farmIndex for remaining farms of the same user
-                        // Decrease farmIndex by 1 for all farms with farmIndex greater than deleted farm's index
-                        const updateIndexSql = `
-                            UPDATE farms 
-                            SET farmIndex = farmIndex - 1 
-                            WHERE userId = ? AND farmIndex > ?
-                        `;
-                        db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+                        // Step 5: Delete fixedasset records
+                        const deleteFixedAssetsSql = "DELETE FROM fixedasset WHERE farmId = ?";
+                        db.plantcare.query(deleteFixedAssetsSql, [farmId], (err, fixedAssetDeleteResult) => {
                             if (err) {
-                                console.error("Error updating farm indexes:", err);
-
-                                resolve(true);
+                                console.error("Error deleting fixedasset records:", err);
+                                reject(err);
                                 return;
                             }
+                            console.log(`Deleted ${fixedAssetDeleteResult.affectedRows} fixedasset records for farm ${farmId}`);
 
-                            console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
-                            console.log(`${currentAssetDeleteResult.affectedRows} currentasset records were deleted.`);
-                            console.log(`${fixedAssetDeleteResult.affectedRows} fixedasset records were deleted.`);
-                            resolve(true);
+                            // Step 6: Delete any other farm-related records here
+                            // Examples might include:
+                            // - crops/plantings associated with the farm
+                            // - farm equipment
+                            // - farm locations/fields
+                            // - farm activities/tasks
+                            // Add more DELETE statements as needed based on your database schema
+
+                            // Step 7: Finally, delete the farm
+                            const deleteSql = "DELETE FROM farms WHERE id = ?";
+                            db.plantcare.query(deleteSql, [farmId], (err, deleteResult) => {
+                                if (err) {
+                                    console.error("Error deleting farm:", err);
+                                    reject(err);
+                                    return;
+                                }
+                                if (deleteResult.affectedRows === 0) {
+                                    resolve(false);
+                                    return;
+                                }
+
+                                // Step 8: Update farmIndex for remaining farms
+                                const updateIndexSql = `
+                                    UPDATE farms 
+                                    SET farmIndex = farmIndex - 1 
+                                    WHERE userId = ? AND farmIndex > ?
+                                `;
+                                db.plantcare.query(updateIndexSql, [userId, farmIndex], (err, updateResult) => {
+                                    if (err) {
+                                        console.error("Error updating farm indexes:", err);
+                                        resolve(true);
+                                        return;
+                                    }
+
+                                    console.log(`Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`);
+                                    console.log(`${slaveCropDeleteResult.affectedRows} slavecropcalendardays records were deleted.`);
+                                    console.log(`${farmStaffDeleteResult.affectedRows} farmstaff records were deleted.`);
+                                    console.log(`${currentAssetDeleteResult.affectedRows} currentasset records were deleted.`);
+                                    console.log(`${fixedAssetDeleteResult.affectedRows} fixedasset records were deleted.`);
+                                    resolve(true);
+                                });
+                            });
                         });
                     });
                 });
