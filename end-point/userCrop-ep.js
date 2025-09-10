@@ -377,12 +377,141 @@ exports.getSlaveCropCalendarPrgress = asyncHandler(async (req, res) => {
     }
 });
 
+// exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
+//     try {
+//         await updateCropCalendarStatusSchema.validateAsync(req.body);
+
+//         const userId = req.user.id;
+//         const ownerId = req.user.ownerId
+
+//         const { id, status } = req.body;
+//         console.log(",,,,,,,,,,,,,,,,,,,", id)
+//         const currentTime = new Date();
+
+//         const taskResults = await cropDao.getTaskById(id);
+//         if (taskResults.length === 0) {
+//             return res
+//                 .status(404)
+//                 .json({ message: "No record found with the provided id." });
+//         }
+
+//         const currentTask = taskResults[0];
+//         const {
+//             taskIndex,
+//             status: currentStatus,
+//             createdAt,
+//             cropCalendarId,
+//             days,
+//             startingDate,
+//         //    userId
+//         } = currentTask;
+
+//         if (currentStatus === "completed" && status === "pending") {
+//             const timeDiffInHours = Math.abs(currentTime - new Date(createdAt)) / 36e5;
+//             if (timeDiffInHours > 1) {
+//                 return res.status(403).json({
+//                     message: "You cannot change the status back to pending after 1 hour of marking it as completed.",
+//                 });
+//             }
+//         }
+//         if (status === "completed" && taskIndex > 1) {
+//             const previousTasksResults = await cropDao.getPreviousTasks(
+//                 taskIndex,
+//                 cropCalendarId,
+//                 userId,
+//                 status
+//             );
+
+//             let allPreviousTasksCompleted = true;
+//             let lastCompletedTask = null;
+//             for (const previousTask of previousTasksResults) {
+//                 if (previousTask.status !== "completed") {
+//                     allPreviousTasksCompleted = false;
+//                     break;
+//                 }
+//                 lastCompletedTask = previousTask;
+//             }
+
+//             if (!allPreviousTasksCompleted) {
+//                 return res
+//                     .status(400)
+//                     .json({
+//                         message: "You have to complete previous tasks before moving to the next.",
+//                     });
+//             }
+
+
+//         }
+
+//         const updateResults = await cropDao.updateTaskStatus(id, status);
+
+//         if (updateResults.affectedRows === 0) {
+//             return res
+//                 .status(404)
+//                 .json({ message: "No record found with the provided id." });
+//         }
+
+//         if (status === "pending") {
+//             cropDao.gettaskImagesByID(id)
+//                 .then((images) => {
+//                     if (!images || images.length === 0) {
+//                     } else {
+//                         if (Array.isArray(images)) {
+//                             images.forEach((img) => {
+//                                 if (img.image) {
+//                                     const imageUrl = img.image;
+//                                     delectfilesOnS3(imageUrl);
+//                                 } else {
+//                                 }
+//                             });
+//                         } else if (images.image) {
+//                             const imageUrl = images.image;
+//                             delectfilesOnS3(imageUrl);
+//                         } else {
+//                             console.log("Image data structure is not as expected:", images);
+//                         }
+//                     }
+
+//                     return cropDao.deleteImagesBySlaveId(id);
+//                 })
+//                 .then((deleteImagesResult) => {
+//                 })
+//                 .catch((error) => {
+//                     console.error("Error deleting images:", error);
+//                     return res.status(500).json({ message: "Error deleting images" });
+//                 })
+//                 .finally(() => {
+//                     if (!res.headersSent) {
+//                         res.status(200).json({ message: "Status updated successfully." });
+//                     }
+//                 });
+//             // cropDao.deleteGeoLocationByTaskId(id);
+//         } else {
+//             if (!res.headersSent) {
+//                 res.status(200).json({ message: "Status updated successfully." });
+//             }
+//         }
+//     } catch (err) {
+//         console.error("Error updating status:", err);
+//         if (err.isJoi) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: err.details[0].message,
+//             });
+//         }
+//         res.status(500).json({ message: "Internal Server Error!" });
+//     }
+// });
+
 exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
     try {
         await updateCropCalendarStatusSchema.validateAsync(req.body);
 
+        const userId = req.user.id;
+        const ownerId = req.user.ownerId;
+
         const { id, status } = req.body;
-        console.log(",,,,,,,,,,,,,,,,,,,", id)
+        console.log(",,,,,,,,,,,,,,,,,,,", id);
         const currentTime = new Date();
 
         const taskResults = await cropDao.getTaskById(id);
@@ -400,7 +529,6 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
             cropCalendarId,
             days,
             startingDate,
-            userId
         } = currentTask;
 
         if (currentStatus === "completed" && status === "pending") {
@@ -411,6 +539,7 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
                 });
             }
         }
+
         if (status === "completed" && taskIndex > 1) {
             const previousTasksResults = await cropDao.getPreviousTasks(
                 taskIndex,
@@ -436,11 +565,10 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
                         message: "You have to complete previous tasks before moving to the next.",
                     });
             }
-
-
         }
 
-        const updateResults = await cropDao.updateTaskStatus(id, status);
+        // Updated call to include userId and ownerId parameters
+        const updateResults = await cropDao.updateTaskStatus(id, status, userId, ownerId);
 
         if (updateResults.affectedRows === 0) {
             return res
@@ -482,7 +610,6 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
                         res.status(200).json({ message: "Status updated successfully." });
                     }
                 });
-            // cropDao.deleteGeoLocationByTaskId(id);
         } else {
             if (!res.headersSent) {
                 res.status(200).json({ message: "Status updated successfully." });

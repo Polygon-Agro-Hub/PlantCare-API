@@ -433,10 +433,34 @@ exports.getPreviousTasks = (taskIndex, cropCalendarId, userId) => {
     });
 };
 
-exports.updateTaskStatus = (id, status) => {
+// exports.updateTaskStatus = (id, status) => {
+//     return new Promise((resolve, reject) => {
+//         const sql = "UPDATE slavecropcalendardays SET status = ?, createdAt = CURRENT_TIMESTAMP WHERE id = ?";
+//         db.plantcare.query(sql, [status, id], (err, results) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
+exports.updateTaskStatus = (id, status, requestUserId, requestUserOwnerId) => {
     return new Promise((resolve, reject) => {
-        const sql = "UPDATE slavecropcalendardays SET status = ?, createdAt = CURRENT_TIMESTAMP WHERE id = ?";
-        db.plantcare.query(sql, [status, id], (err, results) => {
+        let sql, params;
+
+        if (requestUserId === requestUserOwnerId) {
+            // Owner is updating - don't change userId or completedStaffId, just update status and timestamp
+            sql = "UPDATE slavecropcalendardays SET status = ?, createdAt = CURRENT_TIMESTAMP WHERE id = ?";
+            params = [status, id];
+        } else {
+            // Staff member is updating - keep original userId but set completedStaffId to track who completed it
+            sql = "UPDATE slavecropcalendardays SET status = ?, completedStaffId = ?, createdAt = CURRENT_TIMESTAMP WHERE id = ?";
+            params = [status, requestUserId, id];
+        }
+
+        db.plantcare.query(sql, params, (err, results) => {
             if (err) {
                 reject(err);
             } else {

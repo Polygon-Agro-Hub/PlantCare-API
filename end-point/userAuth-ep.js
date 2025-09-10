@@ -130,6 +130,8 @@ exports.SignupUser = asyncHandler(async (req, res) => {
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
 
+        console.log("format phone number", formattedPhoneNumber)
+
         const existingUser = await userAuthDao.checkUserByPhoneNumber(
             formattedPhoneNumber
         );
@@ -264,24 +266,102 @@ exports.updatePhoneNumber = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.signupChecker = asyncHandler(async (req, res) => {
+//     try {
+//         const { phoneNumber, NICnumber } =
+//             await ValidationSchema.signupCheckerSchema.validateAsync(req.body);
+
+//         console.log(";;;;;;;;;;;;;;;;;;;", phoneNumber)
+
+//         const results = await signupDao.checkSignupDetails(phoneNumber, NICnumber);
+
+//         let phoneNumberExists = false;
+//         let NICnumberExists = false;
+
+//         results.forEach((user) => {
+//             if (user.phoneNumber === `+${String(phoneNumber).replace(/^\+/, "")}`) {
+//                 phoneNumberExists = true;
+//             }
+//             if (user.NICnumber === NICnumber) {
+//                 NICnumberExists = true;
+//             }
+//         });
+
+//         if (phoneNumberExists && NICnumberExists) {
+//             return res
+//                 .status(200)
+//                 .json({ message: "This Phone Number and NIC already exist." });
+//         } else if (phoneNumberExists) {
+//             return res
+//                 .status(200)
+//                 .json({ message: "This Phone Number already exists." });
+//         } else if (NICnumberExists) {
+//             return res.status(200).json({ message: "This NIC already exists." });
+//         }
+
+//         res.status(200).json({ message: "Both fields are available!" });
+//     } catch (err) {
+//         console.error("Error in signupChecker:", err);
+
+//         if (err.isJoi) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: err.details[0].message,
+//             });
+//         }
+
+//         res.status(500).json({ message: "Internal Server Error!" });
+//     }
+// });
+
 exports.signupChecker = asyncHandler(async (req, res) => {
     try {
         const { phoneNumber, NICnumber } =
             await ValidationSchema.signupCheckerSchema.validateAsync(req.body);
 
+        console.log("=== DEBUG INFO ===");
+        console.log("Input phoneNumber:", phoneNumber);
+        console.log("Input NICnumber:", NICnumber);
+
         const results = await signupDao.checkSignupDetails(phoneNumber, NICnumber);
+        console.log("Raw results from database:", JSON.stringify(results, null, 2));
 
         let phoneNumberExists = false;
         let NICnumberExists = false;
 
-        results.forEach((user) => {
-            if (user.phoneNumber === `+${String(phoneNumber).replace(/^\+/, "")}`) {
+        const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
+        const phoneDigits = String(phoneNumber).replace(/^\+94/, "").replace(/^\+/, "");
+
+        console.log("Formatted phone for users table:", formattedPhoneNumber);
+        console.log("Phone digits for farmstaff table:", phoneDigits);
+
+        results.forEach((user, index) => {
+            console.log(`\n--- Checking result ${index + 1} ---`);
+            console.log("User data:", JSON.stringify(user, null, 2));
+            console.log("User type:", user.userType);
+            console.log("User phone:", user.phoneNumber);
+            console.log("User NIC:", user.NICnumber || user.nic);
+
+            // Check phone number - simplified logic
+            if (user.userType === 'user' && user.phoneNumber === formattedPhoneNumber) {
                 phoneNumberExists = true;
+                console.log("✅ Phone found in users table");
+            } else if (user.userType === 'farmstaff' && user.phoneNumber === phoneDigits) {
+                phoneNumberExists = true;
+                console.log("✅ Phone found in farmstaff table");
             }
-            if (user.NICnumber === NICnumber) {
+
+            // Check NIC
+            const userNIC = user.NICnumber || user.nic;
+            if (NICnumber && userNIC === NICnumber) {
                 NICnumberExists = true;
+                console.log("✅ NIC found");
             }
         });
+
+        console.log("\n=== FINAL RESULTS ===");
+        console.log("phoneNumberExists:", phoneNumberExists);
+        console.log("NICnumberExists:", NICnumberExists);
 
         if (phoneNumberExists && NICnumberExists) {
             return res
@@ -298,14 +378,12 @@ exports.signupChecker = asyncHandler(async (req, res) => {
         res.status(200).json({ message: "Both fields are available!" });
     } catch (err) {
         console.error("Error in signupChecker:", err);
-
         if (err.isJoi) {
             return res.status(400).json({
                 status: "error",
                 message: err.details[0].message,
             });
         }
-
         res.status(500).json({ message: "Internal Server Error!" });
     }
 });
