@@ -52,6 +52,8 @@ router.get(
 );
 
 
+router.delete('/removeAsset/:category/:assetId', auth, farmEp.deleteAsset);
+
 ///fixAsset
 
 

@@ -317,7 +317,7 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
             });
         }
 
-        else if (['Manager', 'Supervisor', 'Laboror'].includes(userrole)) {
+        else if (['Manager', 'Supervisor', 'Laborer'].includes(userrole)) {
             const farmstaffSql = `
                 SELECT 
                     farmstaff.id,
