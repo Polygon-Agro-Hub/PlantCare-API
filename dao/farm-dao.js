@@ -1268,7 +1268,6 @@ exports.addAssetRecord = async (recordData) => {
 
 
 
-
 exports.getAssetsByCategory = (userId, category, farmId) => {
     return new Promise((resolve, reject) => {
         let query;
@@ -1291,6 +1290,7 @@ exports.getAssetsByCategory = (userId, category, farmId) => {
         });
     });
 };
+
 
 
 

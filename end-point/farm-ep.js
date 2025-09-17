@@ -4,6 +4,9 @@ const { createFarm, createPayment, signupCheckerSchema, updateFarm, createStaffM
 const delectfilesOnS3 = require('../Middlewares/s3delete');
 const delectfloders3 = require('../Middlewares/s3folderdelete')
 const db = require("../startup/database");
+const {
+    getAssetsByCategorySchema,
+} = require("../validations/currentAsset-validation");
 
 
 const {
@@ -810,13 +813,17 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
 
 exports.getAssetsByCategory = asyncHandler(async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
         const { category } = await getAssetsByCategorySchema.validateAsync(
             req.query
         );
         const assets = await farmDao.getAssetsByCategory(userId, category, farmId);
+
+        console.log("hit----------", farmId, category, userId)
+
+        console.log("assetssssssssss", assets)
 
         if (assets.length === 0) {
             return res.status(404).json({
@@ -943,3 +950,92 @@ exports.getFarmName = asyncHandler(async (req, res) => {
         });
     }
 });
+
+
+/////delete
+
+exports.deleteAsset = (req, res) => {
+    const { category, assetId } = req.params;
+    const { numberOfUnits, totalPrice } = req.body;
+    const userId = req.user.ownerId;
+
+    // Validate input
+    if (!numberOfUnits || numberOfUnits <= 0) {
+        return res.status(400).json({ message: 'Invalid number of units.' });
+    }
+
+    if (!totalPrice || totalPrice <= 0) {
+        return res.status(400).json({ message: 'Invalid total price.' });
+    }
+
+    db.plantcare.execute('SELECT * FROM currentasset WHERE userId = ? AND category = ? AND id = ?', [userId, category, assetId], (err, results) => {
+        if (err) {
+            console.error('Error retrieving asset:', err);
+            return res.status(500).json({ message: 'Server error.' });
+        }
+
+        if (!results.length) {
+            return res.status(404).json({ message: 'Asset not found.' });
+        }
+
+        const currentAsset = results[0];
+        const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
+        const newTotal = currentAsset.total - totalPrice;
+
+        // Validation checks
+        if (numberOfUnits > currentAsset.numOfUnit) {
+            return res.status(400).json({ message: 'Cannot remove more units than available.' });
+        }
+
+        if (totalPrice > currentAsset.total) {
+            return res.status(400).json({ message: 'Cannot remove more value than available.' });
+        }
+
+        if (newNumOfUnit < 0 || newTotal < 0) {
+            return res.status(400).json({ message: 'Invalid operation: insufficient units or value.' });
+        }
+
+        // FIRST: Insert the record while the asset still exists
+        db.plantcare.execute(
+            'INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice) VALUES (?, 0, ?, ?)',
+            [currentAsset.id, numberOfUnits, totalPrice],
+            (recordErr) => {
+                if (recordErr) {
+                    console.error('Error adding asset record:', recordErr);
+                    return res.status(500).json({ message: 'Failed to record transaction.' });
+                }
+
+                // THEN: Delete or update the asset
+                if (newNumOfUnit === 0 && newTotal === 0) {
+                    // Delete the entire asset
+                    db.plantcare.execute(
+                        'DELETE FROM currentasset WHERE userId = ? AND category = ? AND id = ?',
+                        [userId, category, assetId],
+                        (deleteErr) => {
+                            if (deleteErr) {
+                                console.error('Error deleting asset:', deleteErr);
+                                return res.status(500).json({ message: 'Failed to delete asset.' });
+                            }
+
+                            res.status(200).json({ message: 'Asset removed successfully.' });
+                        }
+                    );
+                } else {
+                    // Update the asset with new values
+                    db.plantcare.execute(
+                        'UPDATE currentasset SET numOfUnit = ?, total = ? WHERE userId = ? AND category = ? AND id = ?',
+                        [newNumOfUnit, newTotal, userId, category, assetId],
+                        (updateErr) => {
+                            if (updateErr) {
+                                console.error('Error updating asset:', updateErr);
+                                return res.status(500).json({ message: 'Failed to update asset.' });
+                            }
+
+                            res.status(200).json({ message: 'Asset updated successfully.' });
+                        }
+                    );
+                }
+            }
+        );
+    });
+};
