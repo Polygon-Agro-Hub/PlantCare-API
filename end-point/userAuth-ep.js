@@ -12,6 +12,7 @@ const delectfloders3 = require('../Middlewares/s3folderdelete')
 
 exports.loginUser = async (req, res) => {
     console.log("hittt")
+    console.log("Incoming request IP:", req.ip);
     try {
         const { phonenumber } = await ValidationSchema.loginUserSchema.validateAsync(req.body);
         const users = await userAuthDao.loginUser(phonenumber);
