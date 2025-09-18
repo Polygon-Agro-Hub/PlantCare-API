@@ -569,9 +569,85 @@ exports.uploadProfileImage = async (req, res) => {
     }
 };
 
+// exports.deleteUser = async (req, res) => {
+//     try {
+//         const userId = req.user?.id;
+
+//         console.log("delete farm")
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: "User ID is required.",
+//             });
+//         }
+//         console.log("delete farm", userId)
+
+//         const userdetailsresult = await userAuthDao.getUserProfileById(userId);
+//         console.log("111111111111")
+
+//         console.log("hitttttt", userdetailsresult)
+
+//         if (!userdetailsresult) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "User not found.",
+//             });
+//         }
+
+//         const firstname = userdetailsresult.firstName;
+//         const lastname = userdetailsresult.lastName;
+
+//         console.log("2222222222222")
+
+//         const deleteuserResult = await userAuthDao.savedeletedUser(firstname, lastname);
+
+//         console.log("333333333333")
+
+//         const deletedUserId = deleteuserResult.insertId;
+
+//         const { feedbackIds } = req.body;
+
+//         for (const feedbackId of feedbackIds) {
+//             await userAuthDao.saveUserFeedback({
+//                 feedbackId,
+//                 deletedUserId,
+//             });
+//         }
+
+//         console.log("44444444444444")
+//         const deleteResult = await userAuthDao.deleteUserById(userId);
+
+//         console.log("5555555555555555")
+
+//         if (!deleteResult || deleteResult.affectedRows === 0) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "User not found or already deleted.",
+//             });
+//         }
+//         console.log("6666666666")
+
+//         return res.status(200).json({
+//             status: "success",
+//             message: "User account deleted successfully.",
+//         });
+//     } catch (err) {
+//         console.error("Error deleting user:", err);
+
+//         return res.status(500).json({
+//             status: "error",
+//             message: "Internal server error. Please try again later.",
+//         });
+//     }
+// };
+
 exports.deleteUser = async (req, res) => {
     try {
         const userId = req.user?.id;
+        const userRole = req.user?.role || 'Owner'; // Get user role from auth middleware
+
+        console.log("delete user", userId, "role:", userRole);
 
         if (!userId) {
             return res.status(400).json({
@@ -580,7 +656,9 @@ exports.deleteUser = async (req, res) => {
             });
         }
 
-        const userdetailsresult = await userAuthDao.getUserProfileById(userId);
+        // Pass all required parameters to getUserProfileById
+        const userdetailsresult = await userAuthDao.getUserProfileById(userId, userId, userRole);
+        console.log("User details result:", userdetailsresult);
 
         if (!userdetailsresult) {
             return res.status(404).json({
@@ -592,19 +670,22 @@ exports.deleteUser = async (req, res) => {
         const firstname = userdetailsresult.firstName;
         const lastname = userdetailsresult.lastName;
 
+        console.log("Saving deleted user record");
         const deleteuserResult = await userAuthDao.savedeletedUser(firstname, lastname);
-
         const deletedUserId = deleteuserResult.insertId;
 
+        // Save feedback if provided
         const { feedbackIds } = req.body;
-
-        for (const feedbackId of feedbackIds) {
-            await userAuthDao.saveUserFeedback({
-                feedbackId,
-                deletedUserId,
-            });
+        if (feedbackIds && Array.isArray(feedbackIds)) {
+            for (const feedbackId of feedbackIds) {
+                await userAuthDao.saveUserFeedback({
+                    feedbackId,
+                    deletedUserId,
+                });
+            }
         }
 
+        console.log("Deleting user from database");
         const deleteResult = await userAuthDao.deleteUserById(userId);
 
         if (!deleteResult || deleteResult.affectedRows === 0) {
@@ -620,7 +701,6 @@ exports.deleteUser = async (req, res) => {
         });
     } catch (err) {
         console.error("Error deleting user:", err);
-
         return res.status(500).json({
             status: "error",
             message: "Internal server error. Please try again later.",
