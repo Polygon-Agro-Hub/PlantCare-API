@@ -441,7 +441,11 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
                     farmstaff.id,
                     farmstaff.firstName,
                     farmstaff.lastName,
-                    farmstaff.phoneNumber,
+                     CASE 
+                        WHEN farmstaff.phoneNumber IS NOT NULL AND farmstaff.phoneNumber != '' 
+                        THEN CONCAT(farmstaff.phoneCode, farmstaff.phoneNumber)
+                        ELSE farmstaff.phoneNumber
+                    END as phoneNumber,
                     LEFT(farmstaff.Image, 256) as profileImage,
                     LEFT(users.farmerQr, 256) as farmerQr, 
                     farmstaff.role,
