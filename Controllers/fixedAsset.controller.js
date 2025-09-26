@@ -507,7 +507,8 @@ exports.getFixedAssetsByCategory = (req, res) => {
 
 
 exports.getFixedAssetDetailsById = (req, res) => {
-    const userId = req.user.id;
+    //const userId = req.user.id;
+    const userId = req.user.ownerId
     const { assetId, category } = req.params;
 
     db.plantcare.getConnection((err, connection) => {
