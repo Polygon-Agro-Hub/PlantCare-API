@@ -661,9 +661,10 @@ exports.getFixedAssetDetailsById = (req, res) => {
 
 
 exports.updateFixedAsset = (req, res) => {
-    const userId = req.user.id;
+    //  const userId = req.user.id;
     const { assetId, category } = req.params;
     const assetData = req.body;
+    const userId = req.user.ownerId;
 
     // Start a transaction
     db.plantcare.getConnection((err, connection) => {
