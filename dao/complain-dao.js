@@ -56,7 +56,7 @@ exports.countComplaintsByDate = async (date) => {
 exports.getAllComplaintsByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
-        SELECT id, language, complain, status, createdAt, complainCategory , reply, refNo
+        SELECT id, language, complain, status, createdAt, complainCategory , reply, refNo , replyTime
         FROM farmercomplains 
         WHERE farmerId = ?
         ORDER BY createdAt DESC
