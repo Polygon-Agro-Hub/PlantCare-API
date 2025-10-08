@@ -1,8 +1,10 @@
 const db = require('../startup/database');
 
-const getAllMarketData = (userId) => {
+
+const getAllMarketData = (userId, farmId) => {
   return new Promise((resolve, reject) => {
-    const sql = `
+    // Base query
+    let sql = `
     SELECT 
       mp.varietyId, 
       mp.price, 
@@ -17,10 +19,18 @@ const getAllMarketData = (userId) => {
     JOIN cropcalender cc ON ocs.cropCalendar = cc.id
     JOIN cropvariety cv ON cc.cropVarietyId = cv.id
     JOIN collection_officer.marketprice mp ON cv.id = mp.varietyId
-    WHERE oc.userId = ?;
+    WHERE oc.userId = ?
     `;
 
-    db.plantcare.query(sql, [userId], (err, results) => {
+    const params = [userId];
+
+
+    if (farmId) {
+      sql += ` AND ocs.farmId = ?`;
+      params.push(farmId);
+    }
+
+    db.plantcare.query(sql, params, (err, results) => {
       if (err) {
         console.error('Query Error:', err.message);
         reject(new Error('Error executing query. Check logs for details.'));

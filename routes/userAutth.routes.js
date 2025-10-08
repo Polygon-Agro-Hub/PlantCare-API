@@ -3,6 +3,17 @@ const auth = require("../Middlewares/auth.middleware");
 const userAuthEp = require("../end-point/userAuth-ep");
 const router = express.Router();
 const upload = require('../Middlewares/multer.middleware');
+const rateLimit = require('express-rate-limit');
+
+const authLimiter = rateLimit({
+    windowMs:30 * 60 * 1000, // 15 minutes
+    max: 3, // Limit each IP to 100 requests per windowMs
+handler: (req, res /*, next*/) => {
+        return res.status(429).json({
+            status: "error",
+            message: "User is blocked"
+        });
+    }}); 
 
 router.post("/user-register", userAuthEp.SignupUser);
 

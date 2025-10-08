@@ -4,9 +4,9 @@ const router = express.Router();
 const userCrop = require("../end-point/userCrop-ep");
 
 router.get("/get-all-crop/:categorie", userCrop.getCropByCategory);
-router.get("/get-all-crop-bydistrict/:categorie/:district", userCrop.getCropByDistrict), 
+router.get("/get-all-crop-bydistrict/:categorie/:district", userCrop.getCropByDistrict),
 
-router.get("/crop-feed/:cropid", auth, userCrop.CropCalanderFeed);
+  router.get("/crop-feed/:cropid", auth, userCrop.CropCalanderFeed);
 
 router.get("/get-crop-variety/:id", userCrop.getCropVariety);
 
@@ -21,13 +21,13 @@ router.get("/get-user-ongoingculscrops/:id", userCrop.getOngoingCultivationCropB
 router.post("/update-ongoingcultivation", auth, userCrop.UpdateOngoingCultivationScrops);
 
 router.get(
-  "/slave-crop-calendar/:cropCalendarId",
+  "/slave-crop-calendar/:cropCalendarId/:farmId",
   auth,
   userCrop.getSlaveCropCalendarDaysByUserAndCrop
 );
 
 router.get(
-  "/slave-crop-calendar-progress/:cropCalendarId",
+  "/slave-crop-calendar-progress/:cropCalendarId/:farmId",
   auth,
   userCrop.getSlaveCropCalendarPrgress
 );
@@ -37,5 +37,7 @@ router.get("/get-uploaded-images-count/:cropId", auth, userCrop.getUploadedImage
 router.post("/update-slave", auth, userCrop.updateCropCalendarStatus);
 
 router.post("/geo-location", userCrop.addGeoLocation);
+
+router.get("/get-task-image/:slaveId", auth, userCrop.getTaskImage);
 
 module.exports = router;

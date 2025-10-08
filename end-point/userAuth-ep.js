@@ -7,9 +7,12 @@ const signupDao = require('../dao/userAuth-dao');
 const ValidationSchema = require('../validations/userAuth-validation')
 const uploadFileToS3 = require('../Middlewares/s3upload');
 const delectfilesOnS3 = require('../Middlewares/s3delete')
+const delectfloders3 = require('../Middlewares/s3folderdelete')
+
 
 exports.loginUser = async (req, res) => {
     console.log("hittt")
+    console.log("Incoming request IP:", req.ip);
     try {
         const { phonenumber } = await ValidationSchema.loginUserSchema.validateAsync(req.body);
         const users = await userAuthDao.loginUser(phonenumber);
@@ -22,17 +25,36 @@ exports.loginUser = async (req, res) => {
         }
 
         const user = users[0];
+        console.log("user", user)
 
-        const token = jwt.sign({ id: user.id, phoneNumber: user.phoneNumber },
+        const token = jwt.sign({
+            id: user.id, phoneNumber: user.phoneNumber, membership: user.membership, ownerId: user.ownerId, role: user.role, farmId: user.farmId
+
+        },
             process.env.JWT_SECRET || Tl, {
             expiresIn: "8h",
         }
+
         );
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "Tl");
+        const { membership, paymentActiveStatus, farmCount } = decoded;
+        console.log("decodeeeeeeeee", decoded)
+
+
+        console.log("------token----------", token)
 
         res.status(200).json({
             status: "success",
             message: "Login successful",
             token,
+            user: {
+                membership: user.membership,
+                paymentActiveStatus: user.paymentActiveStatus,
+                farmCount: user.farmCount,
+                role: user.role,
+                farmId: user.farmId
+            }
         });
     } catch (err) {
         console.error("hi.... Error:", err);
@@ -49,6 +71,57 @@ exports.loginUser = async (req, res) => {
 };
 
 
+// exports.SignupUser = asyncHandler(async (req, res) => {
+//     try {
+//         const { firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage } =
+//             await ValidationSchema.signupUserSchema.validateAsync(req.body);
+
+//         console.log("Signup User Data:", req.body);
+
+//         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
+
+
+//         const existingUser = await userAuthDao.checkUserByPhoneNumber(
+//             formattedPhoneNumber
+//         );
+
+//         if (existingUser.length > 0) {
+//             return res.status(400).json({
+//                 message: "This mobile number exists in the database, please try another number!",
+//             });
+//         }
+
+//         const result = await userAuthDao.insertUser(
+//             firstName,
+//             lastName,
+//             formattedPhoneNumber,
+//             NICnumber,
+//             district,
+//             farmerLanguage
+//         );
+
+//         const payload = {
+//             id: result.insertId,
+//             phoneNumber: formattedPhoneNumber,
+//         };
+//         const token = jwt.sign(payload, process.env.JWT_SECRET, {
+//             expiresIn: "24h",
+//         });
+
+//         res.status(200).json({
+//             message: "User registered successfully!",
+//             result,
+//             token,
+//         });
+//     } catch (err) {
+//         console.error("Error in SignUp:", err);
+//         if (err.isJoi) {
+//             return res.status(400).json({ message: err.details[0].message });
+//         }
+//         res.status(500).json({ message: "Internal Server Error!" });
+//     }
+// });
+
 exports.SignupUser = asyncHandler(async (req, res) => {
     try {
         const { firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage } =
@@ -58,7 +131,8 @@ exports.SignupUser = asyncHandler(async (req, res) => {
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
 
-        // Check if the phone number already exists in the database
+        console.log("format phone number", formattedPhoneNumber)
+
         const existingUser = await userAuthDao.checkUserByPhoneNumber(
             formattedPhoneNumber
         );
@@ -78,18 +152,41 @@ exports.SignupUser = asyncHandler(async (req, res) => {
             farmerLanguage
         );
 
+        console.log("User insertion result:", result);
+        const newUserId = result.insertId;
+
+        // Create COMPLETE JWT payload like in login
         const payload = {
-            id: result.insertId,
+            id: newUserId,
             phoneNumber: formattedPhoneNumber,
+            membership: 'Basic',        // ✅ Add default membership
+            ownerId: newUserId,         // ✅ Add ownerId (same as id for owners)
+            role: 'Owner',              // ✅ Add default role
+            farmId: null                // ✅ Add farmId (null for new users)
         };
+
+        console.log("JWT Payload:", payload);
+
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: "24h",
         });
+
+        // Verify token creation
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Decoded signup token:", decoded);
 
         res.status(200).json({
             message: "User registered successfully!",
             result,
             token,
+            user: {
+                id: newUserId,
+                firstName,
+                lastName,
+                phoneNumber: formattedPhoneNumber,
+                membership: 'Basic',
+                role: 'Owner'
+            }
         });
     } catch (err) {
         console.error("Error in SignUp:", err);
@@ -100,11 +197,21 @@ exports.SignupUser = asyncHandler(async (req, res) => {
     }
 });
 
+
+
+
 exports.getProfileDetails = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
+        const ownerId = req.user.ownerId
+        const userrole = req.user.role
+
+        console.log("iiiiiiiiiiiiiiiiiii", userId, ownerId, userrole)
+
         // Retrieve user profile from the database using the DAO function
-        const user = await userProfileDao.getUserProfileById(userId);
+        const user = await userProfileDao.getUserProfileById(userId, ownerId, userrole);
+
+        console.log("usetttt", user)
 
         if (!user) {
             return res.status(404).json({
@@ -113,9 +220,19 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
             });
         }
 
+        // Extract the additional fields from the user object
+        const { id, membership, paymentActiveStatus, farmCount, role, ...userProfile } = user;
+
         res.status(200).json({
             status: "success",
-            user: user,
+            user: userProfile,
+            usermembership: {
+                id: id,
+                membership: membership,
+                paymentActiveStatus: paymentActiveStatus,
+                farmCount: farmCount,
+                role: role
+            }
         });
     } catch (err) {
         console.error("Error fetching profile details:", err);
@@ -150,24 +267,102 @@ exports.updatePhoneNumber = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.signupChecker = asyncHandler(async (req, res) => {
+//     try {
+//         const { phoneNumber, NICnumber } =
+//             await ValidationSchema.signupCheckerSchema.validateAsync(req.body);
+
+//         console.log(";;;;;;;;;;;;;;;;;;;", phoneNumber)
+
+//         const results = await signupDao.checkSignupDetails(phoneNumber, NICnumber);
+
+//         let phoneNumberExists = false;
+//         let NICnumberExists = false;
+
+//         results.forEach((user) => {
+//             if (user.phoneNumber === `+${String(phoneNumber).replace(/^\+/, "")}`) {
+//                 phoneNumberExists = true;
+//             }
+//             if (user.NICnumber === NICnumber) {
+//                 NICnumberExists = true;
+//             }
+//         });
+
+//         if (phoneNumberExists && NICnumberExists) {
+//             return res
+//                 .status(200)
+//                 .json({ message: "This Phone Number and NIC already exist." });
+//         } else if (phoneNumberExists) {
+//             return res
+//                 .status(200)
+//                 .json({ message: "This Phone Number already exists." });
+//         } else if (NICnumberExists) {
+//             return res.status(200).json({ message: "This NIC already exists." });
+//         }
+
+//         res.status(200).json({ message: "Both fields are available!" });
+//     } catch (err) {
+//         console.error("Error in signupChecker:", err);
+
+//         if (err.isJoi) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: err.details[0].message,
+//             });
+//         }
+
+//         res.status(500).json({ message: "Internal Server Error!" });
+//     }
+// });
+
 exports.signupChecker = asyncHandler(async (req, res) => {
     try {
         const { phoneNumber, NICnumber } =
             await ValidationSchema.signupCheckerSchema.validateAsync(req.body);
 
+        console.log("=== DEBUG INFO ===");
+        console.log("Input phoneNumber:", phoneNumber);
+        console.log("Input NICnumber:", NICnumber);
+
         const results = await signupDao.checkSignupDetails(phoneNumber, NICnumber);
+        console.log("Raw results from database:", JSON.stringify(results, null, 2));
 
         let phoneNumberExists = false;
         let NICnumberExists = false;
 
-        results.forEach((user) => {
-            if (user.phoneNumber === `+${String(phoneNumber).replace(/^\+/, "")}`) {
+        const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
+        const phoneDigits = String(phoneNumber).replace(/^\+94/, "").replace(/^\+/, "");
+
+        console.log("Formatted phone for users table:", formattedPhoneNumber);
+        console.log("Phone digits for farmstaff table:", phoneDigits);
+
+        results.forEach((user, index) => {
+            console.log(`\n--- Checking result ${index + 1} ---`);
+            console.log("User data:", JSON.stringify(user, null, 2));
+            console.log("User type:", user.userType);
+            console.log("User phone:", user.phoneNumber);
+            console.log("User NIC:", user.NICnumber || user.nic);
+
+            // Check phone number - simplified logic
+            if (user.userType === 'user' && user.phoneNumber === formattedPhoneNumber) {
                 phoneNumberExists = true;
+                console.log("✅ Phone found in users table");
+            } else if (user.userType === 'farmstaff' && user.phoneNumber === phoneDigits) {
+                phoneNumberExists = true;
+                console.log("✅ Phone found in farmstaff table");
             }
-            if (user.NICnumber === NICnumber) {
+
+            // Check NIC
+            const userNIC = user.NICnumber || user.nic;
+            if (NICnumber && userNIC === NICnumber) {
                 NICnumberExists = true;
+                console.log("✅ NIC found");
             }
         });
+
+        console.log("\n=== FINAL RESULTS ===");
+        console.log("phoneNumberExists:", phoneNumberExists);
+        console.log("NICnumberExists:", NICnumberExists);
 
         if (phoneNumberExists && NICnumberExists) {
             return res
@@ -184,14 +379,12 @@ exports.signupChecker = asyncHandler(async (req, res) => {
         res.status(200).json({ message: "Both fields are available!" });
     } catch (err) {
         console.error("Error in signupChecker:", err);
-
         if (err.isJoi) {
             return res.status(400).json({
                 status: "error",
                 message: err.details[0].message,
             });
         }
-
         res.status(500).json({ message: "Internal Server Error!" });
     }
 });
@@ -199,9 +392,7 @@ exports.signupChecker = asyncHandler(async (req, res) => {
 exports.updateFirstLastName = asyncHandler(async (req, res) => {
     try {
         console.log("Hitt update")
-        // const { firstName, lastName, buidingname, streetname, city , district } =
-        // await ValidationSchema.updateFirstLastNameSchema.validateAsync(req.body);
-        // console.log("Hiiii")
+
 
         const sanitizedBody = Object.fromEntries(
             Object.entries(req.body).map(([key, value]) => [key, value === "" ? null : value])
@@ -267,6 +458,7 @@ exports.registerBankDetails = async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
+    const ownerId = req.user.ownerId;
 
     try {
         const bankDetailsExist = await userAuthDao.checkBankDetailsExist(userId);
@@ -287,7 +479,7 @@ exports.registerBankDetails = async (req, res) => {
             );
 
             await new Promise((resolve, reject) => {
-                userAuthDao.createQrCode(userId)
+                userAuthDao.createQrCode(userId, ownerId)
                     .then(successMessage => {
                         console.log("QR code created successfully:", successMessage);
                         resolve(successMessage);
@@ -309,7 +501,7 @@ exports.registerBankDetails = async (req, res) => {
                 },
             });
         } catch (transactionErr) {
-            // Rollback the transaction on error
+
             await db.plantcare.promise().rollback();
             console.error("Error during transaction:", transactionErr);
             return res.status(500).json({
@@ -330,6 +522,8 @@ exports.registerBankDetails = async (req, res) => {
 exports.uploadProfileImage = async (req, res) => {
     try {
         const userId = req.user.id;
+        const ownerId = req.user.ownerId
+        console.log("ownerID", ownerId)
 
         // console.log("R2_ACCOUNT_ID", process.env.R2_ACCOUNT_ID);
         // console.log("R2_BUCKET_NAME", process.env.R2_BUCKET_NAME);
@@ -343,13 +537,15 @@ exports.uploadProfileImage = async (req, res) => {
             delectfilesOnS3(existingProfileImage);
         }
 
+        // await delectfloders3(`users/profile-images/owner${ownerId}/user${userId}`)
+
         let profileImageUrl = null;
 
         if (req.file) {
             const fileName = req.file.originalname;
             const imageBuffer = req.file.buffer;
 
-            const uploadedImage = await uploadFileToS3(imageBuffer, fileName, "users/profile-images");
+            const uploadedImage = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/user${userId}`);
             profileImageUrl = uploadedImage;
         } else {
         }
@@ -374,9 +570,85 @@ exports.uploadProfileImage = async (req, res) => {
     }
 };
 
+// exports.deleteUser = async (req, res) => {
+//     try {
+//         const userId = req.user?.id;
+
+//         console.log("delete farm")
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: "User ID is required.",
+//             });
+//         }
+//         console.log("delete farm", userId)
+
+//         const userdetailsresult = await userAuthDao.getUserProfileById(userId);
+//         console.log("111111111111")
+
+//         console.log("hitttttt", userdetailsresult)
+
+//         if (!userdetailsresult) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "User not found.",
+//             });
+//         }
+
+//         const firstname = userdetailsresult.firstName;
+//         const lastname = userdetailsresult.lastName;
+
+//         console.log("2222222222222")
+
+//         const deleteuserResult = await userAuthDao.savedeletedUser(firstname, lastname);
+
+//         console.log("333333333333")
+
+//         const deletedUserId = deleteuserResult.insertId;
+
+//         const { feedbackIds } = req.body;
+
+//         for (const feedbackId of feedbackIds) {
+//             await userAuthDao.saveUserFeedback({
+//                 feedbackId,
+//                 deletedUserId,
+//             });
+//         }
+
+//         console.log("44444444444444")
+//         const deleteResult = await userAuthDao.deleteUserById(userId);
+
+//         console.log("5555555555555555")
+
+//         if (!deleteResult || deleteResult.affectedRows === 0) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "User not found or already deleted.",
+//             });
+//         }
+//         console.log("6666666666")
+
+//         return res.status(200).json({
+//             status: "success",
+//             message: "User account deleted successfully.",
+//         });
+//     } catch (err) {
+//         console.error("Error deleting user:", err);
+
+//         return res.status(500).json({
+//             status: "error",
+//             message: "Internal server error. Please try again later.",
+//         });
+//     }
+// };
+
 exports.deleteUser = async (req, res) => {
     try {
         const userId = req.user?.id;
+        const userRole = req.user?.role || 'Owner'; // Get user role from auth middleware
+
+        console.log("delete user", userId, "role:", userRole);
 
         if (!userId) {
             return res.status(400).json({
@@ -385,7 +657,9 @@ exports.deleteUser = async (req, res) => {
             });
         }
 
-        const userdetailsresult = await userAuthDao.getUserProfileById(userId);
+        // Pass all required parameters to getUserProfileById
+        const userdetailsresult = await userAuthDao.getUserProfileById(userId, userId, userRole);
+        console.log("User details result:", userdetailsresult);
 
         if (!userdetailsresult) {
             return res.status(404).json({
@@ -397,19 +671,22 @@ exports.deleteUser = async (req, res) => {
         const firstname = userdetailsresult.firstName;
         const lastname = userdetailsresult.lastName;
 
+        console.log("Saving deleted user record");
         const deleteuserResult = await userAuthDao.savedeletedUser(firstname, lastname);
-
         const deletedUserId = deleteuserResult.insertId;
 
+        // Save feedback if provided
         const { feedbackIds } = req.body;
-
-        for (const feedbackId of feedbackIds) {
-            await userAuthDao.saveUserFeedback({
-                feedbackId,
-                deletedUserId,
-            });
+        if (feedbackIds && Array.isArray(feedbackIds)) {
+            for (const feedbackId of feedbackIds) {
+                await userAuthDao.saveUserFeedback({
+                    feedbackId,
+                    deletedUserId,
+                });
+            }
         }
 
+        console.log("Deleting user from database");
         const deleteResult = await userAuthDao.deleteUserById(userId);
 
         if (!deleteResult || deleteResult.affectedRows === 0) {
@@ -425,7 +702,6 @@ exports.deleteUser = async (req, res) => {
         });
     } catch (err) {
         console.error("Error deleting user:", err);
-
         return res.status(500).json({
             status: "error",
             message: "Internal server error. Please try again later.",

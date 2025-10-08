@@ -15,4 +15,6 @@ router.put('/fixedasset/:assetId/:category', authMiddleware, updateFixedAsset);
 router.delete('/fixedasset/:assetId/:category', authMiddleware, deleteFixedAsset);
 
 
+
+
 module.exports = router;

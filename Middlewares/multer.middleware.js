@@ -1,8 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 
-// Multer configuration for file uploads
-const storage = multer.memoryStorage(); // Store files in memory (Buffer)
+
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
@@ -15,7 +15,7 @@ const upload = multer({
         if (mimetype && extname) {
             return cb(null, true);
         } else {
-            return cb(new Error('Only images are allowed')); // Ensure to return error
+            return cb(new Error('Only images are allowed'));
         }
     }
 });
@@ -29,7 +29,7 @@ const errorsHandler = (err, req, res, next) => {
     } else if (err) {
         return res.status(400).send(err.message); // Handle other validation errors
     }
-    next(); // Proceed to the next middleware if no error
+    next();
 };
 
 module.exports = upload; // Export both upload and error handler]

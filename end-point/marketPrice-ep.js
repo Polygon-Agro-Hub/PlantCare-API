@@ -2,9 +2,13 @@ const asyncHandler = require("express-async-handler");
 const { getAllMarketSchema } = require("../validations/marketPrice-validation");
 const { getAllMarketData } = require("../dao/marketPrice-dao");
 
+
+
 exports.getAllMarket = asyncHandler(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
+    const staffId = req.user.id;
+    const farmId = req.user.farmId;
     const { error } = getAllMarketSchema.validate(req.query);
     if (error) {
       return res
@@ -12,11 +16,12 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
         .json({ status: "error", message: error.details[0].message });
     }
 
-    const results = await getAllMarketData(userId);
+    const isOwner = userId === staffId;
+    const results = await getAllMarketData(userId, isOwner ? null : farmId);
 
     const groupedData = {};
     results.forEach((row) => {
-      if (row.price == null || isNaN(row.price)) return; 
+      if (row.price == null || isNaN(row.price)) return;
 
       const varietyId = row.varietyId;
       if (!groupedData[varietyId]) {
@@ -31,7 +36,7 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
           count: 0,
         };
       }
-      groupedData[varietyId].totalPrice += parseFloat(row.price); 
+      groupedData[varietyId].totalPrice += parseFloat(row.price);
       groupedData[varietyId].count += 1;
     });
 
@@ -42,7 +47,7 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
       varietyNameTamil: item.varietyNameTamil,
       bgColor: item.bgColor,
       image: item.image,
-      averagePrice: item.count > 0 ? item.totalPrice / item.count : 0, 
+      averagePrice: item.count > 0 ? item.totalPrice / item.count : 0,
     }));
 
     res.status(200).json(formattedResponse);
