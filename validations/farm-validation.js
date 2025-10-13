@@ -83,6 +83,7 @@ const createStaffMember = Joi.object({
     phoneNumber: Joi.string().pattern(/^\d{7,15}$/).required(),
     countryCode: Joi.string().pattern(/^\+\d{1,4}$/).required(),
     role: Joi.string().required(),
+    nic: Joi.string().required()
 });
 
 exports.ongoingCultivationSchema = Joi.object({
@@ -143,6 +144,10 @@ exports.signupCheckerSchema = Joi.object({
 
 });
 
+const nicSchema = Joi.object({
+  nic: Joi.string().required().min(10).max(12), // example rules
+});
+
 const getSlaveCropCalendarDaysSchema = Joi.object({
     cropCalendarId: Joi.number().integer().required(),
     farmId: Joi.number().integer().required()
@@ -157,5 +162,6 @@ module.exports = {
     signupCheckerSchema: exports.signupCheckerSchema,
     updateFarm,
     createStaffMember,
-    getSlaveCropCalendarDaysSchema
+    getSlaveCropCalendarDaysSchema,
+    nicChecker: nicSchema
 };
