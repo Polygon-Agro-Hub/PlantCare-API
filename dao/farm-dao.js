@@ -933,7 +933,22 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 };
 
 //////////////renew
-
+exports.deleteStaffMember = async (staffMemberId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            DELETE FROM farmstaff 
+            WHERE id = ?
+        `;
+        db.plantcare.query(query, [staffMemberId], (error, results) => {
+            if (error) {
+                console.error("Error deleting staff member:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
 
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
