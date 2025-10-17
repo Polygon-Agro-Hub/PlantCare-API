@@ -643,9 +643,22 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
 });
 
 /////////////renew
+exports.deleteStaffMember = asyncHandler(async (req, res) => {
+    try {
+        const { staffMemberId } = req.params;
 
+        const result = await farmDao.deleteStaffMember(staffMemberId);
 
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Staff member not found" });
+        }
 
+        res.status(200).json({ message: "Staff member deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting staff member:", error);
+        res.status(500).json({ message: "Failed to delete staff member" });
+    }
+});
 
 exports.getrenew = asyncHandler(async (req, res) => {
     try {
