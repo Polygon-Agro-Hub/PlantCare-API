@@ -16,6 +16,82 @@ const {
 
 } = require("../validations/farm-validation");
 
+// exports.CreateFarm = asyncHandler(async (req, res) => {
+//     console.log('Farm creation request:', req.body);
+
+//     try {
+//         const userId = req.user.id;
+//         const input = { ...req.body, userId };
+
+//         console.log('User ID:', userId);
+
+
+//         const { value, error } = createFarm.validate(input);
+//         if (error) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: error.details[0].message,
+//             });
+//         }
+
+//         console.log("Validated input:", value);
+
+//         const {
+//             farmName,
+//             farmIndex,
+//             farmImage,
+//             extentha,
+//             extentac,
+//             extentp,
+//             district,
+//             plotNo,
+//             street,
+//             city,
+//             staffCount,
+//             appUserCount,
+//             staff
+//         } = value;
+
+
+//         const result = await farmDao.createFarmWithStaff({
+//             userId,
+//             farmName,
+//             farmImage,
+//             farmIndex,
+//             extentha,
+//             extentac,
+//             extentp,
+//             district,
+//             plotNo,
+//             street,
+//             city,
+//             staffCount,
+//             appUserCount,
+//             staff
+//         });
+
+//         console.log("Farm creation result:", result);
+
+//         res.status(201).json({
+//             status: "success",
+//             message: "Farm and staff created successfully.",
+//             farmId: result.farmId,
+//             staffIds: result.staffIds,
+//             totalStaffCreated: result.staffIds.length
+//         });
+
+//     } catch (err) {
+//         console.error("Error creating farm:", err);
+
+//         res.status(500).json({
+//             status: "error",
+//             message: "Internal Server Error",
+//             error: process.env.NODE_ENV === 'development' ? err.message : undefined
+//         });
+//     }
+// });
+
+
 exports.CreateFarm = asyncHandler(async (req, res) => {
     console.log('Farm creation request:', req.body);
 
@@ -24,7 +100,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
         const input = { ...req.body, userId };
 
         console.log('User ID:', userId);
-
 
         const { value, error } = createFarm.validate(input);
         if (error) {
@@ -52,7 +127,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             staff
         } = value;
 
-
         const result = await farmDao.createFarmWithStaff({
             userId,
             farmName,
@@ -76,6 +150,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             status: "success",
             message: "Farm and staff created successfully.",
             farmId: result.farmId,
+            regCode: result.regCode,
             staffIds: result.staffIds,
             totalStaffCreated: result.staffIds.length
         });
@@ -374,6 +449,76 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
     }
 });
 
+exports.nicChecker = asyncHandler(async (req, res) => {
+    console.log("NIC Checker - Request received");
+    try {
+        // Validate the NIC from request body
+        const { nic } = req.body;
+
+        if (!nic) {
+            return res.status(400).json({
+                status: "error",
+                message: "NIC number is required"
+            });
+        }
+
+        // Validate NIC format
+        const cleanNic = String(nic).replace(/\s/g, '').toUpperCase();
+        const oldFormat = /^[0-9]{9}[VX]$/;
+        const newFormat = /^[0-9]{12}$/;
+
+        if (!oldFormat.test(cleanNic) && !newFormat.test(cleanNic)) {
+            return res.status(400).json({
+                status: "error",
+                message: "Invalid NIC format. Must be 9 digits + V/X or 12 digits."
+            });
+        }
+
+        console.log("Checking NIC:", cleanNic);
+
+        // Check if NIC exists in database
+        const results = await farmDao.nicChecker(cleanNic);
+        console.log("Results from database:", results);
+
+        let nicExists = false;
+
+        // Check if any results match
+        results.forEach((record) => {
+            console.log("Comparing with:", record.NICnumber || record.nic);
+            const dbNic = (record.NICnumber || record.nic || '').replace(/\s/g, '').toUpperCase();
+            if (dbNic === cleanNic) {
+                nicExists = true;
+            }
+        });
+
+        console.log("NIC exists:", nicExists);
+
+        if (nicExists) {
+            return res.status(409).json({
+                status: "error",
+                message: "This NIC is already registered."
+            });
+        }
+
+        // NIC is available
+        res.status(200).json({
+            status: "success",
+            message: "NIC is available!"
+        });
+    } catch (err) {
+        console.error("Error in nicChecker:", err);
+        if (err.isJoi) {
+            return res.status(400).json({
+                status: "error",
+                message: err.details[0].message,
+            });
+        }
+        res.status(500).json({
+            status: "error",
+            message: "Internal Server Error!"
+        });
+    }
+});
 
 
 ///farmcount

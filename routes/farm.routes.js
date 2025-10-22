@@ -25,6 +25,8 @@ router.post("/enroll-crop/:farmId", auth, farmEp.enroll);
 
 router.post("/members-phoneNumber-checker", farmEp.phoneNumberChecker);
 
+router.post("/members-nic-checker", farmEp.nicChecker);
+
 router.put('/update-farm', auth, farmEp.UpdateFarm);
 
 router.post('/create-new-staffmember/:farmId', auth, farmEp.CreateNewStaffMember);
