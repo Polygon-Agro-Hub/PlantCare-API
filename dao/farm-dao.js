@@ -2,6 +2,147 @@ const e = require("express");
 const db = require("../startup/database");
 
 
+// exports.createFarmWithStaff = async (farmData) => {
+//     let connection;
+
+//     try {
+//         // Get connection from pool
+//         connection = await new Promise((resolve, reject) => {
+//             db.plantcare.getConnection((err, conn) => {
+//                 if (err) return reject(err);
+//                 resolve(conn);
+//             });
+//         });
+
+//         // Start transaction
+//         await new Promise((resolve, reject) => {
+//             connection.beginTransaction(err => {
+//                 if (err) return reject(err);
+//                 resolve(true);
+//             });
+//         });
+
+//         // Get the current farm count for this user to generate farmIndex
+//         const getFarmCountSql = `SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?`;
+//         const [countResult] = await connection.promise().query(getFarmCountSql, [farmData.userId]);
+//         const currentFarmCount = countResult[0].farmCount;
+//         const nextFarmIndex = currentFarmCount + 1;
+
+//         // Validate and clean staff data
+//         if (farmData.staff && Array.isArray(farmData.staff)) {
+//             farmData.staff = farmData.staff.map(staff => {
+//                 // Clean phone number (remove any non-digit characters except +)
+//                 let phoneCode = staff.phoneCode || '+94';
+//                 let phoneNumber = staff.phoneNumber;
+
+//                 // Ensure phoneCode starts with +
+//                 if (!phoneCode.startsWith('+')) {
+//                     phoneCode = '+' + phoneCode;
+//                 }
+
+//                 // Clean phoneNumber (remove any non-digit characters)
+//                 phoneNumber = phoneNumber.replace(/\D/g, '');
+
+//                 return {
+//                     ...staff,
+//                     phoneCode: phoneCode,
+//                     phoneNumber: phoneNumber,
+//                     nic: staff.nic || null // Ensure NIC is properly handled
+//                 };
+//             });
+//         }
+
+//         // Insert farm with auto-generated farmIndex
+//         const insertFarmSql = `
+//             INSERT INTO farms 
+//             (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount, imageId)
+//             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//         `;
+
+//         const farmValues = [
+//             farmData.userId,
+//             farmData.farmName,
+//             nextFarmIndex, // Auto-generated farmIndex
+//             farmData.extentha,
+//             farmData.extentac,
+//             farmData.extentp,
+//             farmData.district,
+//             farmData.plotNo,
+//             farmData.street,
+//             farmData.city,
+//             farmData.staffCount,
+//             farmData.appUserCount,
+//             farmData.farmImage
+//         ];
+
+//         const [farmResult] = await connection.promise().query(insertFarmSql, farmValues);
+//         const farmId = farmResult.insertId;
+//         const staffIds = [];
+
+//         // Insert staff if provided
+//         if (farmData.staff && farmData.staff.length > 0) {
+//             const insertStaffSql = `
+//                 INSERT INTO farmstaff 
+//                 (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, nic, image)
+//                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+//             `;
+
+//             for (const staff of farmData.staff) {
+//                 console.log('Inserting staff member:', staff); // Debug log
+
+//                 const staffValues = [
+//                     farmData.userId,      // ownerId
+//                     farmId,               // farmId
+//                     staff.firstName,      // firstName
+//                     staff.lastName,       // lastName
+//                     staff.phoneCode,      // phoneCode
+//                     staff.phoneNumber,    // phoneNumber
+//                     staff.role,           // role
+//                     staff.nic || null,    // nic - THIS WAS THE MISSING PARAMETER
+//                     staff.image || null   // image
+//                 ];
+
+//                 console.log('Staff values being inserted:', staffValues); // Debug log
+
+//                 const [staffResult] = await connection.promise().query(insertStaffSql, staffValues);
+//                 staffIds.push(staffResult.insertId);
+//             }
+//         }
+
+//         // Commit transaction
+//         await new Promise((resolve, reject) => {
+//             connection.commit(err => {
+//                 if (err) return reject(err);
+//                 resolve(true);
+//             });
+//         });
+
+//         return {
+//             success: true,
+//             farmId,
+//             farmIndex: nextFarmIndex, // Return the generated farmIndex
+//             staffIds,
+//             message: 'Farm and staff created successfully'
+//         };
+
+//     } catch (error) {
+//         // Rollback transaction if connection exists
+//         if (connection) {
+//             await new Promise(resolve => {
+//                 connection.rollback(() => resolve(true));
+//             });
+//         }
+//         console.error('Database error:', error);
+//         throw error;
+
+//     } finally {
+//         // Release connection back to pool
+//         if (connection) {
+//             connection.release();
+//         }
+//     }
+// };
+
 exports.createFarmWithStaff = async (farmData) => {
     let connection;
 
@@ -21,6 +162,16 @@ exports.createFarmWithStaff = async (farmData) => {
                 resolve(true);
             });
         });
+
+        // Get user's NIC number for regCode generation
+        const getUserSql = `SELECT NICnumber FROM users WHERE id = ?`;
+        const [userResult] = await connection.promise().query(getUserSql, [farmData.userId]);
+
+        if (!userResult || userResult.length === 0) {
+            throw new Error('User not found');
+        }
+
+        const userNIC = userResult[0].NICnumber;
 
         // Get the current farm count for this user to generate farmIndex
         const getFarmCountSql = `SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?`;
@@ -47,12 +198,12 @@ exports.createFarmWithStaff = async (farmData) => {
                     ...staff,
                     phoneCode: phoneCode,
                     phoneNumber: phoneNumber,
-                    nic: staff.nic || null // Ensure NIC is properly handled
+                    nic: staff.nic || null
                 };
             });
         }
 
-        // Insert farm with auto-generated farmIndex
+        // Insert farm WITHOUT regCode first (to get farmId)
         const insertFarmSql = `
             INSERT INTO farms 
             (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount, imageId)
@@ -62,7 +213,7 @@ exports.createFarmWithStaff = async (farmData) => {
         const farmValues = [
             farmData.userId,
             farmData.farmName,
-            nextFarmIndex, // Auto-generated farmIndex
+            nextFarmIndex,
             farmData.extentha,
             farmData.extentac,
             farmData.extentp,
@@ -77,6 +228,14 @@ exports.createFarmWithStaff = async (farmData) => {
 
         const [farmResult] = await connection.promise().query(insertFarmSql, farmValues);
         const farmId = farmResult.insertId;
+
+        // Generate regCode
+        const regCode = generateRegCode(userNIC, farmId, nextFarmIndex);
+
+        // Update farm with regCode
+        const updateRegCodeSql = `UPDATE farms SET regCode = ? WHERE id = ?`;
+        await connection.promise().query(updateRegCodeSql, [regCode, farmId]);
+
         const staffIds = [];
 
         // Insert staff if provided
@@ -88,21 +247,21 @@ exports.createFarmWithStaff = async (farmData) => {
             `;
 
             for (const staff of farmData.staff) {
-                console.log('Inserting staff member:', staff); // Debug log
+                console.log('Inserting staff member:', staff);
 
                 const staffValues = [
-                    farmData.userId,      // ownerId
-                    farmId,               // farmId
-                    staff.firstName,      // firstName
-                    staff.lastName,       // lastName
-                    staff.phoneCode,      // phoneCode
-                    staff.phoneNumber,    // phoneNumber
-                    staff.role,           // role
-                    staff.nic || null,    // nic - THIS WAS THE MISSING PARAMETER
-                    staff.image || null   // image
+                    farmData.userId,
+                    farmId,
+                    staff.firstName,
+                    staff.lastName,
+                    staff.phoneCode,
+                    staff.phoneNumber,
+                    staff.role,
+                    staff.nic || null,
+                    staff.image || null
                 ];
 
-                console.log('Staff values being inserted:', staffValues); // Debug log
+                console.log('Staff values being inserted:', staffValues);
 
                 const [staffResult] = await connection.promise().query(insertStaffSql, staffValues);
                 staffIds.push(staffResult.insertId);
@@ -120,7 +279,8 @@ exports.createFarmWithStaff = async (farmData) => {
         return {
             success: true,
             farmId,
-            farmIndex: nextFarmIndex, // Return the generated farmIndex
+            farmIndex: nextFarmIndex,
+            regCode,
             staffIds,
             message: 'Farm and staff created successfully'
         };
@@ -142,6 +302,43 @@ exports.createFarmWithStaff = async (farmData) => {
         }
     }
 };
+
+function generateRegCode(nic, farmId, farmIndex) {
+    // Extract last 3 digits from NIC
+    // For NIC like "123456789V" get "789"
+    // For NIC like "123456789043" get "043"
+    const nicDigits = nic.replace(/\D/g, ''); // Remove non-digits (removes 'V', 'X', etc.)
+    let nicPart = '';
+
+    if (nicDigits.length === 10) {
+        // Old NIC format (10 digits): 123456789V -> get last 3 digits before V
+        nicPart = nicDigits.substring(6, 9); // Gets digits at positions 7, 8, 9
+    } else if (nicDigits.length === 12) {
+        // New NIC format (12 digits): 199912345678 -> get last 3 digits
+        nicPart = nicDigits.substring(9, 12); // Gets last 3 digits
+    } else if (nicDigits.length >= 3) {
+        // Fallback: take last 3 digits for any other length
+        nicPart = nicDigits.slice(-3);
+    } else {
+        // If less than 3 digits, pad with zeros on the left
+        nicPart = nicDigits.padStart(3, '0');
+    }
+
+    // Format farmId as 6-digit number with leading zeros
+    const farmIdPart = String(farmId).padStart(6, '0');
+
+    // Format farmIndex as 3-digit number with leading zeros
+    const farmIndexPart = String(farmIndex).padStart(3, '0');
+
+    // Combine: NIC-FARMID-FARMINDEX
+    const regCode = `${nicPart}-${farmIdPart}-${farmIndexPart}`;
+
+    return regCode;
+}
+
+// Export the helper function if needed elsewhere
+exports.generateRegCode = generateRegCode;
+
 
 
 
@@ -189,7 +386,7 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
         // First get farm data
         const farmQuery = `
             SELECT id, userId, farmName, farmIndex, extentha, extentac, extentp, 
-                   district, plotNo, street, city, staffCount, appUserCount, imageId
+                   district, plotNo, street, city, staffCount, appUserCount, imageId ,regCode
             FROM farms
             WHERE id = ? AND userId = ?
         `;
