@@ -1,3 +1,4 @@
+const e = require("express");
 const db = require("../startup/database");
 
 
@@ -832,29 +833,23 @@ exports.phoneNumberChecker = (phoneNumber) => {
 
 exports.nicChecker = (nic) => {
     return new Promise((resolve, reject) => {
-        const cleanNic = String(nic).replace(/\s/g, '').toUpperCase();
-        console.log("DAO - Checking NIC:", cleanNic);
-
-        // Query to check NIC in both users and farmstaff tables
         const checkQuery = `
-            SELECT NICnumber FROM users WHERE UPPER(REPLACE(NICnumber, ' ', '')) = ?
+            SELECT NICnumber AS nic FROM users WHERE NICnumber = ?
             UNION
-            SELECT nic as NICnumber FROM farmstaff WHERE UPPER(REPLACE(nic, ' ', '')) = ?
+            SELECT nic FROM farmstaff WHERE nic = ?
         `;
 
-        db.plantcare.query(checkQuery, [cleanNic, cleanNic], (err, results) => {
+        db.plantcare.query(checkQuery, [nic, nic], (err, results) => {
             if (err) {
-                console.error("Database error in nicChecker:", err);
+                console.error("Database error:", err);
                 reject(err);
             } else {
-                console.log("DAO - NIC query results:", results);
+                console.log("DAO - query results:", results);
                 resolve(results);
             }
         });
     });
 };
-
-
 
 exports.getCropCountByFarmId = (userId, farmId) => {
     return new Promise((resolve, reject) => {
@@ -1019,8 +1014,8 @@ exports.CreateStaffMember = async (farmData) => {
         // Insert staff member
         const insertStaffSql = `
             INSERT INTO farmstaff 
-            (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, nic)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const staffValues = [
@@ -1030,7 +1025,8 @@ exports.CreateStaffMember = async (farmData) => {
             farmData.lastName,
             farmData.countryCode, // Note: using countryCode for phoneCode
             farmData.phoneNumber,
-            farmData.role
+            farmData.role,
+            farmData.nic 
         ];
 
         const [insertResult] = await connection.promise().query(insertStaffSql, staffValues);
@@ -1087,7 +1083,7 @@ exports.CreateStaffMember = async (farmData) => {
 exports.getStaffMember = async (staffMemberId) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT id, ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image, createdAt
+            SELECT id, ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, image, nic, createdAt
             FROM farmstaff
             WHERE id = ?
             ORDER BY createdAt DESC
@@ -1110,7 +1106,7 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
     return new Promise((resolve, reject) => {
         const query = `
             UPDATE farmstaff 
-            SET firstName = ?, lastName = ?, phoneNumber = ?, phoneCode = ?, role = ?
+            SET firstName = ?, lastName = ?, phoneNumber = ?, phoneCode = ?, role = ?, nic = ?
             WHERE id = ?
         `;
 
@@ -1120,6 +1116,7 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
             staffData.phoneNumber,
             staffData.phoneCode,
             staffData.role,
+             staffData.nic,
             staffMemberId
         ], (error, results) => {
             if (error) {
@@ -1133,7 +1130,22 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 };
 
 //////////////renew
-
+exports.deleteStaffMember = async (staffMemberId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            DELETE FROM farmstaff 
+            WHERE id = ?
+        `;
+        db.plantcare.query(query, [staffMemberId], (error, results) => {
+            if (error) {
+                console.error("Error deleting staff member:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
 
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {

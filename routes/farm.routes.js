@@ -24,6 +24,7 @@ router.post("/enroll-crop/:farmId", auth, farmEp.enroll);
 
 
 router.post("/members-phoneNumber-checker", farmEp.phoneNumberChecker);
+router.post("/members-nic-checker", farmEp.nicChecker);
 
 router.post("/members-nic-checker", farmEp.nicChecker);
 
@@ -34,6 +35,8 @@ router.post('/create-new-staffmember/:farmId', auth, farmEp.CreateNewStaffMember
 router.get('/get-staffMmber-byId/:staffMemberId', auth, farmEp.getStaffMember)
 
 router.put('/update-staffmember/:staffMemberId', auth, farmEp.updateStaffMember)
+
+router.delete('/delete-staffmember/:staffMemberId', auth, farmEp.deleteStaffMember)
 
 router.get('/get-renew', auth, farmEp.getrenew);
 
