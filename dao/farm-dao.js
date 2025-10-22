@@ -1130,22 +1130,60 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 };
 
 //////////////renew
-exports.deleteStaffMember = async (staffMemberId) => {
-    return new Promise((resolve, reject) => {
-        const query = `
-            DELETE FROM farmstaff 
-            WHERE id = ?
+// exports.deleteStaffMember = async (staffMemberId, farmId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             DELETE FROM farmstaff 
+//             WHERE id = ?
+//         `;
+//         db.plantcare.query(query, [staffMemberId], (error, results) => {
+//             if (error) {
+//                 console.error("Error deleting staff member:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+exports.deleteStaffMember = async (staffMemberId, farmId) => {
+  return new Promise((resolve, reject) => {
+    const deleteQuery = `
+      DELETE FROM farmstaff 
+      WHERE id = ?
+    `;
+
+    db.plantcare.query(deleteQuery, [staffMemberId], (error, results) => {
+      if (error) {
+        console.error("Error deleting staff member:", error);
+        reject(error);
+      } else {
+        // After deleting, reduce appUserCount by 1
+        const updateQuery = `
+          UPDATE farms 
+          SET appUserCount = GREATEST(appUserCount - 1, 0)
+          WHERE id = ?
         `;
-        db.plantcare.query(query, [staffMemberId], (error, results) => {
-            if (error) {
-                console.error("Error deleting staff member:", error);
-                reject(error);
-            } else {
-                resolve(results);
-            }
+
+        db.plantcare.query(updateQuery, [farmId], (updateError, updateResults) => {
+          if (updateError) {
+            console.error("Error updating appUserCount:", updateError);
+            reject(updateError);
+          } else {
+            console.log(
+              `✅ Staff member ${staffMemberId} deleted and appUserCount reduced for farm ${farmId}`
+            );
+            resolve({
+              deleteResult: results,
+              updateResult: updateResults,
+            });
+          }
         });
+      }
     });
+  });
 };
+
 
 exports.getrenew = async (userId) => {
     return new Promise((resolve, reject) => {
