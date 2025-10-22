@@ -673,6 +673,7 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
 
 
 exports.getStaffMember = asyncHandler(async (req, res) => {
+    console.log('fdgd')
     try {
         const { staffMemberId } = req.params; // Fixed: destructure to get the actual value
 
@@ -720,9 +721,9 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
 /////////////renew
 exports.deleteStaffMember = asyncHandler(async (req, res) => {
     try {
-        const { staffMemberId } = req.params;
+        const { staffMemberId, farmId } = req.params;
 
-        const result = await farmDao.deleteStaffMember(staffMemberId);
+        const result = await farmDao.deleteStaffMember(staffMemberId, farmId);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Staff member not found" });
