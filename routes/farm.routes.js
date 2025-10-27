@@ -36,7 +36,7 @@ router.get('/get-staffMmber-byId/:staffMemberId', auth, farmEp.getStaffMember)
 
 router.put('/update-staffmember/:staffMemberId', auth, farmEp.updateStaffMember)
 
-router.delete('/delete-staffmember/:staffMemberId', auth, farmEp.deleteStaffMember)
+router.delete('/delete-staffmember/:staffMemberId/:farmId', auth, farmEp.deleteStaffMember)
 
 router.get('/get-renew', auth, farmEp.getrenew);
 
