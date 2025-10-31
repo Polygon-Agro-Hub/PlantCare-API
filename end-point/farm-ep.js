@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const farmDao = require("../dao/farm-dao");
-const { createFarm, createPayment, signupCheckerSchema, updateFarm, createStaffMember, getSlaveCropCalendarDaysSchema } = require('../validations/farm-validation');
+const { createFarm, createPayment, signupCheckerSchema, updateFarm, createStaffMember, getSlaveCropCalendarDaysSchema, nicChecker } = require('../validations/farm-validation');
 const delectfilesOnS3 = require('../Middlewares/s3delete');
 const delectfloders3 = require('../Middlewares/s3folderdelete')
 const db = require("../startup/database");
@@ -15,6 +15,83 @@ const {
     enrollSchema,
 
 } = require("../validations/farm-validation");
+const e = require("express");
+
+// exports.CreateFarm = asyncHandler(async (req, res) => {
+//     console.log('Farm creation request:', req.body);
+
+//     try {
+//         const userId = req.user.id;
+//         const input = { ...req.body, userId };
+
+//         console.log('User ID:', userId);
+
+
+//         const { value, error } = createFarm.validate(input);
+//         if (error) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: error.details[0].message,
+//             });
+//         }
+
+//         console.log("Validated input:", value);
+
+//         const {
+//             farmName,
+//             farmIndex,
+//             farmImage,
+//             extentha,
+//             extentac,
+//             extentp,
+//             district,
+//             plotNo,
+//             street,
+//             city,
+//             staffCount,
+//             appUserCount,
+//             staff
+//         } = value;
+
+
+//         const result = await farmDao.createFarmWithStaff({
+//             userId,
+//             farmName,
+//             farmImage,
+//             farmIndex,
+//             extentha,
+//             extentac,
+//             extentp,
+//             district,
+//             plotNo,
+//             street,
+//             city,
+//             staffCount,
+//             appUserCount,
+//             staff
+//         });
+
+//         console.log("Farm creation result:", result);
+
+//         res.status(201).json({
+//             status: "success",
+//             message: "Farm and staff created successfully.",
+//             farmId: result.farmId,
+//             staffIds: result.staffIds,
+//             totalStaffCreated: result.staffIds.length
+//         });
+
+//     } catch (err) {
+//         console.error("Error creating farm:", err);
+
+//         res.status(500).json({
+//             status: "error",
+//             message: "Internal Server Error",
+//             error: process.env.NODE_ENV === 'development' ? err.message : undefined
+//         });
+//     }
+// });
+
 
 exports.CreateFarm = asyncHandler(async (req, res) => {
     console.log('Farm creation request:', req.body);
@@ -24,7 +101,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
         const input = { ...req.body, userId };
 
         console.log('User ID:', userId);
-
 
         const { value, error } = createFarm.validate(input);
         if (error) {
@@ -52,7 +128,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             staff
         } = value;
 
-
         const result = await farmDao.createFarmWithStaff({
             userId,
             farmName,
@@ -76,6 +151,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             status: "success",
             message: "Farm and staff created successfully.",
             farmId: result.farmId,
+            regCode: result.regCode,
             staffIds: result.staffIds,
             totalStaffCreated: result.staffIds.length
         });
@@ -374,7 +450,55 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
     }
 });
 
+exports.nicChecker = asyncHandler(async (req, res) => {
+    console.log("beforeeeeee")
+    try {
+        const { nic } = await nicChecker.validateAsync(req.body);
+        const results = await farmDao.nicChecker(nic);
+        console.log("checkkk", nic)
+        console.log("results from database:", results); // Add this debug log
 
+        let nicExists = false;
+
+        // Normalize the input NIC for comparison
+        const normalizedInputNic = String(nic).replace(/^\+/, "");
+        console.log("normalized input:", normalizedInputNic); // Add this debug log
+
+        results.forEach((user) => {
+            console.log("comparing with:", user.nic); // Add this debug log
+            if (user.nic === normalizedInputNic) {
+                nicExists = true;
+            }
+        });
+
+        console.log("nicExists:", nicExists); // Add this debug log
+
+        if (nicExists) {
+            return res.status(409).json({
+                status: "error",
+                message: "This NIC already exists."
+            });
+        }
+
+        // NIC is available
+        res.status(200).json({
+            status: "success",
+            message: "NIC is available!"
+        });
+    } catch (err) {
+        console.error("Error in nicChecker:", err);
+        if (err.isJoi) {
+            return res.status(400).json({
+                status: "error",
+                message: err.details[0].message,
+            });
+        }
+        res.status(500).json({
+            status: "error",
+            message: "Internal Server Error!"
+        });
+    }
+});
 
 ///farmcount
 
@@ -512,7 +636,8 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             lastName,
             phoneNumber,
             countryCode,
-            role
+            role,
+            nic
         } = value;
 
         // Create staff member
@@ -523,7 +648,8 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             lastName,
             phoneNumber,
             countryCode,
-            role
+            role,
+            nic
         });
 
         console.log("Staff member creation result:", result);
@@ -547,6 +673,7 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
 
 
 exports.getStaffMember = asyncHandler(async (req, res) => {
+    console.log('fdgd')
     try {
         const { staffMemberId } = req.params; // Fixed: destructure to get the actual value
 
@@ -569,14 +696,15 @@ exports.getStaffMember = asyncHandler(async (req, res) => {
 exports.updateStaffMember = asyncHandler(async (req, res) => {
     try {
         const { staffMemberId } = req.params;
-        const { firstName, lastName, phoneNumber, countryCode, role } = req.body;
+        const { firstName, lastName, phoneNumber, countryCode, role , nic } = req.body;
 
         const result = await farmDao.updateStaffMember(staffMemberId, {
             firstName,
             lastName,
             phoneNumber,
             phoneCode: countryCode,
-            role
+            role,
+            nic
         });
 
         if (result.affectedRows === 0) {
@@ -591,9 +719,22 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
 });
 
 /////////////renew
+exports.deleteStaffMember = asyncHandler(async (req, res) => {
+    try {
+        const { staffMemberId, farmId } = req.params;
 
+        const result = await farmDao.deleteStaffMember(staffMemberId, farmId);
 
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Staff member not found" });
+        }
 
+        res.status(200).json({ message: "Staff member deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting staff member:", error);
+        res.status(500).json({ message: "Failed to delete staff member" });
+    }
+});
 
 exports.getrenew = asyncHandler(async (req, res) => {
     try {

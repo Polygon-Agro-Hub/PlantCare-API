@@ -5,14 +5,14 @@ const {
 } = require('../validations/complain-validation');
 const { Console } = require("winston/lib/winston/transports");
 
-exports.createComplain = asyncHandler(async(req, res) => {
+exports.createComplain = asyncHandler(async (req, res) => {
 
     try {
         const farmerId = req.user.id;
-        const input = {...req.body, farmerId };
+        const input = { ...req.body, farmerId };
         const today = new Date();
-    const YYMMDD = today.toISOString().slice(2, 10).replace(/-/g, ''); 
-    const datePrefix = `PC${YYMMDD}`;
+        const YYMMDD = today.toISOString().slice(2, 10).replace(/-/g, '');
+        const datePrefix = `GC${YYMMDD}`;
 
         const { value, error } = createComplain.validate(input);
         const complaintsOnDate = await complainDao.countComplaintsByDate(today);
@@ -45,7 +45,7 @@ exports.createComplain = asyncHandler(async(req, res) => {
     }
 });
 
-exports.getComplains = asyncHandler(async(req, res) => {
+exports.getComplains = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const complains = await complainDao.getAllComplaintsByUserId(userId);
@@ -61,7 +61,7 @@ exports.getComplains = asyncHandler(async(req, res) => {
     }
 });
 
-exports.getComplainReplyByid = asyncHandler(async(req, res) => {
+exports.getComplainReplyByid = asyncHandler(async (req, res) => {
     try {
         const reply = await complainDao.getAllComplaintsByUserId(id);
 
@@ -76,7 +76,7 @@ exports.getComplainReplyByid = asyncHandler(async(req, res) => {
     }
 });
 
-exports.getComplainCategory = asyncHandler(async(req, res) => {
+exports.getComplainCategory = asyncHandler(async (req, res) => {
     try {
         const categories = await complainDao.getComplainCategories();
 
@@ -84,7 +84,7 @@ exports.getComplainCategory = asyncHandler(async(req, res) => {
             return res.status(404).json({ message: "No categories found" });
         }
 
-        res.status(200).json({ status: "success", data: categories }); 
+        res.status(200).json({ status: "success", data: categories });
     } catch (error) {
         console.error("Error fetching categories:", error);
         res.status(500).json({ message: "Failed to fetch categories" });
