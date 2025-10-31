@@ -696,7 +696,7 @@ exports.getStaffMember = asyncHandler(async (req, res) => {
 exports.updateStaffMember = asyncHandler(async (req, res) => {
     try {
         const { staffMemberId } = req.params;
-        const { firstName, lastName, phoneNumber, countryCode, role , nic } = req.body;
+        const { firstName, lastName, phoneNumber, countryCode, role, nic } = req.body;
 
         const result = await farmDao.updateStaffMember(staffMemberId, {
             firstName,
@@ -994,12 +994,15 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
 
 
 exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
+    console.log("first")
     try {
-
         const userId = req.user.ownerId;
-        const farmId = req.params.farmId;
+        const farmId = parseInt(req.params.farmId, 10); // Convert to integer
+
+        console.log("userId:", userId, "farmId:", farmId, "farmId type:", typeof farmId);
 
         const results = await farmDao.getAllCurrentAssets(userId, farmId);
+        console.log("Results:", results);
 
         if (results.length === 0) {
             return res.status(404).json({
@@ -1007,19 +1010,18 @@ exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
                 message: "No assets found for the user",
             });
         }
-
         return res.status(200).json({
             status: "success",
             currentAssetsByCategory: results,
         });
     } catch (err) {
+        console.error("Error in getAllCurrentAssets:", err);
         res.status(500).json({
             status: "error",
             message: `An error occurred: ${err.message}`,
         });
     }
 });
-
 
 exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
     console.log("///////////////////")
@@ -1180,3 +1182,98 @@ exports.deleteAsset = (req, res) => {
         );
     });
 };
+
+
+// exports.updateCurrentAsset = asyncHandler(async (req, res) => {
+//     try {
+//         const assetId = req.params.assetId;
+//         const userId = req.user.ownerId;
+//         const staffId = req.user.id;
+
+//         const { numberOfUnits, unitPrice, totalPrice } = req.body;
+
+//         // Simple update object with just the changed fields
+//         const assetData = {
+//             userId: userId,
+//             staffId: staffId,
+//             numOfUnit: numberOfUnits,
+//             unitPrice: unitPrice,
+//             total: totalPrice
+//         };
+
+//         const result = await farmDao.updateCurrentAsset(assetId, assetData);
+
+//         if (result.affectedRows === 0) {
+//             return res.status(404).json({
+//                 status: 'error',
+//                 message: "Asset not found"
+//             });
+//         }
+
+//         res.status(200).json({
+//             status: 'success',
+//             message: "Asset updated successfully"
+//         });
+//     } catch (error) {
+//         console.error("Error updating current asset:", error);
+//         res.status(500).json({
+//             status: 'error',
+//             message: "Failed to update asset"
+//         });
+//     }
+// });
+
+exports.updateCurrentAsset = asyncHandler(async (req, res) => {
+    try {
+        const assetId = req.params.assetId;
+        const userId = req.user.ownerId;
+        const staffId = req.user.id;
+        const { numberOfUnits, unitPrice, totalPrice } = req.body;
+
+        // If numberOfUnits is 0, delete the asset
+        if (numberOfUnits === 0 || numberOfUnits === '0') {
+            const result = await farmDao.deleteCurrentAsset(assetId);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: "Asset not found"
+                });
+            }
+
+            return res.status(200).json({
+                status: 'success',
+                message: "Asset deleted successfully"
+            });
+        }
+
+        // Otherwise, update the asset
+        const assetData = {
+            userId: userId,
+            staffId: staffId,
+            numOfUnit: numberOfUnits,
+            unitPrice: unitPrice,
+            total: totalPrice
+        };
+
+        const result = await farmDao.updateCurrentAsset(assetId, assetData);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: "Asset not found"
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: "Asset updated successfully"
+        });
+    } catch (error) {
+        console.error("Error updating current asset:", error);
+        res.status(500).json({
+            status: 'error',
+            message: "Failed to update asset"
+        });
+    }
+});
