@@ -48,6 +48,10 @@ router.get('/select-farm', auth, farmEp.getSelectFarm);
 
 router.post('/currentAsset/:farmId', auth, farmEp.handleAddFixedAsset);
 
+///update currect asset
+// Update current asset - fixed route parameter
+router.put('/currentAsset/update/:assetId', auth, farmEp.updateCurrentAsset);
+
 router.get("/assets/:farmId", auth, farmEp.getAssetsByCategory);
 
 router.get(

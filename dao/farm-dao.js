@@ -1026,7 +1026,7 @@ exports.CreateStaffMember = async (farmData) => {
             farmData.countryCode, // Note: using countryCode for phoneCode
             farmData.phoneNumber,
             farmData.role,
-            farmData.nic 
+            farmData.nic
         ];
 
         const [insertResult] = await connection.promise().query(insertStaffSql, staffValues);
@@ -1116,7 +1116,7 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
             staffData.phoneNumber,
             staffData.phoneCode,
             staffData.role,
-             staffData.nic,
+            staffData.nic,
             staffMemberId
         ], (error, results) => {
             if (error) {
@@ -1147,41 +1147,41 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
 //     });
 // };
 exports.deleteStaffMember = async (staffMemberId, farmId) => {
-  return new Promise((resolve, reject) => {
-    const deleteQuery = `
+    return new Promise((resolve, reject) => {
+        const deleteQuery = `
       DELETE FROM farmstaff 
       WHERE id = ?
     `;
 
-    db.plantcare.query(deleteQuery, [staffMemberId], (error, results) => {
-      if (error) {
-        console.error("Error deleting staff member:", error);
-        reject(error);
-      } else {
-        // After deleting, reduce appUserCount by 1
-        const updateQuery = `
+        db.plantcare.query(deleteQuery, [staffMemberId], (error, results) => {
+            if (error) {
+                console.error("Error deleting staff member:", error);
+                reject(error);
+            } else {
+                // After deleting, reduce appUserCount by 1
+                const updateQuery = `
           UPDATE farms 
           SET appUserCount = GREATEST(appUserCount - 1, 0)
           WHERE id = ?
         `;
 
-        db.plantcare.query(updateQuery, [farmId], (updateError, updateResults) => {
-          if (updateError) {
-            console.error("Error updating appUserCount:", updateError);
-            reject(updateError);
-          } else {
-            console.log(
-              `✅ Staff member ${staffMemberId} deleted and appUserCount reduced for farm ${farmId}`
-            );
-            resolve({
-              deleteResult: results,
-              updateResult: updateResults,
-            });
-          }
+                db.plantcare.query(updateQuery, [farmId], (updateError, updateResults) => {
+                    if (updateError) {
+                        console.error("Error updating appUserCount:", updateError);
+                        reject(updateError);
+                    } else {
+                        console.log(
+                            `✅ Staff member ${staffMemberId} deleted and appUserCount reduced for farm ${farmId}`
+                        );
+                        resolve({
+                            deleteResult: results,
+                            updateResult: updateResults,
+                        });
+                    }
+                });
+            }
         });
-      }
     });
-  });
 };
 
 
@@ -1565,19 +1565,74 @@ exports.getAssetsByCategory = (userId, category, farmId) => {
 
 
 exports.getAllCurrentAssets = (userId, farmId) => {
+    console.log("DAO - userId:", userId, "farmId:", farmId);
+
     return new Promise((resolve, reject) => {
-        const sql = `
+        // Query to get category totals
+        const categorySql = `
             SELECT category, SUM(total) AS totalSum 
             FROM currentasset 
             WHERE userId = ? AND farmId = ?
             GROUP BY category
             HAVING totalSum > 0
         `;
-        db.plantcare.query(sql, [userId, farmId], (err, results) => {
+
+        // Query to get all items - using correct column names
+        const itemsSql = `
+            SELECT 
+                id, 
+                category, 
+                asset, 
+                brand,
+                batchNum, 
+                numOfUnit as quantity, 
+                unit, 
+                unitVolume,
+                unitPrice as pricePerUnit, 
+                total, 
+                purchaseDate,
+                expireDate,
+                status
+            FROM currentasset 
+            WHERE userId = ? AND farmId = ? AND total > 0
+            ORDER BY category, asset
+        `;
+
+        db.plantcare.query(categorySql, [userId, farmId], (err, categoryResults) => {
             if (err) {
+                console.error("Category query error:", err);
                 return reject(err);
             }
-            resolve(results);
+
+            console.log("Category results:", categoryResults);
+
+            db.plantcare.query(itemsSql, [userId, farmId], (err, itemResults) => {
+                if (err) {
+                    console.error("Items query error:", err);
+                    return reject(err);
+                }
+
+                console.log("Items results count:", itemResults.length);
+
+                // Group items by category
+                const itemsByCategory = itemResults.reduce((acc, item) => {
+                    if (!acc[item.category]) {
+                        acc[item.category] = [];
+                    }
+                    acc[item.category].push(item);
+                    return acc;
+                }, {});
+
+                // Combine category totals with their items
+                const results = categoryResults.map(cat => ({
+                    category: cat.category,
+                    totalSum: cat.totalSum,
+                    items: itemsByCategory[cat.category] || []
+                }));
+
+                console.log("Final results with items:", JSON.stringify(results, null, 2));
+                resolve(results);
+            });
         });
     });
 };
@@ -1638,6 +1693,80 @@ exports.getFarmName = async (userId, farmId) => {
                 reject(error);
             } else {
                 console.log("Query results:", results);
+                resolve(results);
+            }
+        });
+    });
+};
+
+exports.deleteCurrentAsset = async (assetId) => {
+    return new Promise((resolve, reject) => {
+        const query = 'DELETE FROM currentasset WHERE id = ?';
+
+        console.log('Executing delete query:', query);
+        console.log('With assetId:', assetId);
+
+        db.plantcare.query(query, [assetId], (error, results) => {
+            if (error) {
+                console.error("Error deleting current asset:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+exports.updateCurrentAsset = async (assetId, assetData) => {
+    return new Promise((resolve, reject) => {
+        const includeStaffId = assetData.staffId && assetData.staffId !== assetData.userId;
+
+        let query, values;
+
+        if (includeStaffId) {
+            query = `
+                UPDATE currentasset 
+                SET userId = ?, 
+                    staffId = ?, 
+                    numOfUnit = ?, 
+                    unitPrice = ?, 
+                    total = ?
+                WHERE id = ?
+            `;
+            values = [
+                assetData.userId,
+                assetData.staffId,
+                assetData.numOfUnit,
+                assetData.unitPrice,
+                assetData.total,
+                assetId
+            ];
+        } else {
+            query = `
+                UPDATE currentasset 
+                SET userId = ?, 
+                    numOfUnit = ?, 
+                    unitPrice = ?, 
+                    total = ?
+                WHERE id = ?
+            `;
+            values = [
+                assetData.userId,
+                assetData.numOfUnit,
+                assetData.unitPrice,
+                assetData.total,
+                assetId
+            ];
+        }
+
+        console.log('Executing update query:', query);
+        console.log('With values:', values);
+
+        db.plantcare.query(query, values, (error, results) => {
+            if (error) {
+                console.error("Error updating current asset:", error);
+                reject(error);
+            } else {
                 resolve(results);
             }
         });
