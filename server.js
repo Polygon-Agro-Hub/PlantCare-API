@@ -117,6 +117,7 @@ const MarketPriceRoutes = require("./routes/marketPriceRoutes");
 const complainRoutes = require("./routes/complainRoutes");
 const heathRoutes = require("./routes/heathRoutes");
 const farmRoutes = require("./routes/farm.routes")
+const certificateRoutes = require("./routes/certificate")
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -194,6 +195,7 @@ app.use("/api/complain", complainRoutes);
 
 app.use("/api/farm", farmRoutes);
 
+app.use("/api/certificate", certificateRoutes);
 app.use("", heathRoutes);
 
 
