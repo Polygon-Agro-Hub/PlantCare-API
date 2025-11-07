@@ -214,13 +214,13 @@ const insertJob = (connection, jobId, userId, item, cropCount) => {
         // isAllCrops now stores the crop count from frontend
         const query = `
             INSERT INTO govilinkjobs
-            (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops, createdAt) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops,status, createdAt) 
+            VALUES (?, ?, ?, ?, ?, ?, ?,NOW())
         `;
 
         connection.query(
             query,
-            [jobId, userId, item.serviceId, item.farmId, item.scheduleDate, cropCount],
+            [jobId, userId, item.serviceId, item.farmId, item.scheduleDate, cropCount, "Request Placed"],
             (error, results) => {
                 if (error) {
                     reject(error);
@@ -286,6 +286,30 @@ const insertPayment = (connection, insertedId, amount, transactionId) => {
     });
 };
 
+// Update farm details
+const updateFarmDetails = (connection, farmId, plotNo, streetName, city) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            UPDATE farms 
+            SET plotNo = ?, street = ?, city = ?
+            WHERE id = ?
+        `;
+
+        connection.query(
+            query,
+            [plotNo, streetName, city, farmId],
+            (error, results) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results);
+                }
+            }
+        );
+    });
+};
+
+// Update the main submitRequestInspection function
 exports.submitRequestInspection = async (userId, requestItems) => {
     let connection = null;
     let transactionStarted = false;
@@ -314,16 +338,29 @@ exports.submitRequestInspection = async (userId, requestItems) => {
             // Get crop count from frontend
             const cropCount = item.crops ? item.crops.length : 0;
 
-            // 1. Insert into govilinkjobs table with crop count
+            // 1. Update farm details if modified
+            if (item.plotNo || item.streetName || item.city) {
+                console.log(`Updating farm details for farm ID: ${item.farmId}`);
+                await updateFarmDetails(
+                    connection,
+                    item.farmId,
+                    item.plotNo,
+                    item.streetName,
+                    item.city
+                );
+                console.log(`Farm details updated for farm ID: ${item.farmId}`);
+            }
+
+            // 2. Insert into govilinkjobs table with crop count
             const jobResult = await insertJob(connection, jobId, userId, item, cropCount);
             const insertedId = jobResult.insertId;
             console.log(`Inserted job: ${jobId} with ID: ${insertedId}, Crop Count: ${cropCount}`);
 
-            // 2. Insert crops into jobrequestcrops table
+            // 3. Insert crops into jobrequestcrops table
             await insertCrops(connection, insertedId, item.crops);
             console.log(`Inserted ${cropCount} crops for job ID: ${insertedId}`);
 
-            // 3. Insert payment with transaction ID
+            // 4. Insert payment with transaction ID
             await insertPayment(connection, insertedId, item.amount, transactionId);
             console.log(`Inserted payment for job ID: ${insertedId}, Amount: ${item.amount}, Transaction ID: ${transactionId}`);
 
@@ -336,6 +373,9 @@ exports.submitRequestInspection = async (userId, requestItems) => {
                 scheduleDate: item.scheduleDate,
                 amount: item.amount,
                 cropCount: cropCount,
+                plotNo: item.plotNo,
+                streetName: item.streetName,
+                city: item.city,
                 status: 'success'
             });
         }
@@ -369,4 +409,40 @@ exports.submitRequestInspection = async (userId, requestItems) => {
             console.log("Database connection released");
         }
     }
+};
+
+
+exports.getRequest = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                gj.id,
+                gj.farmerId,
+                gj.serviceId,
+                gj.farmId,
+                gj.jobId, 
+                gj.sheduleDate,
+                gj.isAllCrops,
+                gj.createdAt,
+                gj.status,
+                os.id as serviceId,
+                os.englishName,
+                os.sinhalaName,
+                os.tamilName,
+                os.srvFee
+            FROM plant_care.govilinkjobs gj
+            INNER JOIN plant_care.officerservices os ON gj.serviceId = os.id
+            WHERE gj.farmerId = ?
+          
+        `;
+
+        db.plantcare.query(query, [userId], (error, results) => {
+            if (error) {
+                console.error("Error fetching officer services:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
 };

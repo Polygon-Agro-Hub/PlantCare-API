@@ -85,6 +85,28 @@ exports.submitRequestInspection = asyncHandler(async (req, res) => {
                     message: "At least one crop must be selected for each request"
                 });
             }
+
+            // Validate farm details if provided
+            if (item.plotNo && typeof item.plotNo !== 'string') {
+                return res.status(400).json({
+                    status: "error",
+                    message: "Invalid plot number format"
+                });
+            }
+
+            if (item.streetName && typeof item.streetName !== 'string') {
+                return res.status(400).json({
+                    status: "error",
+                    message: "Invalid street name format"
+                });
+            }
+
+            if (item.city && typeof item.city !== 'string') {
+                return res.status(400).json({
+                    status: "error",
+                    message: "Invalid city format"
+                });
+            }
         }
 
         // Process all requests with transaction
@@ -105,6 +127,9 @@ exports.submitRequestInspection = asyncHandler(async (req, res) => {
         if (err.message.includes('Failed to process request item')) {
             statusCode = 400;
             errorMessage = err.message;
+        } else if (err.message.includes('Farm not found')) {
+            statusCode = 404;
+            errorMessage = "Farm not found";
         }
 
         res.status(statusCode).json({
@@ -112,5 +137,24 @@ exports.submitRequestInspection = asyncHandler(async (req, res) => {
             message: errorMessage,
             error: err.message
         });
+    }
+});
+
+
+
+exports.getRequest = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const requestInspection = await requestInspectionDao.getRequest(userId);
+        console.log("far,ss", requestInspection)
+
+        if (!requestInspection || requestInspection.length === 0) {
+            return res.status(404).json({ message: "No requestInspection found" });
+        }
+
+        res.status(200).json(requestInspection);
+    } catch (error) {
+        console.error("Error fetching requestInspection:", error);
+        res.status(500).json({ message: "Failed to fetch requestInspection" });
     }
 });

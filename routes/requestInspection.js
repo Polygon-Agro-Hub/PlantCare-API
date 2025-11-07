@@ -11,5 +11,7 @@ router.get('/get-farm-crops/:farmId', auth, requestInspectionEp.getFramCrop);
 
 router.post('/submit-request', auth, requestInspectionEp.submitRequestInspection);
 
+router.get('/get-request', auth, requestInspectionEp.getRequest);
+
 
 module.exports = router;
