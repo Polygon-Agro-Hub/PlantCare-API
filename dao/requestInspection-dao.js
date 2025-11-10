@@ -425,6 +425,7 @@ exports.getRequest = async (userId) => {
                 gj.isAllCrops,
                 gj.createdAt,
                 gj.status,
+                gj.doneDate,
                 os.id as serviceId,
                 os.englishName,
                 os.sinhalaName,

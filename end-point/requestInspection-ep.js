@@ -146,7 +146,7 @@ exports.getRequest = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const requestInspection = await requestInspectionDao.getRequest(userId);
-        console.log("far,ss", requestInspection)
+        console.log("All requestInspection data fetcing", requestInspection)
 
         if (!requestInspection || requestInspection.length === 0) {
             return res.status(404).json({ message: "No requestInspection found" });
