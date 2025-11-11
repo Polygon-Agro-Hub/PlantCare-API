@@ -227,4 +227,53 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
 });
 
 
+exports.getCropHvaeCertificate = asyncHandler(async (req, res) => {
+    try {
+        const cropId = req.params.cropId;
+        const userId = req.user.id;
 
+        const certificates = await certificateDao.getCropHvaeCertificate(cropId, userId);
+
+        //  console.log("////////////////////////////////////////////", this.getCropHvaeCertificate.Date)
+
+        if (!certificates || certificates.length === 0) {
+            return res.status(200).json({
+                status: "notHaveCropCertificate",
+                message: "No certificates found for this crop",
+                data: []
+            });
+        }
+
+        res.status(200).json({
+            status: "haveCropCertificate",
+            message: "Certificates found",
+            data: certificates
+        });
+    } catch (error) {
+        console.error("Error fetching crop certificates:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch crop certificates"
+        });
+    }
+});
+
+
+exports.getCropCertificateByid = asyncHandler(async (req, res) => {
+    try {
+        const cropId = req.params.cropId;
+        const userId = req.user.id;
+
+        console.log("cropid......................", cropId)
+        const certificates = await certificateDao.getCropCertificateByid(cropId, userId);
+
+        if (!certificates || certificates.length === 0) {
+            return res.status(404).json({ message: "No certificates found for farms" });
+        }
+
+        res.status(200).json(certificates);
+    } catch (error) {
+        console.error("Error fetching farm certificates:", error);
+        res.status(500).json({ message: "Failed to fetch farm certificates" });
+    }
+});

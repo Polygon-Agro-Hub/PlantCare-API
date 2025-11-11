@@ -11,6 +11,12 @@ router.post('/certificate-payment/:farmId', auth, certificateEp.createCertificat
 router.get('/get-crop-certificate', auth, certificateEp.getCropsCertificate);
 router.post('/certificate-crop-payment/:cropId', auth, certificateEp.createCropCertificatePayment);
 
+router.get('/get-crophave-certificate/:cropId', auth, certificateEp.getCropHvaeCertificate);
+
+router.get('/get-crop-certificate-byId/:cropId', auth, certificateEp.getCropCertificateByid);
+
+
+
 
 
 

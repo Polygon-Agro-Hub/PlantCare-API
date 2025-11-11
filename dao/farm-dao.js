@@ -601,11 +601,50 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
 ////cultivation
 
 
+// exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
+//     const sql = `
+//         SELECT 
+//             c.id,
+//             c.userId,
+//             oc.startedAt,
+//             oc.farmId,
+//             oc.cropCalendar,
+//             oc.isBlock,
+//             cr.id as cropId,
+//             cr.varietyNameEnglish,
+//             cr.varietyNameSinhala,
+//             cr.varietyNameTamil,
+//             cr.image,
+//             DATE_FORMAT(oc.startedAt, '%Y-%m-%d') as staredAt
+//         FROM ongoingcultivations c 
+//         JOIN ongoingcultivationscrops oc ON c.id = oc.ongoingCultivationId
+//         JOIN cropcalender cc ON oc.cropCalendar = cc.id
+//         JOIN cropvariety cr ON cc.cropVarietyId = cr.id 
+//         WHERE c.userId = ? AND oc.farmId = ?
+//         ORDER BY oc.startedAt DESC, oc.cropCalendar ASC
+//     `;
+
+//     console.log('DEBUG: Executing query with userId:', userId, 'farmId:', farmId);
+
+//     db.plantcare.query(sql, [userId, farmId], (err, results) => {
+//         if (err) {
+//             console.error("Database error:", err);
+//             return callback(err, null);
+//         }
+
+//         console.log('DEBUG: Query results count:', results.length);
+//         console.log('DEBUG: Sample result farmIds:', results.slice(0, 3).map(r => r.farmId));
+
+//         callback(null, results);
+//     });
+// };
+
 exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
     const sql = `
         SELECT 
             c.id,
             c.userId,
+            oc.id As ongoingCropId,
             oc.startedAt,
             oc.farmId,
             oc.cropCalendar,

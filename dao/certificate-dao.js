@@ -273,5 +273,77 @@ exports.createCropCertificatePayment = async (paymentData) => {
 };
 
 
+exports.getCropHvaeCertificate = async (cropId, userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                cp.id as paymentId,
+                cp.certificateId,
+                cp.userId,
+                cp.payType,
+                cpc.cropId,
+                cpc.createdAt
+            FROM plant_care.certificationpayment cp
+            INNER JOIN plant_care.certificationpaymentcrop cpc 
+                ON cp.id = cpc.paymentId
+            WHERE cp.userId = ? 
+                AND cp.payType = 'Crop'
+                AND cpc.cropId = ?
+            LIMIT 1
+        `;
 
+        db.plantcare.query(query, [userId, cropId], (error, results) => {
+            if (error) {
+                console.error("Error fetching crop certificates:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
 
+exports.getCropCertificateByid = async (cropId, userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                cpc.cropId,
+                cpc.paymentId,
+                cp.certificateId,
+                cp.transactionId,
+                cp.amount,
+                cp.expireDate,
+                cp.createdAt as paymentCreatedAt,
+                cert.srtcomapnyId,
+                cert.srtName,
+                cert.srtNumber,
+                cert.applicable,
+                cert.accreditation,
+                cert.serviceAreas,
+                cert.price,
+                cert.timeLine,
+                cert.commission,
+                cert.tearms,
+                cert.scope,
+                cert.logo,
+                cert.noOfVisit,
+                cert.modifyBy,
+                cert.modifyDate,
+                cert.createdAt as certificateCreatedAt
+            FROM certificationpaymentcrop cpc
+            INNER JOIN certificationpayment cp ON cpc.paymentId = cp.id
+            INNER JOIN certificates cert ON cp.certificateId = cert.id
+            WHERE cpc.cropId = ? AND cp.userId = ?
+            ORDER BY cp.createdAt DESC
+        `;
+
+        db.plantcare.query(query, [cropId, userId], (error, results) => {
+            if (error) {
+                console.error("Error fetching crop certificates:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
