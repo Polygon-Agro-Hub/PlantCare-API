@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const certificateDao = require("../dao/certificate-dao");
-
+const uploadFileToS3 = require('../Middlewares/s3upload');
+const multer = require('multer');
 
 exports.getFarmsCertificate = asyncHandler(async (req, res) => {
     try {
@@ -267,6 +268,8 @@ exports.getCropCertificateByid = asyncHandler(async (req, res) => {
         console.log("cropid......................", cropId)
         const certificates = await certificateDao.getCropCertificateByid(cropId, userId);
 
+        // console.log("certificate Q", this.getCropCertificateByid)
+
         if (!certificates || certificates.length === 0) {
             return res.status(404).json({ message: "No certificates found for farms" });
         }
@@ -275,5 +278,106 @@ exports.getCropCertificateByid = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error("Error fetching farm certificates:", error);
         res.status(500).json({ message: "Failed to fetch farm certificates" });
+    }
+});
+
+
+
+
+// Update for Tick Off
+exports.updateQuestionItemByid = asyncHandler(async (req, res) => {
+    try {
+        const itemId = req.params.itemId;
+        const { type } = req.body; // 'tickOff' or get from item
+
+        console.log("Updating item ID:", itemId);
+
+        // Get the item first to check its type
+        const item = await certificateDao.getQuestionItemById(itemId);
+
+        if (!item) {
+            return res.status(404).json({ message: "Questionnaire item not found" });
+        }
+
+        // Update based on type
+        if (item.type === 'Tick Off') {
+            const result = await certificateDao.updateQuestionItemByid(itemId, {
+                type: 'tickOff'
+            });
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json({
+                message: "This item requires photo proof, use the upload image endpoint"
+            });
+        }
+
+    } catch (error) {
+        console.error("Error updating questionnaire item:", error);
+        res.status(500).json({ message: "Failed to update questionnaire item" });
+    }
+});
+
+// New endpoint for Photo Proof upload
+exports.uploadQuestionnaireImage = asyncHandler(async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded.' });
+        }
+
+        const { itemId, slaveId, farmId } = req.body;
+        const ownerId = req.user.ownerId;
+        const userId = req.user.id;
+
+        if (!itemId || !slaveId) {
+            return res.status(400).json({ message: 'itemId and slaveId are required.' });
+        }
+
+        // Get the item to verify it's a Photo Proof type
+        const item = await certificateDao.getQuestionItemById(itemId);
+
+        if (!item) {
+            return res.status(404).json({ message: "Questionnaire item not found" });
+        }
+
+        if (item.type !== 'Photo Proof') {
+            return res.status(400).json({
+                message: "This item is not a Photo Proof type"
+            });
+        }
+
+        const imageBuffer = req.file.buffer;
+        const fileName = req.file.originalname;
+
+        // Upload to S3
+        const imageUrl = await uploadFileToS3(
+            imageBuffer,
+            fileName,
+            `questionnaire/owner${ownerId}/farm${farmId}/slave${slaveId}`
+        );
+
+        // Update the questionnaire item with image URL
+        const result = await certificateDao.updateQuestionItemByid(itemId, {
+            type: 'photoProof',
+            imageUrl: imageUrl
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Questionnaire image uploaded successfully.',
+            imageUrl: imageUrl,
+            imageDetails: {
+                mimeType: req.file.mimetype,
+                size: req.file.size,
+            },
+            result: result,
+        });
+    } catch (error) {
+        if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+                message: 'File size exceeds the maximum allowed size of 10 MB.',
+            });
+        }
+        console.error('Error during questionnaire image upload:', error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 });
