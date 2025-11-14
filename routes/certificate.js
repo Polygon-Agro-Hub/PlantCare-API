@@ -23,6 +23,9 @@ router.put('/update-questionnaire-item/:itemId', auth, certificateEp.updateQuest
 router.post('/questionnaire-item/upload-image/:itemId', auth, upload.single('image'), certificateEp.uploadQuestionnaireImage);
 
 
+router.get('/get-farmname/:farmId', auth, certificateEp.getFarmName);
+
+
 
 
 

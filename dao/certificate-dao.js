@@ -742,3 +742,24 @@ exports.getQuestionItemById = async (itemId) => {
         });
     });
 };
+
+
+exports.getFarmName = async (farmId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT farmName 
+            FROM plant_care.farms 
+            WHERE farmId = ?
+            ORDER BY farmName ASC
+        `;
+
+        db.plantcare.query(query, [farmId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farm name:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};

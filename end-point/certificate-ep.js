@@ -381,3 +381,23 @@ exports.uploadQuestionnaireImage = asyncHandler(async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 });
+
+
+exports.getFarmName = asyncHandler(async (req, res) => {
+    try {
+        const farmId = req.params.farmId; // Fixed: was cropId
+
+        console.log("farmId", farmId); // Fixed: was cropId
+
+        const farm = await certificateDao.getFarmName(farmId);
+
+        if (!farm || farm.length === 0) {
+            return res.status(404).json({ message: "Farm not found" });
+        }
+
+        res.status(200).json(farm);
+    } catch (error) {
+        console.error("Error fetching farm name:", error);
+        res.status(500).json({ message: "Failed to fetch farm name" });
+    }
+});
