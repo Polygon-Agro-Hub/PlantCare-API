@@ -342,6 +342,45 @@ exports.generateRegCode = generateRegCode;
 
 
 
+// exports.getAllFarmByUserId = async (userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT 
+//                 f.id,
+//                 f.userId, 
+//                 f.farmName, 
+//                 f.farmIndex, 
+//                 f.extentha, 
+//                 f.extentac, 
+//                 f.extentp, 
+//                 f.district, 
+//                 f.plotNo, 
+//                 f.street, 
+//                 f.city, 
+//                 f.staffCount, 
+//                 f.appUserCount, 
+//                 f.imageId,
+//                 f.isBlock,
+//                 COALESCE(COUNT(occ.farmId), 0) as farmCropCount
+//             FROM farms f
+//             LEFT JOIN ongoingcultivationscrops occ ON f.id = occ.farmId
+//             WHERE f.userId = ?
+//             GROUP BY f.id, f.userId, f.farmName, f.farmIndex, f.extentha, f.extentac, f.extentp, 
+//                      f.district, f.plotNo, f.street, f.city, f.staffCount, f.appUserCount, f.imageId, f.isBlock
+//             ORDER BY f.id DESC
+//         `;
+
+//         db.plantcare.query(query, [userId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching farms:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
 exports.getAllFarmByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -361,15 +400,20 @@ exports.getAllFarmByUserId = async (userId) => {
                 f.appUserCount, 
                 f.imageId,
                 f.isBlock,
-                COALESCE(COUNT(occ.farmId), 0) as farmCropCount
+                COALESCE(COUNT(DISTINCT occ.id), 0) as farmCropCount,
+                CASE 
+                    WHEN cpf.farmId IS NOT NULL THEN 'Certificate'
+                    ELSE 'NoCertificate'
+                END as certificationStatus
             FROM farms f
             LEFT JOIN ongoingcultivationscrops occ ON f.id = occ.farmId
+            LEFT JOIN certificationpaymentfarm cpf ON f.id = cpf.farmId
             WHERE f.userId = ?
             GROUP BY f.id, f.userId, f.farmName, f.farmIndex, f.extentha, f.extentac, f.extentp, 
-                     f.district, f.plotNo, f.street, f.city, f.staffCount, f.appUserCount, f.imageId, f.isBlock
+                     f.district, f.plotNo, f.street, f.city, f.staffCount, f.appUserCount, f.imageId, 
+                     f.isBlock, cpf.farmId
             ORDER BY f.id DESC
         `;
-
         db.plantcare.query(query, [userId], (error, results) => {
             if (error) {
                 console.error("Error fetching farms:", error);
@@ -557,11 +601,50 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
 ////cultivation
 
 
+// exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
+//     const sql = `
+//         SELECT 
+//             c.id,
+//             c.userId,
+//             oc.startedAt,
+//             oc.farmId,
+//             oc.cropCalendar,
+//             oc.isBlock,
+//             cr.id as cropId,
+//             cr.varietyNameEnglish,
+//             cr.varietyNameSinhala,
+//             cr.varietyNameTamil,
+//             cr.image,
+//             DATE_FORMAT(oc.startedAt, '%Y-%m-%d') as staredAt
+//         FROM ongoingcultivations c 
+//         JOIN ongoingcultivationscrops oc ON c.id = oc.ongoingCultivationId
+//         JOIN cropcalender cc ON oc.cropCalendar = cc.id
+//         JOIN cropvariety cr ON cc.cropVarietyId = cr.id 
+//         WHERE c.userId = ? AND oc.farmId = ?
+//         ORDER BY oc.startedAt DESC, oc.cropCalendar ASC
+//     `;
+
+//     console.log('DEBUG: Executing query with userId:', userId, 'farmId:', farmId);
+
+//     db.plantcare.query(sql, [userId, farmId], (err, results) => {
+//         if (err) {
+//             console.error("Database error:", err);
+//             return callback(err, null);
+//         }
+
+//         console.log('DEBUG: Query results count:', results.length);
+//         console.log('DEBUG: Sample result farmIds:', results.slice(0, 3).map(r => r.farmId));
+
+//         callback(null, results);
+//     });
+// };
+
 exports.getOngoingCultivationsByUserIdAndFarmId = (userId, farmId, callback) => {
     const sql = `
         SELECT 
             c.id,
             c.userId,
+            oc.id As ongoingCropId,
             oc.startedAt,
             oc.farmId,
             oc.cropCalendar,

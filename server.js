@@ -116,7 +116,9 @@ const cropRoutes = require("./routes/cropRoutes");
 const MarketPriceRoutes = require("./routes/marketPriceRoutes");
 const complainRoutes = require("./routes/complainRoutes");
 const heathRoutes = require("./routes/heathRoutes");
-const farmRoutes = require("./routes/farm.routes")
+const farmRoutes = require("./routes/farm.routes");
+const certificateRoutes = require("./routes/certificate");
+const requestInspectionRoutes = require("./routes/requestInspection");
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -193,6 +195,10 @@ app.use("/api/market-price", MarketPriceRoutes);
 app.use("/api/complain", complainRoutes);
 
 app.use("/api/farm", farmRoutes);
+
+app.use("/api/requestInspection", requestInspectionRoutes);
+
+app.use("/api/certificate", certificateRoutes);
 
 app.use("", heathRoutes);
 
