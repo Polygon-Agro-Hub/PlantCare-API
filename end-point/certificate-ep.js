@@ -503,3 +503,57 @@ exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Failed to fetch farm certificates" });
     }
 });
+
+
+
+exports.removeQuestionnaireItem = asyncHandler(async (req, res) => {
+    try {
+        const itemId = req.params.itemId;
+        const userId = req.user.id;
+
+        console.log(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", itemId)
+
+        if (!itemId) {
+            return res.status(400).json({ message: 'itemId is required.' });
+        }
+
+        // Get the item to check completion time and verify details
+        const item = await certificateDao.getQuestionItemById(itemId);
+
+        if (!item) {
+            return res.status(404).json({ message: "Questionnaire item not found" });
+        }
+
+        // Check if the item was completed within the last 1 hour
+        if (!item.doneDate) {
+            return res.status(400).json({
+                message: "This item is not completed yet"
+            });
+        }
+
+        const completionTime = new Date(item.doneDate);
+        const currentTime = new Date();
+        const timeDifference = currentTime - completionTime;
+        const oneHourInMs = 60 * 60 * 1000; // 1 hour in milliseconds
+
+        if (timeDifference > oneHourInMs) {
+            return res.status(403).json({
+                message: "Cannot remove completion after 1 hour. Please contact administrator.",
+                completedAt: item.doneDate,
+                timeElapsed: Math.floor(timeDifference / (1000 * 60)) + ' minutes'
+            });
+        }
+
+        // Remove the completion based on item type
+        const result = await certificateDao.removeQuestionItemCompletion(itemId, item.type);
+
+        res.status(200).json({
+            success: true,
+            message: 'Questionnaire item completion removed successfully.',
+            result: result,
+        });
+    } catch (error) {
+        console.error('Error during questionnaire item removal:', error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+});

@@ -38,8 +38,8 @@ router.get('/get-farm-certificate/:farmId', auth, certificateEp.getFarmCertifica
 router.get('/get-farmcertificatetask/:farmId', auth, certificateEp.getFarmCertificateTask);
 
 
-
-
+// Remove questionnaire item (both tick mark and image) within 1 hour
+router.delete('/questionnaire-item/remove/:itemId', auth, certificateEp.removeQuestionnaireItem);
 
 
 
