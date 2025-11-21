@@ -27,6 +27,18 @@ router.get('/get-farmname/:farmId', auth, certificateEp.getFarmName);
 
 
 
+router.get('/get-farmcertificate-crop/:farmId', auth, certificateEp.getFarmcertificateCrop);
+
+router.get('/get-farm-certificate/:farmId', auth, certificateEp.getFarmCertificate);
+
+
+//router.post('/farm-certificate-questionnaire/:farmId', auth, certificateEp.createFarmQuestionnaire);
+
+
+router.get('/get-farmcertificatetask/:farmId', auth, certificateEp.getFarmCertificateTask);
+
+
+
 
 
 
