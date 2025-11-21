@@ -284,6 +284,8 @@ exports.getCropCertificateByid = asyncHandler(async (req, res) => {
 
 
 
+
+
 // Update for Tick Off
 exports.updateQuestionItemByid = asyncHandler(async (req, res) => {
     try {
@@ -399,5 +401,105 @@ exports.getFarmName = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error("Error fetching farm name:", error);
         res.status(500).json({ message: "Failed to fetch farm name" });
+    }
+});
+
+
+
+
+exports.getFarmcertificateCrop = asyncHandler(async (req, res) => {
+    try {
+        const farmId = req.params.farmId; // Fixed: was cropId
+
+        console.log("farmId", farmId); // Fixed: was cropId
+
+        const farm = await certificateDao.getFarmcertificateCrop(farmId);
+
+        if (!farm || farm.length === 0) {
+            return res.status(404).json({ message: "Farm not found" });
+        }
+
+        res.status(200).json(farm);
+    } catch (error) {
+        console.error("Error fetching farm name:", error);
+        res.status(500).json({ message: "Failed to fetch farm name" });
+    }
+});
+
+
+
+exports.getFarmCertificate = asyncHandler(async (req, res) => {
+    try {
+        const farmId = req.params.farmId;
+        const userId = req.user.id;
+
+        const certificates = await certificateDao.getFarmCertificate(farmId, userId);
+
+        if (!certificates || certificates.length === 0) {
+            return res.status(200).json({
+                status: "notHaveFarmCertificate",
+                message: "No certificates found for this farm",
+                data: []
+            });
+        }
+
+        res.status(200).json({
+            status: "haveFarmCertificate",
+            message: "Certificates found",
+            data: certificates
+        });
+    } catch (error) {
+        console.error("Error fetching farm certificates:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch farm certificates"
+        });
+    }
+});
+
+
+
+
+// exports.createFarmQuestionnaire = asyncHandler(async (req, res) => {
+//     try {
+//         const farmId = req.params.farmId;
+//         const userId = req.user.id;
+
+//         const result = await certificateDao.createFarmQuestionnaire(farmId, userId);
+
+//         res.status(200).json({
+//             success: true,
+//             message: "Farm questionnaire created successfully",
+//             data: result
+//         });
+//     } catch (error) {
+//         console.error("Error in createFarmQuestionnaire endpoint:", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Failed to create farm questionnaire",
+//             error: error.message
+//         });
+//     }
+// });
+
+
+exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
+    try {
+        const farmId = req.params.farmId;
+        const userId = req.user.id;
+
+        console.log("farmid......................", farmId)
+        const certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
+
+        // console.log("certificate Q", this.getCropCertificateByid)
+
+        if (!certificates || certificates.length === 0) {
+            return res.status(404).json({ message: "No certificates found for farms" });
+        }
+
+        res.status(200).json(certificates);
+    } catch (error) {
+        console.error("Error fetching farm certificates:", error);
+        res.status(500).json({ message: "Failed to fetch farm certificates" });
     }
 });
