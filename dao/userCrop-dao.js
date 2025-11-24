@@ -416,14 +416,14 @@ exports.getTaskById = (id) => {
     });
 };
 
-exports.getPreviousTasks = (taskIndex, cropCalendarId, userId) => {
+exports.getPreviousTasks = (taskIndex, cropCalendarId, userId, onCulscropID) => {
     return new Promise((resolve, reject) => {
         const sql = `
-          SELECT id, taskIndex, createdAt, status , days, startingDate
+          SELECT id, taskIndex, createdAt, status , days, startingDate ,onCulscropID
           FROM slavecropcalendardays 
-          WHERE taskIndex < ? AND cropCalendarId = ? AND userId = ? 
+          WHERE taskIndex < ? AND cropCalendarId = ? AND userId = ? AND onCulscropID = ?
           ORDER BY taskIndex ASC`;
-        db.plantcare.query(sql, [taskIndex, cropCalendarId, userId], (err, results) => {
+        db.plantcare.query(sql, [taskIndex, cropCalendarId, userId, onCulscropID], (err, results) => {
             if (err) {
                 reject(err);
             } else {
