@@ -510,7 +510,7 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
         const userId = req.user.id;
         const ownerId = req.user.ownerId;
 
-        const { id, status } = req.body;
+        const { id, status, onCulscropID } = req.body;
         console.log(",,,,,,,,,,,,,,,,,,,", id);
         const currentTime = new Date();
 
@@ -545,8 +545,10 @@ exports.updateCropCalendarStatus = asyncHandler(async (req, res) => {
                 taskIndex,
                 cropCalendarId,
                 userId,
-                status
+                status,
+                onCulscropID
             );
+            console.log("t1", previousTasksResults)
 
             let allPreviousTasksCompleted = true;
             let lastCompletedTask = null;
