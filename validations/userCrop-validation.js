@@ -66,6 +66,7 @@ exports.getSlaveCropCalendarDaysSchema = Joi.object({
 exports.updateCropCalendarStatusSchema = Joi.object({
     id: Joi.number().required().label("Task ID"),
     status: Joi.string().valid("pending", "completed").required().label("Status"),
+    onCulscropID: Joi.number()
 });
 
 // module.exports = {
