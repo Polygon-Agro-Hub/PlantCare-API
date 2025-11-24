@@ -638,26 +638,73 @@ exports.getCropCertificateByid = async (cropId, userId) => {
 
 
 
+// exports.updateQuestionItemByid = async (itemId, updateData) => {
+//     return new Promise((resolve, reject) => {
+//         let query;
+//         let params;
+
+//         // Check if it's a tick-off update or image upload update
+//         if (updateData.type === 'tickOff') {
+//             query = `
+//                 UPDATE slavequestionnaireitems 
+//                 SET tickResult = ?, doneDate = NOW()
+//                 WHERE id = ?
+//             `;
+//             params = [1, itemId];
+//         } else if (updateData.type === 'photoProof') {
+//             query = `
+//                 UPDATE slavequestionnaireitems 
+//                 SET uploadImage = ?, doneDate = NOW()
+//                 WHERE id = ?
+//             `;
+//             params = [updateData.imageUrl, itemId];
+//         } else {
+//             return reject(new Error('Invalid update type'));
+//         }
+
+//         db.plantcare.query(query, params, (err, result) => {
+//             if (err) {
+//                 reject(new Error('Error updating questionnaire item: ' + err.message));
+//             } else {
+//                 if (result.affectedRows === 0) {
+//                     reject(new Error('No questionnaire item found with the given ID'));
+//                 } else {
+//                     resolve({
+//                         success: true,
+//                         message: 'Questionnaire item updated successfully',
+//                         affectedRows: result.affectedRows
+//                     });
+//                 }
+//             }
+//         });
+//     });
+// };
+
 exports.updateQuestionItemByid = async (itemId, updateData) => {
     return new Promise((resolve, reject) => {
         let query;
         let params;
 
+        // Get current timestamp and add 5 hours 30 minutes for Sri Lanka timezone
+        const currentDate = new Date();
+        const sriLankaTime = new Date(currentDate.getTime() + (5.5 * 60 * 60 * 1000));
+        const currentTimestamp = sriLankaTime.toISOString().slice(0, 19).replace('T', ' ');
+
         // Check if it's a tick-off update or image upload update
         if (updateData.type === 'tickOff') {
             query = `
                 UPDATE slavequestionnaireitems 
-                SET tickResult = ?, doneDate = NOW()
+                SET tickResult = ?, doneDate = ?
                 WHERE id = ?
             `;
-            params = [1, itemId];
+            params = [1, currentTimestamp, itemId];
         } else if (updateData.type === 'photoProof') {
             query = `
                 UPDATE slavequestionnaireitems 
-                SET uploadImage = ?, doneDate = NOW()
+                SET uploadImage = ?, doneDate = ?
                 WHERE id = ?
             `;
-            params = [updateData.imageUrl, itemId];
+            params = [updateData.imageUrl, currentTimestamp, itemId];
         } else {
             return reject(new Error('Invalid update type'));
         }
@@ -1056,6 +1103,49 @@ exports.getFarmCertificateTask = async (farmId, userId) => {
                     }
                 });
             });
+        });
+    });
+};
+
+
+
+exports.removeQuestionItemCompletion = async (itemId, itemType) => {
+    return new Promise((resolve, reject) => {
+        let query;
+        let params;
+
+        if (itemType === 'Tick Off') {
+            query = `
+                UPDATE slavequestionnaireitems 
+                SET tickResult = 0, doneDate = NULL
+                WHERE id = ?
+            `;
+            params = [itemId];
+        } else if (itemType === 'Photo Proof') {
+            query = `
+                UPDATE slavequestionnaireitems 
+                SET uploadImage = NULL, doneDate = NULL
+                WHERE id = ?
+            `;
+            params = [itemId];
+        } else {
+            return reject(new Error('Invalid item type'));
+        }
+
+        db.plantcare.query(query, params, (err, result) => {
+            if (err) {
+                reject(new Error('Error removing questionnaire item completion: ' + err.message));
+            } else {
+                if (result.affectedRows === 0) {
+                    reject(new Error('No questionnaire item found with the given ID'));
+                } else {
+                    resolve({
+                        success: true,
+                        message: 'Questionnaire item completion removed successfully',
+                        affectedRows: result.affectedRows
+                    });
+                }
+            }
         });
     });
 };
