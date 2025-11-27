@@ -1,33 +1,47 @@
 const db = require("../startup/database");
 
 
-exports.getFarmsCertificate = async () => {
+exports.getFarmsCertificate = async (farmId) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT 
-                id,
-                srtcomapnyId,
-                srtName,
-                srtNumber,
-                applicable,
-                accreditation,
-                serviceAreas,
-                price,
-                timeLine,
-                commission,
-                tearms,
-                scope,
-                logo,
-                noOfVisit,
-                modifyBy,
-                modifyDate,
-                createdAt
-            FROM certificates
-            WHERE applicable = 'For Farm'
-            ORDER BY id ASC
+            SELECT DISTINCT
+                c.id,
+                c.srtcomapnyId,
+                c.srtName,
+                c.srtNumber,
+                c.applicable,
+                c.accreditation,
+                c.serviceAreas,
+                c.price,
+                c.timeLine,
+                c.commission,
+                c.tearms,
+                c.scope,
+                c.logo,
+                c.noOfVisit,
+                c.modifyBy,
+                c.modifyDate,
+                c.createdAt
+            FROM certificates c
+            INNER JOIN (
+                -- Get farm district
+                SELECT district 
+                FROM farms 
+                WHERE id = ?
+                LIMIT 1
+            ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+            WHERE c.applicable = 'For Farm'
+            AND EXISTS (
+                -- Check if certificate has at least one questionnaire
+                SELECT 1 
+                FROM questionnaire q 
+                WHERE q.certificateid = c.id
+                LIMIT 1
+            )
+            ORDER BY c.id ASC
         `;
 
-        db.plantcare.query(query, (error, results) => {
+        db.plantcare.query(query, [farmId], (error, results) => {
             if (error) {
                 console.error("Error fetching farm certificates:", error);
                 reject(error);
@@ -272,33 +286,99 @@ exports.createCertificatePayment = async (paymentData) => {
 
 //crop
 
-exports.getCropsCertificate = async () => {
+// exports.getCropsCertificate = async (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT DISTINCT
+//                 c.id,
+//                 c.srtcomapnyId,
+//                 c.srtName,
+//                 c.srtNumber,
+//                 c.applicable,
+//                 c.accreditation,
+//                 c.serviceAreas,
+//                 c.price,
+//                 c.timeLine,
+//                 c.commission,
+//                 c.tearms,
+//                 c.scope,
+//                 c.logo,
+//                 c.noOfVisit,
+//                 c.modifyBy,
+//                 c.modifyDate,
+//                 c.createdAt
+//             FROM certificates c
+//             INNER JOIN (
+//                 -- Get farm district
+//                 SELECT district 
+//                 FROM farms 
+//                 WHERE id = ?
+//                 LIMIT 1
+//             ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+//             WHERE c.applicable = 'For Selected Crops'
+//             AND EXISTS (
+//                 -- Check if certificate has at least one questionnaire
+//                 SELECT 1 
+//                 FROM questionnaire q 
+//                 WHERE q.certificateid = c.id
+//                 LIMIT 1
+//             )
+//             ORDER BY c.id ASC
+//         `;
+
+//         db.plantcare.query(query, [farmId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching crop certificates:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+exports.getCropsCertificate = async (farmId, cropIdcrop) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT 
-                id,
-                srtcomapnyId,
-                srtName,
-                srtNumber,
-                applicable,
-                accreditation,
-                serviceAreas,
-                price,
-                timeLine,
-                commission,
-                tearms,
-                scope,
-                logo,
-                noOfVisit,
-                modifyBy,
-                modifyDate,
-                createdAt
-            FROM certificates
-            WHERE applicable = 'For Selected Crops'
-            ORDER BY id ASC
+            SELECT DISTINCT
+                c.id,
+                c.srtcomapnyId,
+                c.srtName,
+                c.srtNumber,
+                c.applicable,
+                c.accreditation,
+                c.serviceAreas,
+                c.price,
+                c.timeLine,
+                c.commission,
+                c.tearms,
+                c.scope,
+                c.logo,
+                c.noOfVisit,
+                c.modifyBy,
+                c.modifyDate,
+                c.createdAt
+            FROM certificates c
+            INNER JOIN (
+                -- Get farm district
+                SELECT district 
+                FROM farms 
+                WHERE id = ?
+                LIMIT 1
+            ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+            INNER JOIN certificatecrops cc ON cc.certificateId = c.id
+            WHERE c.applicable = 'For Selected Crops'
+            AND cc.cropId = ?
+            AND EXISTS (
+                -- Check if certificate has at least one questionnaire
+                SELECT 1 
+                FROM questionnaire q 
+                WHERE q.certificateid = c.id
+                LIMIT 1
+            )
+            ORDER BY c.id ASC
         `;
 
-        db.plantcare.query(query, (error, results) => {
+        db.plantcare.query(query, [farmId, cropIdcrop], (error, results) => {
             if (error) {
                 console.error("Error fetching crop certificates:", error);
                 reject(error);
@@ -753,7 +833,7 @@ exports.getFarmName = async (farmId) => {
         const query = `
             SELECT farmName 
             FROM plant_care.farms 
-            WHERE farmId = ?
+            WHERE id = ?
             ORDER BY farmName ASC
         `;
 

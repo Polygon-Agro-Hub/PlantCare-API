@@ -5,11 +5,11 @@ const certificateEp = require("../end-point/certificate-ep");
 const { upload } = require('../end-point/cropCalendarimages-ep');
 
 //Fram certificate
-router.get('/get-farms-certificate', auth, certificateEp.getFarmsCertificate);
+router.get('/get-farms-certificate/:farmId', auth, certificateEp.getFarmsCertificate);
 router.post('/certificate-payment/:farmId', auth, certificateEp.createCertificatePayment);
 
 //Crop Certificate
-router.get('/get-crop-certificate', auth, certificateEp.getCropsCertificate);
+router.get('/get-crop-certificate/:farmId/:cropIdcrop', auth, certificateEp.getCropsCertificate);
 router.post('/certificate-crop-payment/:cropId', auth, certificateEp.createCropCertificatePayment);
 
 router.get('/get-crophave-certificate/:cropId', auth, certificateEp.getCropHvaeCertificate);
