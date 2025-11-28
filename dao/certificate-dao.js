@@ -336,7 +336,7 @@ exports.createCertificatePayment = async (paymentData) => {
 //         });
 //     });
 // };
-exports.getCropsCertificate = async (farmId, cropIdcrop) => {
+exports.getCropsCertificate = async (farmId, cropId) => {
     return new Promise((resolve, reject) => {
         const query = `
             SELECT DISTINCT
@@ -366,8 +366,16 @@ exports.getCropsCertificate = async (farmId, cropIdcrop) => {
                 LIMIT 1
             ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
             INNER JOIN certificatecrops cc ON cc.certificateId = c.id
+            INNER JOIN (
+                -- Get cropGroupId from the ongoing cultivation crop
+                SELECT cv.cropGroupId
+                FROM ongoingcultivationscrops occ
+                INNER JOIN cropcalender ccal ON ccal.id = occ.cropCalendar
+                INNER JOIN cropvariety cv ON cv.id = ccal.cropVarietyId
+                WHERE occ.id = ?
+                LIMIT 1
+            ) crop_info ON crop_info.cropGroupId = cc.cropId
             WHERE c.applicable = 'For Selected Crops'
-            AND cc.cropId = ?
             AND EXISTS (
                 -- Check if certificate has at least one questionnaire
                 SELECT 1 
@@ -378,7 +386,7 @@ exports.getCropsCertificate = async (farmId, cropIdcrop) => {
             ORDER BY c.id ASC
         `;
 
-        db.plantcare.query(query, [farmId, cropIdcrop], (error, results) => {
+        db.plantcare.query(query, [farmId, cropId], (error, results) => {
             if (error) {
                 console.error("Error fetching crop certificates:", error);
                 reject(error);
@@ -1229,4 +1237,40 @@ exports.removeQuestionItemCompletion = async (itemId, itemType) => {
         });
     });
 };
+
+
+exports.getCropNames = async (cropId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                occ.id AS ongoingCropId,
+                occ.cropCalendar AS cropCalendarId,
+                cc.id AS cropCalenderId,
+                cc.cropVarietyId,
+                cv.id AS cropVarietyId,
+                cv.varietyNameEnglish,
+                cv.varietyNameSinhala,
+                cv.varietyNameTamil,
+                cv.cropGroupId
+            FROM plant_care.ongoingcultivationscrops occ
+            INNER JOIN plant_care.cropcalender cc 
+                ON occ.cropCalendar = cc.id
+            INNER JOIN plant_care.cropvariety cv 
+                ON cc.cropVarietyId = cv.id
+            WHERE occ.id = ?
+            ORDER BY cv.varietyNameEnglish ASC
+        `;
+
+        db.plantcare.query(query, [cropId], (error, results) => {
+            if (error) {
+                console.error("Error fetching crop names:", error);
+                reject(error);
+            } else {
+                console.log("Query results:", results);
+                resolve(results);
+            }
+        });
+    });
+};
+
 

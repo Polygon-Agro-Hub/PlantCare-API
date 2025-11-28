@@ -9,7 +9,7 @@ router.get('/get-farms-certificate/:farmId', auth, certificateEp.getFarmsCertifi
 router.post('/certificate-payment/:farmId', auth, certificateEp.createCertificatePayment);
 
 //Crop Certificate
-router.get('/get-crop-certificate/:farmId/:cropIdcrop', auth, certificateEp.getCropsCertificate);
+router.get('/get-crop-certificate/:farmId/:cropId', auth, certificateEp.getCropsCertificate);
 router.post('/certificate-crop-payment/:cropId', auth, certificateEp.createCropCertificatePayment);
 
 router.get('/get-crophave-certificate/:cropId', auth, certificateEp.getCropHvaeCertificate);
@@ -21,6 +21,10 @@ router.put('/update-questionnaire-item/:itemId', auth, certificateEp.updateQuest
 
 // Photo Proof upload
 router.post('/questionnaire-item/upload-image/:itemId', auth, upload.single('image'), certificateEp.uploadQuestionnaireImage);
+
+
+
+router.get('/get-cropName/:cropId', auth, certificateEp.getCropNames)
 
 
 router.get('/get-farmname/:farmId', auth, certificateEp.getFarmName);
