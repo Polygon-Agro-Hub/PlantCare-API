@@ -5,10 +5,17 @@ const multer = require('multer');
 
 exports.getFarmsCertificate = asyncHandler(async (req, res) => {
     try {
-        const certificates = await certificateDao.getFarmsCertificate();
+        const farmId = req.params.farmId;
+        console.log("farmid////////////", farmId)
+        // Validate farmId
+        if (!farmId) {
+            return res.status(400).json({ message: "Farm ID is required" });
+        }
+
+        const certificates = await certificateDao.getFarmsCertificate(farmId);
 
         if (!certificates || certificates.length === 0) {
-            return res.status(404).json({ message: "No certificates found for farms" });
+            return res.status(404).json({ message: "No certificates found for this farm" });
         }
 
         res.status(200).json(certificates);
@@ -17,7 +24,6 @@ exports.getFarmsCertificate = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Failed to fetch farm certificates" });
     }
 });
-
 
 // Certificate Payment Endpoint - Fixed Version
 
@@ -118,19 +124,32 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
 
 exports.getCropsCertificate = asyncHandler(async (req, res) => {
     try {
-        const certificates = await certificateDao.getCropsCertificate();
+        const farmId = req.params.farmId;
+        const cropId = req.params.cropId; // This is ongoingcultivationscrops.id
+
+        console.log("farmId............", farmId);
+        console.log("cropId (ongoingcultivationscrops.id)........", cropId);
+
+        // Validate farmId and cropId
+        if (!farmId) {
+            return res.status(400).json({ message: "Farm ID is required" });
+        }
+        if (!cropId) {
+            return res.status(400).json({ message: "Crop ID is required" });
+        }
+
+        const certificates = await certificateDao.getCropsCertificate(farmId, cropId);
 
         if (!certificates || certificates.length === 0) {
-            return res.status(404).json({ message: "No certificates found for farms" });
+            return res.status(404).json({ message: "No certificates found for this crop" });
         }
 
         res.status(200).json(certificates);
     } catch (error) {
-        console.error("Error fetching farm certificates:", error);
-        res.status(500).json({ message: "Failed to fetch farm certificates" });
+        console.error("Error fetching crop certificates:", error);
+        res.status(500).json({ message: "Failed to fetch crop certificates" });
     }
 });
-
 
 // Certificate Payment Endpoint - Fixed Version
 
@@ -555,5 +574,26 @@ exports.removeQuestionnaireItem = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error('Error during questionnaire item removal:', error);
         res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+});
+
+exports.getCropNames = asyncHandler(async (req, res) => {
+    try {
+        const cropId = req.params.cropId;
+
+
+        console.log("cropid......................", cropId)
+        const certificates = await certificateDao.getCropNames(cropId);
+
+        // console.log("certificate Q", this.getCropCertificateByid)
+
+        if (!certificates || certificates.length === 0) {
+            return res.status(404).json({ message: "No certificates found for farms" });
+        }
+
+        res.status(200).json(certificates);
+    } catch (error) {
+        console.error("Error fetching farm certificates:", error);
+        res.status(500).json({ message: "Failed to fetch farm certificates" });
     }
 });
