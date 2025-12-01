@@ -1,33 +1,47 @@
 const db = require("../startup/database");
 
 
-exports.getFarmsCertificate = async () => {
+exports.getFarmsCertificate = async (farmId) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT 
-                id,
-                srtcomapnyId,
-                srtName,
-                srtNumber,
-                applicable,
-                accreditation,
-                serviceAreas,
-                price,
-                timeLine,
-                commission,
-                tearms,
-                scope,
-                logo,
-                noOfVisit,
-                modifyBy,
-                modifyDate,
-                createdAt
-            FROM certificates
-            WHERE applicable = 'For Farm'
-            ORDER BY id ASC
+            SELECT DISTINCT
+                c.id,
+                c.srtcomapnyId,
+                c.srtName,
+                c.srtNumber,
+                c.applicable,
+                c.accreditation,
+                c.serviceAreas,
+                c.price,
+                c.timeLine,
+                c.commission,
+                c.tearms,
+                c.scope,
+                c.logo,
+                c.noOfVisit,
+                c.modifyBy,
+                c.modifyDate,
+                c.createdAt
+            FROM certificates c
+            INNER JOIN (
+                -- Get farm district
+                SELECT district 
+                FROM farms 
+                WHERE id = ?
+                LIMIT 1
+            ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+            WHERE c.applicable = 'For Farm'
+            AND EXISTS (
+                -- Check if certificate has at least one questionnaire
+                SELECT 1 
+                FROM questionnaire q 
+                WHERE q.certificateid = c.id
+                LIMIT 1
+            )
+            ORDER BY c.id ASC
         `;
 
-        db.plantcare.query(query, (error, results) => {
+        db.plantcare.query(query, [farmId], (error, results) => {
             if (error) {
                 console.error("Error fetching farm certificates:", error);
                 reject(error);
@@ -272,33 +286,107 @@ exports.createCertificatePayment = async (paymentData) => {
 
 //crop
 
-exports.getCropsCertificate = async () => {
+// exports.getCropsCertificate = async (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT DISTINCT
+//                 c.id,
+//                 c.srtcomapnyId,
+//                 c.srtName,
+//                 c.srtNumber,
+//                 c.applicable,
+//                 c.accreditation,
+//                 c.serviceAreas,
+//                 c.price,
+//                 c.timeLine,
+//                 c.commission,
+//                 c.tearms,
+//                 c.scope,
+//                 c.logo,
+//                 c.noOfVisit,
+//                 c.modifyBy,
+//                 c.modifyDate,
+//                 c.createdAt
+//             FROM certificates c
+//             INNER JOIN (
+//                 -- Get farm district
+//                 SELECT district 
+//                 FROM farms 
+//                 WHERE id = ?
+//                 LIMIT 1
+//             ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+//             WHERE c.applicable = 'For Selected Crops'
+//             AND EXISTS (
+//                 -- Check if certificate has at least one questionnaire
+//                 SELECT 1 
+//                 FROM questionnaire q 
+//                 WHERE q.certificateid = c.id
+//                 LIMIT 1
+//             )
+//             ORDER BY c.id ASC
+//         `;
+
+//         db.plantcare.query(query, [farmId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching crop certificates:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+exports.getCropsCertificate = async (farmId, cropId) => {
     return new Promise((resolve, reject) => {
         const query = `
-            SELECT 
-                id,
-                srtcomapnyId,
-                srtName,
-                srtNumber,
-                applicable,
-                accreditation,
-                serviceAreas,
-                price,
-                timeLine,
-                commission,
-                tearms,
-                scope,
-                logo,
-                noOfVisit,
-                modifyBy,
-                modifyDate,
-                createdAt
-            FROM certificates
-            WHERE applicable = 'For Selected Crops'
-            ORDER BY id ASC
+            SELECT DISTINCT
+                c.id,
+                c.srtcomapnyId,
+                c.srtName,
+                c.srtNumber,
+                c.applicable,
+                c.accreditation,
+                c.serviceAreas,
+                c.price,
+                c.timeLine,
+                c.commission,
+                c.tearms,
+                c.scope,
+                c.logo,
+                c.noOfVisit,
+                c.modifyBy,
+                c.modifyDate,
+                c.createdAt
+            FROM certificates c
+            INNER JOIN (
+                -- Get farm district
+                SELECT district 
+                FROM farms 
+                WHERE id = ?
+                LIMIT 1
+            ) f ON FIND_IN_SET(f.district, c.serviceAreas) > 0
+            INNER JOIN certificatecrops cc ON cc.certificateId = c.id
+            INNER JOIN (
+                -- Get cropGroupId from the ongoing cultivation crop
+                SELECT cv.cropGroupId
+                FROM ongoingcultivationscrops occ
+                INNER JOIN cropcalender ccal ON ccal.id = occ.cropCalendar
+                INNER JOIN cropvariety cv ON cv.id = ccal.cropVarietyId
+                WHERE occ.id = ?
+                LIMIT 1
+            ) crop_info ON crop_info.cropGroupId = cc.cropId
+            WHERE c.applicable = 'For Selected Crops'
+            AND EXISTS (
+                -- Check if certificate has at least one questionnaire
+                SELECT 1 
+                FROM questionnaire q 
+                WHERE q.certificateid = c.id
+                LIMIT 1
+            )
+            ORDER BY c.id ASC
         `;
 
-        db.plantcare.query(query, (error, results) => {
+        db.plantcare.query(query, [farmId, cropId], (error, results) => {
             if (error) {
                 console.error("Error fetching crop certificates:", error);
                 reject(error);
@@ -753,7 +841,7 @@ exports.getFarmName = async (farmId) => {
         const query = `
             SELECT farmName 
             FROM plant_care.farms 
-            WHERE farmId = ?
+            WHERE id = ?
             ORDER BY farmName ASC
         `;
 
@@ -1149,4 +1237,40 @@ exports.removeQuestionItemCompletion = async (itemId, itemType) => {
         });
     });
 };
+
+
+exports.getCropNames = async (cropId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                occ.id AS ongoingCropId,
+                occ.cropCalendar AS cropCalendarId,
+                cc.id AS cropCalenderId,
+                cc.cropVarietyId,
+                cv.id AS cropVarietyId,
+                cv.varietyNameEnglish,
+                cv.varietyNameSinhala,
+                cv.varietyNameTamil,
+                cv.cropGroupId
+            FROM plant_care.ongoingcultivationscrops occ
+            INNER JOIN plant_care.cropcalender cc 
+                ON occ.cropCalendar = cc.id
+            INNER JOIN plant_care.cropvariety cv 
+                ON cc.cropVarietyId = cv.id
+            WHERE occ.id = ?
+            ORDER BY cv.varietyNameEnglish ASC
+        `;
+
+        db.plantcare.query(query, [cropId], (error, results) => {
+            if (error) {
+                console.error("Error fetching crop names:", error);
+                reject(error);
+            } else {
+                console.log("Query results:", results);
+                resolve(results);
+            }
+        });
+    });
+};
+
 

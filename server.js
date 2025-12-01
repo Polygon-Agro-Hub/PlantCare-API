@@ -117,6 +117,7 @@ const MarketPriceRoutes = require("./routes/marketPriceRoutes");
 const complainRoutes = require("./routes/complainRoutes");
 const heathRoutes = require("./routes/heathRoutes");
 const farmRoutes = require("./routes/farm.routes");
+const staffRoutes = require("./routes/staffRoutes")
 const certificateRoutes = require("./routes/certificate");
 const requestInspectionRoutes = require("./routes/requestInspection");
 app.use(helmet());
@@ -195,6 +196,8 @@ app.use("/api/market-price", MarketPriceRoutes);
 app.use("/api/complain", complainRoutes);
 
 app.use("/api/farm", farmRoutes);
+
+app.use("/api/staff", staffRoutes);
 
 app.use("/api/requestInspection", requestInspectionRoutes);
 
