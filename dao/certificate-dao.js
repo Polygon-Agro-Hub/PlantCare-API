@@ -1083,6 +1083,118 @@ exports.getFarmCertificate = async (farmId, userId) => {
 
 
 
+// exports.getFarmCertificateTask = async (farmId, userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT 
+//                 cpf.farmId,
+//                 cpf.paymentId,
+//                 cp.certificateId,
+//                 cp.transactionId,
+//                 cp.amount,
+//                 cp.expireDate,
+//                 cp.createdAt as paymentCreatedAt,
+//                 cert.srtcomapnyId,
+//                 cert.srtName,
+//                 cert.srtNumber,
+//                 cert.applicable,
+//                 cert.accreditation,
+//                 cert.serviceAreas,
+//                 cert.price,
+//                 cert.timeLine,
+//                 cert.commission,
+//                 cert.tearms,
+//                 cert.scope,
+//                 cert.logo,
+//                 cert.noOfVisit,
+//                 cert.modifyBy,
+//                 cert.modifyDate,
+//                 cert.createdAt as certificateCreatedAt,
+//                 sq.id as slaveQuestionnaireId,
+//                 sq.clusterFarmId,
+//                 sq.createdAt as slaveQuestionnaireCreatedAt
+//             FROM certificationpaymentfarm cpf
+//             INNER JOIN certificationpayment cp ON cpf.paymentId = cp.id
+//             INNER JOIN certificates cert ON cp.certificateId = cert.id
+//             LEFT JOIN slavequestionnaire sq ON sq.crtPaymentId = cp.id
+//             WHERE cpf.farmId = ? AND cp.userId = ?
+//             ORDER BY cp.createdAt DESC
+//         `;
+
+//         db.plantcare.query(query, [farmId, userId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching crop certificates:", error);
+//                 return reject(error);
+//             }
+
+//             if (!results || results.length === 0) {
+//                 return resolve([]);
+//             }
+
+//             // Get questionnaire items for each slave questionnaire
+//             const certificatesWithItems = [];
+//             let processedCount = 0;
+
+//             results.forEach((certificate, index) => {
+//                 if (!certificate.slaveQuestionnaireId) {
+//                     // No questionnaire for this certificate
+//                     certificatesWithItems.push({
+//                         ...certificate,
+//                         questionnaireItems: []
+//                     });
+//                     processedCount++;
+
+//                     if (processedCount === results.length) {
+//                         resolve(certificatesWithItems);
+//                     }
+//                     return;
+//                 }
+
+//                 // Fetch questionnaire items
+//                 const itemsQuery = `
+//                     SELECT 
+//                         id,
+//                         slaveId,
+//                         type,
+//                         qNo,
+//                         qEnglish,
+//                         qSinhala,
+//                         qTamil,
+//                         tickResult,
+//                         officerTickResult,
+//                         uploadImage,
+//                         officerUploadImage,
+//                         doneDate
+//                     FROM slavequestionnaireitems
+//                     WHERE slaveId = ?
+//                     ORDER BY qNo ASC
+//                 `;
+
+//                 db.plantcare.query(itemsQuery, [certificate.slaveQuestionnaireId], (itemError, items) => {
+//                     if (itemError) {
+//                         console.error("Error fetching questionnaire items:", itemError);
+//                         certificatesWithItems.push({
+//                             ...certificate,
+//                             questionnaireItems: []
+//                         });
+//                     } else {
+//                         certificatesWithItems.push({
+//                             ...certificate,
+//                             questionnaireItems: items || []
+//                         });
+//                     }
+
+//                     processedCount++;
+
+//                     if (processedCount === results.length) {
+//                         resolve(certificatesWithItems);
+//                     }
+//                 });
+//             });
+//         });
+//     });
+// };
+
 exports.getFarmCertificateTask = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -1112,7 +1224,8 @@ exports.getFarmCertificateTask = async (farmId, userId) => {
                 cert.createdAt as certificateCreatedAt,
                 sq.id as slaveQuestionnaireId,
                 sq.clusterFarmId,
-                sq.createdAt as slaveQuestionnaireCreatedAt
+                sq.createdAt as slaveQuestionnaireCreatedAt,
+                'farm' as certificateType
             FROM certificationpaymentfarm cpf
             INNER JOIN certificationpayment cp ON cpf.paymentId = cp.id
             INNER JOIN certificates cert ON cp.certificateId = cert.id
@@ -1123,7 +1236,7 @@ exports.getFarmCertificateTask = async (farmId, userId) => {
 
         db.plantcare.query(query, [farmId, userId], (error, results) => {
             if (error) {
-                console.error("Error fetching crop certificates:", error);
+                console.error("Error fetching farm certificates:", error);
                 return reject(error);
             }
 
@@ -1131,69 +1244,125 @@ exports.getFarmCertificateTask = async (farmId, userId) => {
                 return resolve([]);
             }
 
-            // Get questionnaire items for each slave questionnaire
-            const certificatesWithItems = [];
-            let processedCount = 0;
-
-            results.forEach((certificate, index) => {
-                if (!certificate.slaveQuestionnaireId) {
-                    // No questionnaire for this certificate
-                    certificatesWithItems.push({
-                        ...certificate,
-                        questionnaireItems: []
-                    });
-                    processedCount++;
-
-                    if (processedCount === results.length) {
-                        resolve(certificatesWithItems);
-                    }
-                    return;
-                }
-
-                // Fetch questionnaire items
-                const itemsQuery = `
-                    SELECT 
-                        id,
-                        slaveId,
-                        type,
-                        qNo,
-                        qEnglish,
-                        qSinhala,
-                        qTamil,
-                        tickResult,
-                        officerTickResult,
-                        uploadImage,
-                        officerUploadImage,
-                        doneDate
-                    FROM slavequestionnaireitems
-                    WHERE slaveId = ?
-                    ORDER BY qNo ASC
-                `;
-
-                db.plantcare.query(itemsQuery, [certificate.slaveQuestionnaireId], (itemError, items) => {
-                    if (itemError) {
-                        console.error("Error fetching questionnaire items:", itemError);
-                        certificatesWithItems.push({
-                            ...certificate,
-                            questionnaireItems: []
-                        });
-                    } else {
-                        certificatesWithItems.push({
-                            ...certificate,
-                            questionnaireItems: items || []
-                        });
-                    }
-
-                    processedCount++;
-
-                    if (processedCount === results.length) {
-                        resolve(certificatesWithItems);
-                    }
-                });
-            });
+            processQuestionnaireItems(results, resolve, reject);
         });
     });
 };
+
+// New function to get cluster certificates
+exports.getClusterCertificateTask = async (farmId, userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                fcf.farmId,
+                fcf.clusterId,
+                fc.clsName,
+                fc.certificateId,
+                cert.srtcomapnyId,
+                cert.srtName,
+                cert.srtNumber,
+                cert.applicable,
+                cert.accreditation,
+                cert.serviceAreas,
+                cert.price,
+                cert.timeLine,
+                cert.commission,
+                cert.tearms,
+                cert.scope,
+                cert.logo,
+                cert.noOfVisit,
+                cert.modifyBy,
+                cert.modifyDate,
+                cert.createdAt as certificateCreatedAt,
+                sq.id as slaveQuestionnaireId,
+                sq.clusterFarmId,
+                sq.crtPaymentId,
+                sq.createdAt as slaveQuestionnaireCreatedAt,
+                sq.isCluster,
+                'cluster' as certificateType
+            FROM farmclusterfarmers fcf
+            INNER JOIN farmcluster fc ON fcf.clusterId = fc.id
+            INNER JOIN certificates cert ON fc.certificateId = cert.id
+            LEFT JOIN slavequestionnaire sq ON sq.clusterFarmId = fcf.id AND sq.isCluster = 1
+            WHERE fcf.farmId = ?
+            ORDER BY sq.createdAt DESC, fc.id DESC
+        `;
+
+        db.plantcare.query(query, [farmId], (error, results) => {
+            if (error) {
+                console.error("Error fetching cluster certificates:", error);
+                return reject(error);
+            }
+
+            if (!results || results.length === 0) {
+                return resolve([]);
+            }
+
+            processQuestionnaireItems(results, resolve, reject);
+        });
+    });
+};
+
+// Helper function to process questionnaire items (DRY principle)
+function processQuestionnaireItems(results, resolve, reject) {
+    const certificatesWithItems = [];
+    let processedCount = 0;
+
+    results.forEach((certificate) => {
+        if (!certificate.slaveQuestionnaireId) {
+            certificatesWithItems.push({
+                ...certificate,
+                questionnaireItems: []
+            });
+            processedCount++;
+
+            if (processedCount === results.length) {
+                resolve(certificatesWithItems);
+            }
+            return;
+        }
+
+        const itemsQuery = `
+            SELECT 
+                id,
+                slaveId,
+                type,
+                qNo,
+                qEnglish,
+                qSinhala,
+                qTamil,
+                tickResult,
+                officerTickResult,
+                uploadImage,
+                officerUploadImage,
+                doneDate
+            FROM slavequestionnaireitems
+            WHERE slaveId = ?
+            ORDER BY qNo ASC
+        `;
+
+        db.plantcare.query(itemsQuery, [certificate.slaveQuestionnaireId], (itemError, items) => {
+            if (itemError) {
+                console.error("Error fetching questionnaire items:", itemError);
+                certificatesWithItems.push({
+                    ...certificate,
+                    questionnaireItems: []
+                });
+            } else {
+                certificatesWithItems.push({
+                    ...certificate,
+                    questionnaireItems: items || []
+                });
+            }
+
+            processedCount++;
+
+            if (processedCount === results.length) {
+                resolve(certificatesWithItems);
+            }
+        });
+    });
+}
 
 
 
