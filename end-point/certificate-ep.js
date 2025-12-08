@@ -502,24 +502,53 @@ exports.getFarmCertificate = asyncHandler(async (req, res) => {
 // });
 
 
+// exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
+//     try {
+//         const farmId = req.params.farmId;
+//         const userId = req.user.id;
+
+//         console.log("farmid......................", farmId)
+//         const certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
+
+//         // console.log("certificate Q", this.getCropCertificateByid)
+
+//         if (!certificates || certificates.length === 0) {
+//             return res.status(404).json({ message: "No certificates found for farms" });
+//         }
+
+//         res.status(200).json(certificates);
+//     } catch (error) {
+//         console.error("Error fetching farm certificates:", error);
+//         res.status(500).json({ message: "Failed to fetch farm certificates" });
+//     }
+// });
+
 exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
         const userId = req.user.id;
 
-        console.log("farmid......................", farmId)
-        const certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
+        console.log("farmId......................", farmId);
 
-        // console.log("certificate Q", this.getCropCertificateByid)
+        // First, try to get farm certificates
+        let certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
+
+        // If no farm certificates found, try to get cluster certificates
+        if (!certificates || certificates.length === 0) {
+            console.log("No farm certificates found, checking cluster certificates...");
+            certificates = await certificateDao.getClusterCertificateTask(farmId, userId);
+        }
 
         if (!certificates || certificates.length === 0) {
-            return res.status(404).json({ message: "No certificates found for farms" });
+            return res.status(404).json({
+                message: "No certificates found for farm or cluster"
+            });
         }
 
         res.status(200).json(certificates);
     } catch (error) {
-        console.error("Error fetching farm certificates:", error);
-        res.status(500).json({ message: "Failed to fetch farm certificates" });
+        console.error("Error fetching certificates:", error);
+        res.status(500).json({ message: "Failed to fetch certificates" });
     }
 });
 
