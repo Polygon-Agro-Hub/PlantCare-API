@@ -381,6 +381,50 @@ exports.generateRegCode = generateRegCode;
 //     });
 // };
 
+// exports.getAllFarmByUserId = async (userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT 
+//                 f.id,
+//                 f.userId, 
+//                 f.farmName, 
+//                 f.farmIndex, 
+//                 f.extentha, 
+//                 f.extentac, 
+//                 f.extentp, 
+//                 f.district, 
+//                 f.plotNo, 
+//                 f.street, 
+//                 f.city, 
+//                 f.staffCount, 
+//                 f.appUserCount, 
+//                 f.imageId,
+//                 f.isBlock,
+//                 COALESCE(COUNT(DISTINCT occ.id), 0) as farmCropCount,
+//                 CASE 
+//                     WHEN cpf.farmId IS NOT NULL THEN 'Certificate'
+//                     ELSE 'NoCertificate'
+//                 END as certificationStatus
+//             FROM farms f
+//             LEFT JOIN ongoingcultivationscrops occ ON f.id = occ.farmId
+//             LEFT JOIN certificationpaymentfarm cpf ON f.id = cpf.farmId
+//             WHERE f.userId = ?
+//             GROUP BY f.id, f.userId, f.farmName, f.farmIndex, f.extentha, f.extentac, f.extentp, 
+//                      f.district, f.plotNo, f.street, f.city, f.staffCount, f.appUserCount, f.imageId, 
+//                      f.isBlock, cpf.farmId
+//             ORDER BY f.id DESC
+//         `;
+//         db.plantcare.query(query, [userId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching farms:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
 exports.getAllFarmByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -402,16 +446,17 @@ exports.getAllFarmByUserId = async (userId) => {
                 f.isBlock,
                 COALESCE(COUNT(DISTINCT occ.id), 0) as farmCropCount,
                 CASE 
-                    WHEN cpf.farmId IS NOT NULL THEN 'Certificate'
+                    WHEN cpf.farmId IS NOT NULL OR fcf.farmId IS NOT NULL THEN 'Certificate'
                     ELSE 'NoCertificate'
                 END as certificationStatus
             FROM farms f
             LEFT JOIN ongoingcultivationscrops occ ON f.id = occ.farmId
             LEFT JOIN certificationpaymentfarm cpf ON f.id = cpf.farmId
+            LEFT JOIN farmclusterfarmers fcf ON f.id = fcf.farmId
             WHERE f.userId = ?
             GROUP BY f.id, f.userId, f.farmName, f.farmIndex, f.extentha, f.extentac, f.extentp, 
                      f.district, f.plotNo, f.street, f.city, f.staffCount, f.appUserCount, f.imageId, 
-                     f.isBlock, cpf.farmId
+                     f.isBlock, cpf.farmId, fcf.farmId
             ORDER BY f.id DESC
         `;
         db.plantcare.query(query, [userId], (error, results) => {
