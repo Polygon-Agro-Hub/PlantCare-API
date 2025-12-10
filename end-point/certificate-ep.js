@@ -626,3 +626,28 @@ exports.getCropNames = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Failed to fetch farm certificates" });
     }
 });
+
+
+// endpoint.js - Fix the endpoint to use params instead of body
+exports.getFarms = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const farmId = req.params.farmId; // Changed from req.body.farmId to req.params.farmId
+
+        const farms = await certificateDao.getAllFarmByUserId(userId, farmId);
+
+        if (!farms || farms.length === 0) {
+            return res.status(404).json({ message: "No farms found" });
+        }
+
+        // Return single farm with certificate status
+        const farm = farms[0];
+        res.status(200).json({
+            status: farm.certificationStatus === 'Certificate' ? 'haveFarmCertificate' : 'noFarmCertificate',
+            data: farm
+        });
+    } catch (error) {
+        console.error("Error fetching farms:", error);
+        res.status(500).json({ message: "Failed to fetch farms" });
+    }
+});
