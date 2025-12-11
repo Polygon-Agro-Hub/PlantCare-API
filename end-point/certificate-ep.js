@@ -447,21 +447,55 @@ exports.getFarmcertificateCrop = asyncHandler(async (req, res) => {
 
 
 
+// exports.getFarmCertificate = asyncHandler(async (req, res) => {
+//     try {
+//         const farmId = req.params.farmId;
+//         const userId = req.user.id;
+
+//         const certificates = await certificateDao.getFarmCertificate(farmId, userId);
+
+//         if (!certificates || certificates.length === 0) {
+//             return res.status(200).json({
+//                 status: "notHaveFarmCertificate",
+//                 message: "No certificates found for this farm",
+//                 data: []
+//             });
+//         }
+
+//         res.status(200).json({
+//             status: "haveFarmCertificate",
+//             message: "Certificates found",
+//             data: certificates
+//         });
+//     } catch (error) {
+//         console.error("Error fetching farm certificates:", error);
+//         res.status(500).json({
+//             status: "error",
+//             message: "Failed to fetch farm certificates"
+//         });
+//     }
+// });
 exports.getFarmCertificate = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
         const userId = req.user.id;
 
+        console.log("Fetching farm certificate for farmId:", farmId, "userId:", userId);
+
         const certificates = await certificateDao.getFarmCertificate(farmId, userId);
 
+        console.log("Certificate query results:", certificates);
+
         if (!certificates || certificates.length === 0) {
+            console.log("No certificates found - returning noFarmCertificate status");
             return res.status(200).json({
-                status: "notHaveFarmCertificate",
+                status: "noFarmCertificate",  // ✅ Changed from "notHaveFarmCertificate"
                 message: "No certificates found for this farm",
                 data: []
             });
         }
 
+        console.log("Certificates found - returning haveFarmCertificate status");
         res.status(200).json({
             status: "haveFarmCertificate",
             message: "Certificates found",
@@ -475,7 +509,6 @@ exports.getFarmCertificate = asyncHandler(async (req, res) => {
         });
     }
 });
-
 
 
 

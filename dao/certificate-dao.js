@@ -888,39 +888,102 @@ exports.getFarmcertificateCrop = async (farmId) => {
 };
 
 
+
 exports.getFarmCertificate = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                cp.id as paymentId,
-                cp.certificateId,
-                cp.userId,
-                cp.payType,
-                cp.transactionId,
-                cp.amount,
-                cp.expireDate,
-                cpc.farmId,
-                cpc.createdAt
-            FROM plant_care.certificationpayment cp
-            INNER JOIN plant_care.certificationpaymentfarm cpc 
-                ON cp.id = cpc.paymentId
-            WHERE cp.userId = ? 
-                AND cp.payType = 'Farm'
-                AND cpc.farmId = ?
-            ORDER BY cpc.createdAt DESC
+        // First check if farm is in a cluster
+        const clusterCheckQuery = `
+            SELECT farmId 
+            FROM plant_care.farmclusterfarmers 
+            WHERE farmId = ?
             LIMIT 1
         `;
 
-        db.plantcare.query(query, [userId, farmId], (error, results) => {
-            if (error) {
-                console.error("Error fetching farm certificates:", error);
-                reject(error);
-            } else {
-                resolve(results);
+        db.plantcare.query(clusterCheckQuery, [farmId], (clusterError, clusterResults) => {
+            if (clusterError) {
+                console.error("Error checking farm cluster:", clusterError);
+                reject(clusterError);
+                return;
             }
+
+            // If farm is in a cluster, return it as having certificate
+            if (clusterResults && clusterResults.length > 0) {
+                console.log("Farm is in a cluster - has certificate");
+                resolve([{
+                    farmId: farmId,
+                    certificateSource: 'cluster',
+                    hasClusterCertificate: true
+                }]);
+                return;
+            }
+
+            // If not in cluster, check regular certificate payment
+            const certificateQuery = `
+                SELECT 
+                    cp.id as paymentId,
+                    cp.certificateId,
+                    cp.userId,
+                    cp.payType,
+                    cp.transactionId,
+                    cp.amount,
+                    cp.expireDate,
+                    cpc.farmId,
+                    cpc.createdAt
+                FROM plant_care.certificationpayment cp
+                INNER JOIN plant_care.certificationpaymentfarm cpc 
+                    ON cp.id = cpc.paymentId
+                WHERE cp.userId = ? 
+                    AND cp.payType = 'Farm'
+                    AND cpc.farmId = ?
+                ORDER BY cpc.createdAt DESC
+                LIMIT 1
+            `;
+
+            db.plantcare.query(certificateQuery, [userId, farmId], (certError, certResults) => {
+                if (certError) {
+                    console.error("Error fetching farm certificates:", certError);
+                    reject(certError);
+                } else {
+                    resolve(certResults);
+                }
+            });
         });
     });
 };
+
+// exports.getFarmCertificate = async (farmId, userId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT 
+//                 cp.id as paymentId,
+//                 cp.certificateId,
+//                 cp.userId,
+//                 cp.payType,
+//                 cp.transactionId,
+//                 cp.amount,
+//                 cp.expireDate,
+//                 cpc.farmId,
+//                 cpc.createdAt
+//             FROM plant_care.certificationpayment cp
+//             INNER JOIN plant_care.certificationpaymentfarm cpc 
+//                 ON cp.id = cpc.paymentId
+//             WHERE cp.userId = ? 
+//                 AND cp.payType = 'Farm'
+//                 AND cpc.farmId = ?
+//             ORDER BY cpc.createdAt DESC
+//             LIMIT 1
+//         `;
+
+//         db.plantcare.query(query, [userId, farmId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching farm certificates:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
 
 
 
