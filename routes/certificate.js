@@ -47,6 +47,10 @@ router.delete('/questionnaire-item/remove/:itemId', auth, certificateEp.removeQu
 
 
 
+router.get('/get-farms/:farmId', auth, certificateEp.getFarms);
+
+
+
 
 
 module.exports = router;
