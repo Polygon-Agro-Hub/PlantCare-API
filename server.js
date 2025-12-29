@@ -102,7 +102,7 @@
 
 const express = require("express");
 const cors = require("cors");
-const { plantcare, collectionofficer, marketPlace, admin } = require("./startup/database");
+const { plantcare, collectionofficer, marketPlace, admin, investments } = require("./startup/database");
 const helmet = require("helmet");
 
 
@@ -120,6 +120,7 @@ const farmRoutes = require("./routes/farm.routes");
 const staffRoutes = require("./routes/staffRoutes")
 const certificateRoutes = require("./routes/certificate");
 const requestInspectionRoutes = require("./routes/requestInspection");
+const goviCapitalRoutes = require("./routes/goviCapital");
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -164,6 +165,7 @@ DatabaseConnection(plantcare, "PlantCare");
 DatabaseConnection(collectionofficer, "CollectionOfficer");
 DatabaseConnection(marketPlace, "MarketPlace");
 DatabaseConnection(admin, "Admin");
+DatabaseConnection(investments, "Investment");
 
 
 const myCropRoutes = require("./routes/UserCrop.routes");
@@ -202,6 +204,8 @@ app.use("/api/staff", staffRoutes);
 app.use("/api/requestInspection", requestInspectionRoutes);
 
 app.use("/api/certificate", certificateRoutes);
+
+app.use("/api/goviCapital", goviCapitalRoutes);
 
 app.use("", heathRoutes);
 
