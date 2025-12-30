@@ -1,34 +1,56 @@
 const db = require("../startup/database");
 
 
-exports.getCrops = async (farmId) => {
+// exports.getCrops = async (farmId) => {
+//     return new Promise((resolve, reject) => {
+//         const query = `
+//             SELECT 
+//                 f.*,
+//                 cc.id as cropCalendarId,
+//                 cv.id as cropVarietyId,
+
+//                 cg.id as cropGroupId,
+//                 cg.cropNameEnglish,
+//                 cg.cropNameSinhala,
+//                 cg.cropNameTamil,
+//                 occ.ongoingCultivationId,
+//                 occ.cropCalendar as cropCalendarId,
+//                 oc.userId
+//             FROM farms f
+//             LEFT JOIN ongoingcultivations oc ON   oc.userId
+//             LEFT JOIN ongoingcultivationscrops occ ON oc.id = occ.ongoingCultivationId
+//             LEFT JOIN cropcalender cc ON occ.cropCalendar = cc.id
+//             LEFT JOIN cropvariety cv ON cc.cropVarietyId = cv.id
+//             LEFT JOIN cropgroup cg ON cv.cropGroupId = cg.id
+//             WHERE oc.userId = ?
+//             ORDER BY occ.ongoingCultivationId ASC, occ.cropCalendar ASC, occ.farmId
+//         `;
+
+//         db.plantcare.query(query, [farmId], (error, results) => {
+//             if (error) {
+//                 console.error("Error fetching farms with crops:", error);
+//                 reject(error);
+//             } else {
+//                 resolve(results);
+//             }
+//         });
+//     });
+// };
+
+exports.getCrops = async () => {
     return new Promise((resolve, reject) => {
         const query = `
             SELECT 
-                f.*,
-                cc.id as cropCalendarId,
-                cv.id as cropVarietyId,
-              
-                cg.id as cropGroupId,
-                cg.cropNameEnglish,
-                cg.cropNameSinhala,
-                cg.cropNameTamil,
-                occ.ongoingCultivationId,
-                occ.cropCalendar as cropCalendarId,
-                oc.userId
-            FROM farms f
-            LEFT JOIN ongoingcultivations oc ON   oc.userId
-            LEFT JOIN ongoingcultivationscrops occ ON oc.id = occ.ongoingCultivationId
-            LEFT JOIN cropcalender cc ON occ.cropCalendar = cc.id
-            LEFT JOIN cropvariety cv ON cc.cropVarietyId = cv.id
-            LEFT JOIN cropgroup cg ON cv.cropGroupId = cg.id
-            WHERE oc.userId = ?
-            ORDER BY occ.ongoingCultivationId ASC, occ.cropCalendar ASC, occ.farmId
+                id as cropGroupId,
+                cropNameEnglish,
+                cropNameSinhala,
+                cropNameTamil
+            FROM cropgroup
         `;
 
-        db.plantcare.query(query, [farmId], (error, results) => {
+        db.plantcare.query(query, (error, results) => {
             if (error) {
-                console.error("Error fetching farms with crops:", error);
+                console.error("Error fetching crops:", error);
                 reject(error);
             } else {
                 resolve(results);
