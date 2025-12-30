@@ -300,3 +300,22 @@ exports.createInvestmentRequest = asyncHandler(async (req, res) => {
         });
     }
 });
+
+
+exports.getInvestmentRequests = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log("userIddddddddddddddddddddddddddddd", userId);
+        const requests = await goviCapitalDao.getInvestmentRequests(userId);
+        console.log("requestsssssss", requests);
+
+        if (!requests || requests.length === 0) {
+            return res.status(404).json({ message: "No requests found" });
+        }
+
+        res.status(200).json(requests);
+    } catch (error) {
+        console.error("Error fetching requests:", error);
+        res.status(500).json({ message: "Failed to fetch requests" });
+    }
+});

@@ -8,6 +8,8 @@ router.get('/get-farm-crops', auth, goviCapitalEp.getCrops);
 
 router.get('/get-farmer-details', auth, goviCapitalEp.getFarmerDetails);
 
+router.get('/get-investment-requests', auth, goviCapitalEp.getInvestmentRequests);
+
 router.post(
     '/create-investment-request',
     auth,
