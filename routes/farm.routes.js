@@ -73,4 +73,12 @@ router.get('/fixed-assets/:category/:farmId', auth, farmEp.getFixedAssetsByCateg
 router.get('/get-farmName/:farmId', auth, farmEp.getFarmName);
 
 
+//get farm extent
+
+router.get('/get-farm-extend/:farmId', auth, farmEp.getFarmExtend);
+
+
+
+
+
 module.exports = router;
