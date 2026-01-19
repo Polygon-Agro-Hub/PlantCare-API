@@ -1784,7 +1784,7 @@ exports.getFixedAssetsByCategory = (userId, category, farmId) => {
                 JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Machine and Vehicles'`;
         } else if (category === 'Tools') {
-            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+            sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType,mtfa.mentionOther FROM fixedasset fa
                 JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Tools'`;
         } else {
@@ -1895,6 +1895,37 @@ exports.updateCurrentAsset = async (assetId, assetData) => {
                 console.error("Error updating current asset:", error);
                 reject(error);
             } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+
+
+
+
+
+
+exports.getFarmExtend = async (farmId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+      SELECT 
+        id, 
+        farmName,
+        extentha,
+        extentac,
+        extentp
+      FROM farms 
+      WHERE id = ?
+    `;
+
+        db.plantcare.query(query, [farmId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farm:", error);
+                reject(error);
+            } else {
+                console.log("Query results:", results);
                 resolve(results);
             }
         });
