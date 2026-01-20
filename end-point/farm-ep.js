@@ -1358,3 +1358,40 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
         });
     }
 });
+
+
+
+exports.getFarmExtend = asyncHandler(async (req, res) => {
+    try {
+
+        const farmId = req.params.farmId;
+
+        console.log("Fetching farm for farmId:", farmId);
+
+        const farms = await farmDao.getFarmExtend(farmId);
+        console.log("farms", farms);
+
+        if (!farms || farms.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No farm found",
+                data: null
+            });
+        }
+
+        // Return consistent response format
+        res.status(200).json({
+            status: "success",
+            message: "Farm retrieved successfully",
+            data: farms[0] // Return single farm object since we're querying by specific farmId
+        });
+    } catch (error) {
+        console.error("Error fetching farm:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch farm",
+            data: null
+        });
+    }
+});
+

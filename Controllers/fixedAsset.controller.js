@@ -443,63 +443,132 @@ exports.addFixedAsset = (req, res) => {
 };
 
 
+// exports.getFixedAssetsByCategory = (req, res) => {
+//     const userId = req.user.id;
+//     const { category } = req.params;
+
+//     // Start a transaction
+//     db.plantcare.getConnection((err, connection) => {
+//         if (err) return res.status(500).json({ message: 'Transaction error', error: err });
+//         connection.beginTransaction((transactionErr) => {
+//             if (transactionErr) {
+//                 connection.release();
+//                 return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
+//             }
+
+//             let sqlQuery = '';
+//             let queryParams = [userId];
+
+//             // Determine which SQL to run based on category
+//             if (category === 'Land') {
+//                 sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
+//                     JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
+//                     WHERE fa.userId = ? AND fa.category = 'Land'`;
+//             } else if (category === 'Building and Infrastructures') {
+//                 sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
+//                     JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
+//                     WHERE fa.userId = ? AND fa.category = 'Building and Infrastructures'`;
+//             } else if (category === 'Machine and Vehicles') {
+//                 sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+//                     JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+//                     WHERE fa.userId = ? AND fa.category = 'Machine and Vehicles'`;
+//             } else if (category === 'Tools') {
+//                 sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
+//                     JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+//                     WHERE fa.userId = ? AND fa.category = 'Tools'`;
+//             } else {
+//                 return res.status(400).json({ message: 'Invalid category provided.' });
+//             }
+
+//             // Execute the query based on the category
+//             db.plantcare.query(sqlQuery, queryParams, (queryErr, results) => {
+//                 if (queryErr) {
+//                     return connection.rollback(() => {
+//                         connection.release();
+//                         return res.status(500).json({ message: 'Error retrieving fixed assets', error: queryErr });
+//                     });
+//                 }
+
+//                 // Commit the transaction and return the results
+//                 connection.commit((commitErr) => {
+//                     if (commitErr) {
+//                         return connection.rollback(() => {
+//                             connection.release();
+//                             return res.status(500).json({ message: 'Commit error', error: commitErr });
+//                         });
+//                     }
+//                     connection.release();
+//                     return res.status(200).json({ message: 'Fixed assets retrieved successfully.', data: results });
+//                 });
+//             });
+//         });
+//     });
+// };
 exports.getFixedAssetsByCategory = (req, res) => {
     const userId = req.user.id;
     const { category } = req.params;
 
-    // Start a transaction
+    // Get a connection from the pool
     db.plantcare.getConnection((err, connection) => {
-        if (err) return res.status(500).json({ message: 'Transaction error', error: err });
-        connection.beginTransaction((transactionErr) => {
-            if (transactionErr) {
-                connection.release();
-                return res.status(500).json({ message: 'Failed to start transaction', error: transactionErr });
-            }
+        if (err) {
+            return res.status(500).json({ message: 'Connection error', error: err });
+        }
 
-            let sqlQuery = '';
-            let queryParams = [userId];
+        let sqlQuery = '';
+        let queryParams = [userId];
 
-            // Determine which SQL to run based on category
-            if (category === 'Land') {
-                sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
-                    JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
-                    WHERE fa.userId = ? AND fa.category = 'Land'`;
-            } else if (category === 'Building and Infrastructures') {
-                sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
-                    JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
-                    WHERE fa.userId = ? AND fa.category = 'Building and Infrastructures'`;
-            } else if (category === 'Machine and Vehicles') {
-                sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
-                    JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
-                    WHERE fa.userId = ? AND fa.category = 'Machine and Vehicles'`;
-            } else if (category === 'Tools') {
-                sqlQuery = `SELECT fa.id, fa.category, mtfa.asset, mtfa.assetType FROM fixedasset fa
-                    JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
-                    WHERE fa.userId = ? AND fa.category = 'Tools'`;
-            } else {
-                return res.status(400).json({ message: 'Invalid category provided.' });
-            }
+        // Determine which SQL to run based on category
+        if (category === 'Land') {
+            sqlQuery = `
+                SELECT fa.id, fa.category, fa.farmId, f.farmName, lfa.district 
+                FROM fixedasset fa
+                JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
+                LEFT JOIN farms f ON fa.farmId = f.id
+                WHERE fa.userId = ? AND fa.category = 'Land'
+                ORDER BY fa.id ASC`;
+        } else if (category === 'Building and Infrastructures') {
+            sqlQuery = `
+                SELECT fa.id, fa.category, fa.farmId, f.farmName, bfa.type, bfa.district 
+                FROM fixedasset fa
+                JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
+                LEFT JOIN farms f ON fa.farmId = f.id
+                WHERE fa.userId = ? AND fa.category = 'Building and Infrastructures'
+                ORDER BY fa.id ASC`;
+        } else if (category === 'Machine and Vehicles') {
+            sqlQuery = `
+                SELECT fa.id, fa.category, fa.farmId, f.farmName, mtfa.asset, mtfa.assetType 
+                FROM fixedasset fa
+                JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+                LEFT JOIN farms f ON fa.farmId = f.id
+                WHERE fa.userId = ? AND fa.category = 'Machine and Vehicles'
+                ORDER BY fa.id ASC`;
+        } else if (category === 'Tools') {
+            sqlQuery = `
+                SELECT fa.id, fa.category, fa.farmId, f.farmName, mtfa.asset, mtfa.assetType 
+                FROM fixedasset fa
+                JOIN machtoolsfixedasset mtfa ON fa.id = mtfa.fixedAssetId
+                LEFT JOIN farms f ON fa.farmId = f.id
+                WHERE fa.userId = ? AND fa.category = 'Tools'
+                ORDER BY fa.id ASC`;
+        } else {
+            connection.release();
+            return res.status(400).json({ message: 'Invalid category provided.' });
+        }
 
-            // Execute the query based on the category
-            db.plantcare.query(sqlQuery, queryParams, (queryErr, results) => {
-                if (queryErr) {
-                    return connection.rollback(() => {
-                        connection.release();
-                        return res.status(500).json({ message: 'Error retrieving fixed assets', error: queryErr });
-                    });
-                }
+        // Execute the query
+        db.plantcare.query(sqlQuery, queryParams, (queryErr, results) => {
+            connection.release(); // Release connection after query
 
-                // Commit the transaction and return the results
-                connection.commit((commitErr) => {
-                    if (commitErr) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            return res.status(500).json({ message: 'Commit error', error: commitErr });
-                        });
-                    }
-                    connection.release();
-                    return res.status(200).json({ message: 'Fixed assets retrieved successfully.', data: results });
+            if (queryErr) {
+                return res.status(500).json({
+                    message: 'Error retrieving fixed assets',
+                    error: queryErr
                 });
+            }
+
+            return res.status(200).json({
+                message: 'Fixed assets retrieved successfully.',
+                data: results
             });
         });
     });
