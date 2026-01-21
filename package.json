@@ -33,6 +33,7 @@
         "mysql2": "^3.11.0",
         "oracledb": "^6.6.0",
         "qrcode": "^1.5.4",
+        "uuid": "^13.0.0",
         "winston": "^3.17.0"
     },
     "devDependencies": {
