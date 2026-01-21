@@ -34,7 +34,7 @@ app.use(
     origin: "http://localhost:8081", // The client origin that is allowed to access the resource
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed methods
     credentials: true, // Allow credentials (cookies, auth headers)
-  })
+  }),
 );
 
 // Explicitly handle OPTIONS requests for preflight
@@ -44,7 +44,7 @@ app.options(
     origin: "http://localhost:8081", // Allow the client origin for preflight
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed methods for the preflight response
     credentials: true,
-  })
+  }),
 );
 
 const DatabaseConnection = (db, name) => {
@@ -63,6 +63,7 @@ const DatabaseConnection = (db, name) => {
     }
   });
 };
+
 // Initial database connections
 DatabaseConnection(plantcare, "PlantCare");
 DatabaseConnection(collectionofficer, "CollectionOfficer");
@@ -98,15 +99,10 @@ app.use("/api/news", newsRoutes);
 app.use("/api/crop", cropRoutes);
 app.use("/api/market-price", MarketPriceRoutes);
 app.use("/api/complain", complainRoutes);
-
 app.use("/api/farm", farmRoutes);
-
 app.use("/api/staff", staffRoutes);
-
 app.use("/api/requestInspection", requestInspectionRoutes);
-
 app.use("/api/certificate", certificateRoutes);
-
 app.use("/api/goviCapital", goviCapitalRoutes);
 
 app.use("", heathRoutes);
