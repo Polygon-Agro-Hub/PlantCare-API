@@ -320,6 +320,83 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
 
 
 // ENDPOINT - Updated to include farmId validation and usage
+// exports.enroll = asyncHandler(async (req, res) => {
+//     console.log("first")
+//     try {
+//         const cropId = req.body.cropId;
+//         const extentha = req.body.extentha || '0';
+//         const extentac = req.body.extentac || '0';
+//         const extentp = req.body.extentp || '0';
+//         const startDate = req.body.startDate;
+//         const userId = req.user.id;
+//         const farmId = req.params.farmId
+
+//         console.log("farmId", farmId)
+
+//         const { error } = enrollSchema.validate({
+//             extentha,
+//             extentac,
+//             extentp,
+//             startedAt: startDate,
+//             ongoingCultivationId: null,
+//             createdAt: undefined,
+//             farmId
+//         });
+
+//         console.log("valide after")
+//         console.log("Error:", error);
+
+//         if (error) {
+//             return res.status(400).json({ message: error.details[0].message });
+//         }
+
+//         let cultivationId;
+//         const ongoingCultivationResult = await farmDao.checkOngoingCultivation(userId);
+
+//         if (!ongoingCultivationResult[0]) {
+//             const newCultivationResult = await farmDao.createOngoingCultivation(userId);
+//             cultivationId = newCultivationResult.insertId;
+//         } else {
+//             cultivationId = ongoingCultivationResult[0].id;
+//         }
+
+//         // Updated: Check crop count for specific farm
+//         const cropCountResult = await farmDao.checkCropCountByFarm(cultivationId, farmId);
+//         const cropCount = cropCountResult[0].count;
+
+
+
+//         // Updated: Check enrolled crops for specific farm
+//         const enrolledCrops = await farmDao.checkEnrollCropByFarm(cultivationId, farmId);
+//         if (enrolledCrops.some((crop) => crop.cropCalendar == cropId)) {
+//             return res
+//                 .status(400)
+//                 .json({ message: "You are already enrolled in this crop for this farm!" });
+//         }
+
+//         const cultivationIndex = cropCount + 1;
+
+//         await farmDao.enrollOngoingCultivationCrop(cultivationId, cropId, extentha, extentac, extentp, startDate, cultivationIndex, farmId);
+//         const enroledoncultivationcrop = await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
+//         console.log("data", enroledoncultivationcrop);
+
+//         let onCulscropID;
+//         if (enroledoncultivationcrop.length > 0) {
+//             onCulscropID = enroledoncultivationcrop[0].id;
+//         } else {
+//             console.log("No records found for the given cultivationId.");
+//             return res.status(500).json({ message: "Failed to create cultivation record" });
+//         }
+
+//         const responseenrollSlaveCrop = await farmDao.enrollSlaveCrop(userId, cropId, startDate, onCulscropID, farmId);
+
+//         return res.json({ message: "Enrollment successful" });
+//     } catch (err) {
+//         console.error("Error during enrollment:", err);
+//         res.status(500).json({ message: "Internal Server Error" });
+//     }
+// });
+
 exports.enroll = asyncHandler(async (req, res) => {
     console.log("first")
     try {
@@ -364,8 +441,6 @@ exports.enroll = asyncHandler(async (req, res) => {
         const cropCountResult = await farmDao.checkCropCountByFarm(cultivationId, farmId);
         const cropCount = cropCountResult[0].count;
 
-
-
         // Updated: Check enrolled crops for specific farm
         const enrolledCrops = await farmDao.checkEnrollCropByFarm(cultivationId, farmId);
         if (enrolledCrops.some((crop) => crop.cropCalendar == cropId)) {
@@ -390,7 +465,13 @@ exports.enroll = asyncHandler(async (req, res) => {
 
         const responseenrollSlaveCrop = await farmDao.enrollSlaveCrop(userId, cropId, startDate, onCulscropID, farmId);
 
-        return res.json({ message: "Enrollment successful" });
+        // UPDATED: Return the onCulscropID in the response
+        return res.json({
+            message: "Enrollment successful",
+            ongoingCultivationCropId: onCulscropID,  // This is the ID from ongoingcultivationscrops table
+            cultivationId: cultivationId,
+            farmId: farmId
+        });
     } catch (err) {
         console.error("Error during enrollment:", err);
         res.status(500).json({ message: "Internal Server Error" });
@@ -1277,3 +1358,40 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
         });
     }
 });
+
+
+
+exports.getFarmExtend = asyncHandler(async (req, res) => {
+    try {
+
+        const farmId = req.params.farmId;
+
+        console.log("Fetching farm for farmId:", farmId);
+
+        const farms = await farmDao.getFarmExtend(farmId);
+        console.log("farms", farms);
+
+        if (!farms || farms.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No farm found",
+                data: null
+            });
+        }
+
+        // Return consistent response format
+        res.status(200).json({
+            status: "success",
+            message: "Farm retrieved successfully",
+            data: farms[0] // Return single farm object since we're querying by specific farmId
+        });
+    } catch (error) {
+        console.error("Error fetching farm:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch farm",
+            data: null
+        });
+    }
+});
+

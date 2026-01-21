@@ -450,7 +450,8 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
                     LEFT(users.farmerQr, 256) as farmerQr, 
                     farmstaff.role,
                     farmstaff.farmId,
-                    farms.farmName
+                    farms.farmName,
+                    farms.imageId
                 FROM farmstaff 
                 LEFT JOIN users ON farmstaff.ownerId = users.id 
                 LEFT JOIN farms ON farmstaff.farmId = farms.id
