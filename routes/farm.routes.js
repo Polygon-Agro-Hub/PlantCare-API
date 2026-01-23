@@ -1,84 +1,94 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../Middlewares/auth.middleware');
+const auth = require("../Middlewares/auth.middleware");
 const farmEp = require("../end-point/farm-ep");
 
+router.post("/add-farm", auth, farmEp.CreateFarm);
 
-router.post('/add-farm', auth, farmEp.CreateFarm);
+router.get("/get-farms", auth, farmEp.getFarms);
 
-router.get('/get-farms', auth, farmEp.getFarms);
+router.get("/get-membership", auth, farmEp.getMemberShip);
 
-router.get('/get-membership', auth, farmEp.getMemberShip);
+router.get("/get-farms/byFarm-Id/:id", auth, farmEp.getFarmById);
 
-router.get('/get-farms/byFarm-Id/:id', auth, farmEp.getFarmById);
+router.post("/add-payment", auth, farmEp.CreatePayment);
 
-router.post('/add-payment', auth, farmEp.CreatePayment);
-
-router.get('/get-cropCount/:farmId', auth, farmEp.getCropCountByFarmId);
-
+router.get("/get-cropCount/:farmId", auth, farmEp.getCropCountByFarmId);
 
 //cultivation
-router.get("/get-user-ongoing-cul/:farmId", auth, farmEp.OngoingCultivaionGetById);
+router.get(
+    "/get-user-ongoing-cul/:farmId",
+    auth,
+    farmEp.OngoingCultivaionGetById,
+);
 
 router.post("/enroll-crop/:farmId", auth, farmEp.enroll);
-
 
 router.post("/members-phoneNumber-checker", farmEp.phoneNumberChecker);
 router.post("/members-nic-checker", farmEp.nicChecker);
 
 router.post("/members-nic-checker", farmEp.nicChecker);
 
-router.put('/update-farm', auth, farmEp.UpdateFarm);
+router.put("/update-farm", auth, farmEp.UpdateFarm);
 
-router.post('/create-new-staffmember/:farmId', auth, farmEp.CreateNewStaffMember);
+router.post(
+    "/create-new-staffmember/:farmId",
+    auth,
+    farmEp.CreateNewStaffMember,
+);
 
-router.get('/get-staffMmber-byId/:staffMemberId', auth, farmEp.getStaffMember)
+router.get("/get-staffMmber-byId/:staffMemberId", auth, farmEp.getStaffMember);
 
-router.put('/update-staffmember/:staffMemberId', auth, farmEp.updateStaffMember)
+router.put(
+    "/update-staffmember/:staffMemberId",
+    auth,
+    farmEp.updateStaffMember,
+);
 
-router.delete('/delete-staffmember/:staffMemberId/:farmId', auth, farmEp.deleteStaffMember)
+router.delete(
+    "/delete-staffmember/:staffMemberId/:farmId",
+    auth,
+    farmEp.deleteStaffMember,
+);
 
-router.get('/get-renew', auth, farmEp.getrenew);
+router.get("/get-renew", auth, farmEp.getrenew);
 
-router.delete('/delete-farm/:farmId', auth, farmEp.deleteFarm);
+router.delete("/delete-farm/:farmId", auth, farmEp.deleteFarm);
 
-router.get('/select-farm', auth, farmEp.getSelectFarm);
+router.get("/select-farm", auth, farmEp.getSelectFarm);
 
 /////currect asset
 
-router.post('/currentAsset/:farmId', auth, farmEp.handleAddFixedAsset);
+router.post("/currentAsset/:farmId", auth, farmEp.handleAddFixedAsset);
 
 ///update currect asset
-// Update current asset - fixed route parameter
-router.put('/currentAsset/update/:assetId', auth, farmEp.updateCurrentAsset);
+router.put("/currentAsset/update/:assetId", auth, farmEp.updateCurrentAsset);
 
 router.get("/assets/:farmId", auth, farmEp.getAssetsByCategory);
 
-router.get(
-    "/currentAsset/:farmId",
-    auth,
-    farmEp.getAllCurrentAssets
-);
+router.get("/currentAsset/:farmId", auth, farmEp.getAllCurrentAssets);
 
-
-router.delete('/removeAsset/:category/:assetId', auth, farmEp.deleteAsset);
+router.delete("/removeAsset/:category/:assetId", auth, farmEp.deleteAsset);
 
 ///fixAsset
 
-
-router.get('/fixed-assets/:category/:farmId', auth, farmEp.getFixedAssetsByCategory);
+router.get(
+    "/fixed-assets/:category/:farmId",
+    auth,
+    farmEp.getFixedAssetsByCategory,
+);
 
 ///fetch farmId
 
-router.get('/get-farmName/:farmId', auth, farmEp.getFarmName);
-
+router.get("/get-farmName/:farmId", auth, farmEp.getFarmName);
 
 //get farm extent
 
-router.get('/get-farm-extend/:farmId', auth, farmEp.getFarmExtend);
+router.get("/get-farm-extend/:farmId", auth, farmEp.getFarmExtend);
 
 
-
+//get alreday add currect asset 
+router.get("/get-currectasset-alreadyHave/:farmId", auth, farmEp.getCurrectAssetAlredayHave);
 
 
 module.exports = router;
