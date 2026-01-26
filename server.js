@@ -92,7 +92,7 @@ app.use(process.env.AUTHOR, calendartaskImages);
 const reportRoutes = require("./routes/reportRoutes");
 app.use(process.env.AUTHOR, reportRoutes);
 
-const pentionRoutes = require("./routes/pension");
+const pentionRoutes = require("./routes/pension.routes");
 app.use(process.env.AUTHOR, pentionRoutes);
 
 app.get("/test", (req, res) => {

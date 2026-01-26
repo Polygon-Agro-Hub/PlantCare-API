@@ -1,6 +1,6 @@
 const db = require('../startup/database');
 
-
+// Check Pension Request
 exports.checkPensionRequestByUserId = (userId) => {
     return new Promise((resolve, reject) => {
         const sql = `
@@ -31,14 +31,16 @@ exports.checkPensionRequestByUserId = (userId) => {
     });
 };
 
-exports.createPensionRequest = (pensionData) => {
+// Submit Pension Request
+exports.submitPensionRequestDAO = (pensionData) => {
     return new Promise((resolve, reject) => {
         const query = `
             INSERT INTO pensionrequest (
                 userId, fullName, nic, nicFront, nicBack, dob,
-                sucFullName, sucType, sucNic, sucNicFront, sucNicBack, sucdob,
+                sucFullName, sucType, sucNic, sucNicFront, sucNicBack, 
+                birthCrtFront, birthCrtBack, sucdob,
                 reqStatus, isFirstTime
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'To Review', 1)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'To Review', 1)
         `;
         
         db.plantcare.query(query, [
@@ -53,6 +55,8 @@ exports.createPensionRequest = (pensionData) => {
             pensionData.sucNic || null,
             pensionData.sucNicFront || null,
             pensionData.sucNicBack || null,
+            pensionData.birthCrtFront || null,
+            pensionData.birthCrtBack || null,
             pensionData.sucdob
         ], (err, result) => {
             if (err) {
