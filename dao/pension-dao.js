@@ -9,6 +9,7 @@ exports.checkPensionRequestByUserId = (userId) => {
                 pr.reqStatus, 
                 pr.defaultPension,
                 pr.createdAt as requestCreatedAt,
+                pr.isFirstTime,
                 u.created_at as userCreatedAt
             FROM pensionrequest pr
             INNER JOIN users u ON pr.userId = u.id

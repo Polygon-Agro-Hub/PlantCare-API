@@ -23,6 +23,7 @@ exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
       requestId: pensionStatus.id,
       defaultPension: parseFloat(pensionStatus.defaultPension),
       userCreatedAt: pensionStatus.userCreatedAt,
+      isFirstTime: pensionStatus.isFirstTime,
       requestCreatedAt: pensionStatus.requestCreatedAt,
     });
   } catch (err) {
