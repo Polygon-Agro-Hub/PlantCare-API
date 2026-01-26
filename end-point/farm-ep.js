@@ -1,106 +1,35 @@
 const asyncHandler = require("express-async-handler");
 const farmDao = require("../dao/farm-dao");
-const { createFarm, createPayment, signupCheckerSchema, updateFarm, createStaffMember, getSlaveCropCalendarDaysSchema, nicChecker } = require('../validations/farm-validation');
-const delectfilesOnS3 = require('../Middlewares/s3delete');
-const delectfloders3 = require('../Middlewares/s3folderdelete')
+const {
+    createFarm,
+    createPayment,
+    signupCheckerSchema,
+    updateFarm,
+    createStaffMember,
+    getSlaveCropCalendarDaysSchema,
+    nicChecker,
+} = require("../validations/farm-validation");
+const delectfilesOnS3 = require("../Middlewares/s3delete");
+const delectfloders3 = require("../Middlewares/s3folderdelete");
 const db = require("../startup/database");
 const {
     getAssetsByCategorySchema,
 } = require("../validations/currentAsset-validation");
 
-
 const {
-
     ongoingCultivationSchema,
     enrollSchema,
-
 } = require("../validations/farm-validation");
 const e = require("express");
 
-// exports.CreateFarm = asyncHandler(async (req, res) => {
-//     console.log('Farm creation request:', req.body);
-
-//     try {
-//         const userId = req.user.id;
-//         const input = { ...req.body, userId };
-
-//         console.log('User ID:', userId);
-
-
-//         const { value, error } = createFarm.validate(input);
-//         if (error) {
-//             return res.status(400).json({
-//                 status: "error",
-//                 message: error.details[0].message,
-//             });
-//         }
-
-//         console.log("Validated input:", value);
-
-//         const {
-//             farmName,
-//             farmIndex,
-//             farmImage,
-//             extentha,
-//             extentac,
-//             extentp,
-//             district,
-//             plotNo,
-//             street,
-//             city,
-//             staffCount,
-//             appUserCount,
-//             staff
-//         } = value;
-
-
-//         const result = await farmDao.createFarmWithStaff({
-//             userId,
-//             farmName,
-//             farmImage,
-//             farmIndex,
-//             extentha,
-//             extentac,
-//             extentp,
-//             district,
-//             plotNo,
-//             street,
-//             city,
-//             staffCount,
-//             appUserCount,
-//             staff
-//         });
-
-//         console.log("Farm creation result:", result);
-
-//         res.status(201).json({
-//             status: "success",
-//             message: "Farm and staff created successfully.",
-//             farmId: result.farmId,
-//             staffIds: result.staffIds,
-//             totalStaffCreated: result.staffIds.length
-//         });
-
-//     } catch (err) {
-//         console.error("Error creating farm:", err);
-
-//         res.status(500).json({
-//             status: "error",
-//             message: "Internal Server Error",
-//             error: process.env.NODE_ENV === 'development' ? err.message : undefined
-//         });
-//     }
-// });
-
-
 exports.CreateFarm = asyncHandler(async (req, res) => {
-    console.log('Farm creation request:', req.body);
+    console.log("Farm creation request:", req.body);
 
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-        console.log('User ID:', userId);
+        console.log("User ID:", userId);
 
         const { value, error } = createFarm.validate(input);
         if (error) {
@@ -125,7 +54,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             city,
             staffCount,
             appUserCount,
-            staff
+            staff,
         } = value;
 
         const result = await farmDao.createFarmWithStaff({
@@ -142,7 +71,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             city,
             staffCount,
             appUserCount,
-            staff
+            staff,
         });
 
         console.log("Farm creation result:", result);
@@ -153,16 +82,15 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             farmId: result.farmId,
             regCode: result.regCode,
             staffIds: result.staffIds,
-            totalStaffCreated: result.staffIds.length
+            totalStaffCreated: result.staffIds.length,
         });
-
     } catch (err) {
         console.error("Error creating farm:", err);
 
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });
@@ -171,7 +99,7 @@ exports.getFarms = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farms = await farmDao.getAllFarmByUserId(userId);
-        console.log("far,ss", farms)
+        console.log("far,ss", farms);
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({ message: "No farms found" });
@@ -183,7 +111,6 @@ exports.getFarms = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "Failed to fetch farms" });
     }
 });
-
 
 exports.getFarmById = asyncHandler(async (req, res) => {
     try {
@@ -203,8 +130,6 @@ exports.getFarmById = asyncHandler(async (req, res) => {
     }
 });
 
-
-
 exports.getMemberShip = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
@@ -216,24 +141,23 @@ exports.getMemberShip = asyncHandler(async (req, res) => {
 
         res.status(200).json({
             success: true,
-            data: userMembership
+            data: userMembership,
         });
     } catch (error) {
         console.error("Error fetching user membership:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to fetch user membership"
+            message: "Failed to fetch user membership",
         });
     }
 });
-
 
 exports.CreatePayment = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-        console.log('Payment request data:', input);
+        console.log("Payment request data:", input);
 
         const { value, error } = createPayment.validate(input);
         if (error) {
@@ -249,36 +173,32 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
             userId,
             payment,
             plan,
-            expireDate
+            expireDate,
         });
 
         res.status(201).json({
             status: "success",
             message: "Payment processed and membership updated successfully.",
             paymentId: result.paymentId,
-            userUpdated: result.userUpdated
+            userUpdated: result.userUpdated,
         });
-
     } catch (err) {
         console.error("Error processing payment:", err);
 
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });
 
-
 //////////////cultivation
-
 
 exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farmId = req.params.farmId;
-
 
         if (!farmId) {
             return res.status(400).json({
@@ -294,22 +214,26 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
             });
         }
 
-        farmDao.getOngoingCultivationsByUserIdAndFarmId(userId, farmId, (err, results) => {
-            if (err) {
-                console.error("Error fetching data from DAO:", err);
-                return res.status(500).json({
-                    status: "error",
-                    message: "An error occurred while fetching data.",
-                });
-            }
-            if (results.length === 0) {
-                return res.status(404).json({
-                    status: "error",
-                    message: "No ongoing cultivation found for this user and farm",
-                });
-            }
-            res.status(200).json(results);
-        });
+        farmDao.getOngoingCultivationsByUserIdAndFarmId(
+            userId,
+            farmId,
+            (err, results) => {
+                if (err) {
+                    console.error("Error fetching data from DAO:", err);
+                    return res.status(500).json({
+                        status: "error",
+                        message: "An error occurred while fetching data.",
+                    });
+                }
+                if (results.length === 0) {
+                    return res.status(404).json({
+                        status: "error",
+                        message: "No ongoing cultivation found for this user and farm",
+                    });
+                }
+                res.status(200).json(results);
+            },
+        );
     } catch (err) {
         console.error("Error in OngoingCultivationGetById:", err);
         res
@@ -318,97 +242,18 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
     }
 });
 
-
-// ENDPOINT - Updated to include farmId validation and usage
-// exports.enroll = asyncHandler(async (req, res) => {
-//     console.log("first")
-//     try {
-//         const cropId = req.body.cropId;
-//         const extentha = req.body.extentha || '0';
-//         const extentac = req.body.extentac || '0';
-//         const extentp = req.body.extentp || '0';
-//         const startDate = req.body.startDate;
-//         const userId = req.user.id;
-//         const farmId = req.params.farmId
-
-//         console.log("farmId", farmId)
-
-//         const { error } = enrollSchema.validate({
-//             extentha,
-//             extentac,
-//             extentp,
-//             startedAt: startDate,
-//             ongoingCultivationId: null,
-//             createdAt: undefined,
-//             farmId
-//         });
-
-//         console.log("valide after")
-//         console.log("Error:", error);
-
-//         if (error) {
-//             return res.status(400).json({ message: error.details[0].message });
-//         }
-
-//         let cultivationId;
-//         const ongoingCultivationResult = await farmDao.checkOngoingCultivation(userId);
-
-//         if (!ongoingCultivationResult[0]) {
-//             const newCultivationResult = await farmDao.createOngoingCultivation(userId);
-//             cultivationId = newCultivationResult.insertId;
-//         } else {
-//             cultivationId = ongoingCultivationResult[0].id;
-//         }
-
-//         // Updated: Check crop count for specific farm
-//         const cropCountResult = await farmDao.checkCropCountByFarm(cultivationId, farmId);
-//         const cropCount = cropCountResult[0].count;
-
-
-
-//         // Updated: Check enrolled crops for specific farm
-//         const enrolledCrops = await farmDao.checkEnrollCropByFarm(cultivationId, farmId);
-//         if (enrolledCrops.some((crop) => crop.cropCalendar == cropId)) {
-//             return res
-//                 .status(400)
-//                 .json({ message: "You are already enrolled in this crop for this farm!" });
-//         }
-
-//         const cultivationIndex = cropCount + 1;
-
-//         await farmDao.enrollOngoingCultivationCrop(cultivationId, cropId, extentha, extentac, extentp, startDate, cultivationIndex, farmId);
-//         const enroledoncultivationcrop = await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
-//         console.log("data", enroledoncultivationcrop);
-
-//         let onCulscropID;
-//         if (enroledoncultivationcrop.length > 0) {
-//             onCulscropID = enroledoncultivationcrop[0].id;
-//         } else {
-//             console.log("No records found for the given cultivationId.");
-//             return res.status(500).json({ message: "Failed to create cultivation record" });
-//         }
-
-//         const responseenrollSlaveCrop = await farmDao.enrollSlaveCrop(userId, cropId, startDate, onCulscropID, farmId);
-
-//         return res.json({ message: "Enrollment successful" });
-//     } catch (err) {
-//         console.error("Error during enrollment:", err);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// });
-
 exports.enroll = asyncHandler(async (req, res) => {
-    console.log("first")
+    console.log("first");
     try {
         const cropId = req.body.cropId;
-        const extentha = req.body.extentha || '0';
-        const extentac = req.body.extentac || '0';
-        const extentp = req.body.extentp || '0';
+        const extentha = req.body.extentha || "0";
+        const extentac = req.body.extentac || "0";
+        const extentp = req.body.extentp || "0";
         const startDate = req.body.startDate;
         const userId = req.user.id;
-        const farmId = req.params.farmId
+        const farmId = req.params.farmId;
 
-        console.log("farmId", farmId)
+        console.log("farmId", farmId);
 
         const { error } = enrollSchema.validate({
             extentha,
@@ -417,10 +262,10 @@ exports.enroll = asyncHandler(async (req, res) => {
             startedAt: startDate,
             ongoingCultivationId: null,
             createdAt: undefined,
-            farmId
+            farmId,
         });
 
-        console.log("valide after")
+        console.log("valide after");
         console.log("Error:", error);
 
         if (error) {
@@ -428,31 +273,49 @@ exports.enroll = asyncHandler(async (req, res) => {
         }
 
         let cultivationId;
-        const ongoingCultivationResult = await farmDao.checkOngoingCultivation(userId);
+        const ongoingCultivationResult =
+            await farmDao.checkOngoingCultivation(userId);
 
         if (!ongoingCultivationResult[0]) {
-            const newCultivationResult = await farmDao.createOngoingCultivation(userId);
+            const newCultivationResult =
+                await farmDao.createOngoingCultivation(userId);
             cultivationId = newCultivationResult.insertId;
         } else {
             cultivationId = ongoingCultivationResult[0].id;
         }
 
         // Updated: Check crop count for specific farm
-        const cropCountResult = await farmDao.checkCropCountByFarm(cultivationId, farmId);
+        const cropCountResult = await farmDao.checkCropCountByFarm(
+            cultivationId,
+            farmId,
+        );
         const cropCount = cropCountResult[0].count;
 
         // Updated: Check enrolled crops for specific farm
-        const enrolledCrops = await farmDao.checkEnrollCropByFarm(cultivationId, farmId);
+        const enrolledCrops = await farmDao.checkEnrollCropByFarm(
+            cultivationId,
+            farmId,
+        );
         if (enrolledCrops.some((crop) => crop.cropCalendar == cropId)) {
-            return res
-                .status(400)
-                .json({ message: "You are already enrolled in this crop for this farm!" });
+            return res.status(400).json({
+                message: "You are already enrolled in this crop for this farm!",
+            });
         }
 
         const cultivationIndex = cropCount + 1;
 
-        await farmDao.enrollOngoingCultivationCrop(cultivationId, cropId, extentha, extentac, extentp, startDate, cultivationIndex, farmId);
-        const enroledoncultivationcrop = await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
+        await farmDao.enrollOngoingCultivationCrop(
+            cultivationId,
+            cropId,
+            extentha,
+            extentac,
+            extentp,
+            startDate,
+            cultivationIndex,
+            farmId,
+        );
+        const enroledoncultivationcrop =
+            await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
         console.log("data", enroledoncultivationcrop);
 
         let onCulscropID;
@@ -460,17 +323,25 @@ exports.enroll = asyncHandler(async (req, res) => {
             onCulscropID = enroledoncultivationcrop[0].id;
         } else {
             console.log("No records found for the given cultivationId.");
-            return res.status(500).json({ message: "Failed to create cultivation record" });
+            return res
+                .status(500)
+                .json({ message: "Failed to create cultivation record" });
         }
 
-        const responseenrollSlaveCrop = await farmDao.enrollSlaveCrop(userId, cropId, startDate, onCulscropID, farmId);
+        const responseenrollSlaveCrop = await farmDao.enrollSlaveCrop(
+            userId,
+            cropId,
+            startDate,
+            onCulscropID,
+            farmId,
+        );
 
         // UPDATED: Return the onCulscropID in the response
         return res.json({
             message: "Enrollment successful",
-            ongoingCultivationCropId: onCulscropID,  // This is the ID from ongoingcultivationscrops table
+            ongoingCultivationCropId: onCulscropID,
             cultivationId: cultivationId,
-            farmId: farmId
+            farmId: farmId,
         });
     } catch (err) {
         console.error("Error during enrollment:", err);
@@ -478,43 +349,38 @@ exports.enroll = asyncHandler(async (req, res) => {
     }
 });
 
-
-
-// ENDPOINT
 exports.phoneNumberChecker = asyncHandler(async (req, res) => {
-    console.log("beforeeeeee")
+    console.log("beforeeeeee");
     try {
         const { phoneNumber } = await signupCheckerSchema.validateAsync(req.body);
         const results = await farmDao.phoneNumberChecker(phoneNumber);
-        console.log("checkkk", phoneNumber)
-        console.log("results from database:", results); // Add this debug log
+        console.log("checkkk", phoneNumber);
+        // console.log("results from database:", results);
 
         let phoneNumberExists = false;
 
-        // Normalize the input phone number for comparison
         const normalizedInputPhone = `+${String(phoneNumber).replace(/^\+/, "")}`;
-        console.log("normalized input:", normalizedInputPhone); // Add this debug log
+        //  console.log("normalized input:", normalizedInputPhone);
 
         results.forEach((user) => {
-            console.log("comparing with:", user.phoneNumber); // Add this debug log
+            console.log("comparing with:", user.phoneNumber);
             if (user.phoneNumber === normalizedInputPhone) {
                 phoneNumberExists = true;
             }
         });
 
-        console.log("phoneNumberExists:", phoneNumberExists); // Add this debug log
+        console.log("phoneNumberExists:", phoneNumberExists);
 
         if (phoneNumberExists) {
             return res.status(409).json({
                 status: "error",
-                message: "This phone number already exists."
+                message: "This phone number already exists.",
             });
         }
 
-        // Phone number is available
         res.status(200).json({
             status: "success",
-            message: "Phone number is available!"
+            message: "Phone number is available!",
         });
     } catch (err) {
         console.error("Error in phoneNumberChecker:", err);
@@ -526,45 +392,43 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
         }
         res.status(500).json({
             status: "error",
-            message: "Internal Server Error!"
+            message: "Internal Server Error!",
         });
     }
 });
 
 exports.nicChecker = asyncHandler(async (req, res) => {
-    console.log("beforeeeeee")
+    console.log("beforeeeeee");
     try {
         const { nic } = await nicChecker.validateAsync(req.body);
         const results = await farmDao.nicChecker(nic);
-        console.log("checkkk", nic)
-        console.log("results from database:", results); // Add this debug log
+        console.log("checkkk", nic);
+        console.log("results from database:", results);
 
         let nicExists = false;
 
-        // Normalize the input NIC for comparison
         const normalizedInputNic = String(nic).replace(/^\+/, "");
-        console.log("normalized input:", normalizedInputNic); // Add this debug log
+        console.log("normalized input:", normalizedInputNic);
 
         results.forEach((user) => {
-            console.log("comparing with:", user.nic); // Add this debug log
+            console.log("comparing with:", user.nic);
             if (user.nic === normalizedInputNic) {
                 nicExists = true;
             }
         });
 
-        console.log("nicExists:", nicExists); // Add this debug log
+        console.log("nicExists:", nicExists);
 
         if (nicExists) {
             return res.status(409).json({
                 status: "error",
-                message: "This NIC already exists."
+                message: "This NIC already exists.",
             });
         }
 
-        // NIC is available
         res.status(200).json({
             status: "success",
-            message: "NIC is available!"
+            message: "NIC is available!",
         });
     } catch (err) {
         console.error("Error in nicChecker:", err);
@@ -576,7 +440,7 @@ exports.nicChecker = asyncHandler(async (req, res) => {
         }
         res.status(500).json({
             status: "error",
-            message: "Internal Server Error!"
+            message: "Internal Server Error!",
         });
     }
 });
@@ -585,35 +449,33 @@ exports.nicChecker = asyncHandler(async (req, res) => {
 
 exports.getCropCountByFarmId = asyncHandler(async (req, res) => {
     try {
-        const farmId = req.params.farmId; // Changed from req.params.id to req.params.farmId
+        const farmId = req.params.farmId;
         const userId = req.user.id;
 
-        // Get crop count - parameters are now in correct order
         const cropCount = await farmDao.getCropCountByFarmId(userId, farmId);
 
         if (cropCount === null || cropCount === undefined) {
-            return res.status(404).json({ message: "Farm not found or no crops found" });
+            return res
+                .status(404)
+                .json({ message: "Farm not found or no crops found" });
         }
 
-        res.status(200).json({ cropCount }); // Return as object for consistency
+        res.status(200).json({ cropCount });
     } catch (error) {
         console.error("Error fetching crop count:", error);
         res.status(500).json({ message: "Failed to fetch crop count" });
     }
 });
 
-
-
 exports.UpdateFarm = asyncHandler(async (req, res) => {
-    console.log('Farm update request:', req.body);
+    console.log("Farm update request:", req.body);
 
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-        console.log('User ID:', userId);
+        console.log("User ID:", userId);
 
-        // Validate input - you might want to create a separate validation schema for updates
         const { value, error } = updateFarm.validate(input);
         if (error) {
             return res.status(400).json({
@@ -625,7 +487,7 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
         console.log("Validated input:", value);
 
         const {
-            farmId, // This should be provided to identify which farm to update
+            farmId,
             farmName,
             farmIndex,
             farmImage,
@@ -636,10 +498,9 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             plotNo,
             street,
             city,
-            staffCount
+            staffCount,
         } = value;
 
-        // Check if farmId is provided
         if (!farmId) {
             return res.status(400).json({
                 status: "error",
@@ -647,7 +508,6 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             });
         }
 
-        // Update farm
         const result = await farmDao.updateFarm({
             userId,
             farmId,
@@ -661,7 +521,7 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             plotNo,
             street,
             city,
-            staffCount
+            staffCount,
         });
 
         console.log("Farm update result:", result);
@@ -670,39 +530,34 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             status: "success",
             message: "Farm updated successfully.",
             farmId: result.farmId,
-            updatedRows: result.affectedRows
+            updatedRows: result.affectedRows,
         });
-
     } catch (err) {
         console.error("Error updating farm:", err);
 
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });
 
-
-
-
-
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-    console.log('Staff member creation request:', req.body);
+    console.log("Staff member creation request:", req.body);
     try {
         const userId = req.user.id;
-        const { farmId } = req.params; // Get farmId from URL params
-        console.log('User ID:', userId, 'Farm ID:', farmId);
+        const { farmId } = req.params;
+        console.log("User ID:", userId, "Farm ID:", farmId);
 
         // Create input object for validation
         const input = {
             ...req.body,
-            farmId // Include farmId in input for validation
+            farmId,
         };
 
         // Validate input (you'll need to create/update your validation schema)
-        const { value, error } = createStaffMember.validate(input); // Note: changed from createFarm
+        const { value, error } = createStaffMember.validate(input);
         if (error) {
             return res.status(400).json({
                 status: "error",
@@ -712,14 +567,7 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
 
         console.log("Validated input:", value);
 
-        const {
-            firstName,
-            lastName,
-            phoneNumber,
-            countryCode,
-            role,
-            nic
-        } = value;
+        const { firstName, lastName, phoneNumber, countryCode, role, nic } = value;
 
         // Create staff member
         const result = await farmDao.CreateStaffMember({
@@ -730,7 +578,7 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             phoneNumber,
             countryCode,
             role,
-            nic
+            nic,
         });
 
         console.log("Staff member creation result:", result);
@@ -739,24 +587,22 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             status: "success",
             message: "Staff member created successfully.",
             staffId: result.staffId,
-            data: result.data
+            data: result.data,
         });
-
     } catch (err) {
         console.error("Error creating staff member:", err);
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });
 
-
 exports.getStaffMember = asyncHandler(async (req, res) => {
-    console.log('fdgd')
+    console.log("fdgd");
     try {
-        const { staffMemberId } = req.params; // Fixed: destructure to get the actual value
+        const { staffMemberId } = req.params;
 
         // Get staff member data
         const staffMemberData = await farmDao.getStaffMember(staffMemberId);
@@ -773,11 +619,11 @@ exports.getStaffMember = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.updateStaffMember = asyncHandler(async (req, res) => {
     try {
         const { staffMemberId } = req.params;
-        const { firstName, lastName, phoneNumber, countryCode, role, nic } = req.body;
+        const { firstName, lastName, phoneNumber, countryCode, role, nic } =
+            req.body;
 
         const result = await farmDao.updateStaffMember(staffMemberId, {
             firstName,
@@ -785,7 +631,7 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
             phoneNumber,
             phoneCode: countryCode,
             role,
-            nic
+            nic,
         });
 
         if (result.affectedRows === 0) {
@@ -826,7 +672,7 @@ exports.getrenew = asyncHandler(async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Farm not found",
-                needsRenewal: true
+                needsRenewal: true,
             });
         }
 
@@ -844,7 +690,7 @@ exports.getrenew = asyncHandler(async (req, res) => {
                 userId: farmData.userId,
                 farmName: farmData.farmName,
                 needsRenewal,
-                status: needsRenewal ? 'blocked' : 'active',
+                status: needsRenewal ? "blocked" : "active",
                 isBlock: farmData.isBlock,
                 district: farmData.district,
                 city: farmData.city,
@@ -852,20 +698,17 @@ exports.getrenew = asyncHandler(async (req, res) => {
                 appUserCount: farmData.appUserCount,
                 daysRemaining: farmData.daysRemaining,
                 expireDate: farmData.expireDate,
-                activeStatus: farmData.activeStatus
-            }
+                activeStatus: farmData.activeStatus,
+            },
         });
-
     } catch (error) {
         console.error("Error fetching user farm:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to fetch user farm"
+            message: "Failed to fetch user farm",
         });
     }
 });
-
-
 
 exports.deleteFarm = asyncHandler(async (req, res) => {
     console.log("Deleting farm...");
@@ -885,7 +728,7 @@ exports.deleteFarm = asyncHandler(async (req, res) => {
         if (!deleteResult) {
             return res.status(404).json({
                 status: "error",
-                message: "Farm not found or already deleted"
+                message: "Farm not found or already deleted",
             });
         }
 
@@ -899,9 +742,8 @@ exports.deleteFarm = asyncHandler(async (req, res) => {
 
         res.status(200).json({
             status: "success",
-            message: "Farm deleted successfully and farm indexes reordered"
+            message: "Farm deleted successfully and farm indexes reordered",
         });
-
     } catch (err) {
         console.error("Error deleting farm:", err);
 
@@ -914,7 +756,7 @@ exports.deleteFarm = asyncHandler(async (req, res) => {
 
         res.status(500).json({
             status: "error",
-            error: "Internal Server Error"
+            error: "Internal Server Error",
         });
     }
 });
@@ -924,15 +766,14 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId;
         const selectFarm = await farmDao.getSelectFarm(ownerId);
 
-        console.log('Select Farm', selectFarm);
+        console.log("Select Farm", selectFarm);
 
         // Return the farm data for dropdown
         return res.status(200).json({
             status: "success",
             message: "Farms retrieved successfully",
-            data: selectFarm
+            data: selectFarm,
         });
-
     } catch (err) {
         console.error("Error:", err);
         if (err.isJoi) {
@@ -948,15 +789,12 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
     }
 });
 
-
 ////currect asset
-
-
 
 exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
-        const userId = req.user.ownerId;  // Should be the owner's ID from users table
+        const userId = req.user.ownerId;
         const staffId = req.user.id;
         const {
             category,
@@ -971,21 +809,27 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             purchaseDate,
             expireDate,
             warranty,
-            status
+            status,
         } = req.body;
 
         // Validate volume
         const volumeInt = parseInt(volume, 10);
         if (isNaN(volumeInt)) {
             return res.status(400).json({
-                status: 'error',
-                message: 'Volume must be a valid number.'
+                status: "error",
+                message: "Volume must be a valid number.",
             });
         }
 
         // Format dates
-        const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
-        const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
+        const formattedPurchaseDate = new Date(purchaseDate)
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ");
+        const formattedExpireDate = new Date(expireDate)
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ");
 
         // Create new asset data
         const assetData = {
@@ -1003,7 +847,7 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             total: totalPrice,
             purchaseDate: formattedPurchaseDate,
             expireDate: formattedExpireDate,
-            status: status
+            status: status,
         };
 
         const insertResult = await farmDao.createNewAsset(assetData);
@@ -1013,16 +857,15 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             currentAssetId: insertResult.insertId,
             numOfPlusUnit: numberOfUnits,
             numOfMinUnit: 0,
-            totalPrice: totalPrice
+            totalPrice: totalPrice,
         };
 
         await farmDao.addAssetRecord(recordData);
 
         res.status(201).json({
-            status: 'success',
-            message: 'New asset created successfully',
+            status: "success",
+            message: "New asset created successfully",
         });
-
     } catch (err) {
         console.error("Error:", err);
         return res.status(500).json({
@@ -1032,20 +875,19 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.getAssetsByCategory = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
         const { category } = await getAssetsByCategorySchema.validateAsync(
-            req.query
+            req.query,
         );
         const assets = await farmDao.getAssetsByCategory(userId, category, farmId);
 
-        console.log("hit----------", farmId, category, userId)
+        console.log("hit----------", farmId, category, userId);
 
-        console.log("assetssssssssss", assets)
+        console.log("assetssssssssss", assets);
 
         if (assets.length === 0) {
             return res.status(404).json({
@@ -1073,14 +915,20 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
-    console.log("first")
+    console.log("first");
     try {
         const userId = req.user.ownerId;
-        const farmId = parseInt(req.params.farmId, 10); // Convert to integer
+        const farmId = parseInt(req.params.farmId, 10);
 
-        console.log("userId:", userId, "farmId:", farmId, "farmId type:", typeof farmId);
+        console.log(
+            "userId:",
+            userId,
+            "farmId:",
+            farmId,
+            "farmId type:",
+            typeof farmId,
+        );
 
         const results = await farmDao.getAllCurrentAssets(userId, farmId);
         console.log("Results:", results);
@@ -1105,14 +953,16 @@ exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
 });
 
 exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
-    console.log("///////////////////")
+    console.log("///////////////////");
     try {
         const userId = req.user.ownerId;
         const { category, farmId } = req.params;
 
-
-
-        const results = await farmDao.getFixedAssetsByCategory(userId, category, farmId);
+        const results = await farmDao.getFixedAssetsByCategory(
+            userId,
+            category,
+            farmId,
+        );
 
         if (results.length === 0) {
             return res.status(404).json({
@@ -1126,7 +976,7 @@ exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
             fixedAssets: results,
         });
     } catch (err) {
-        if (err.message === 'Invalid category provided.') {
+        if (err.message === "Invalid category provided.") {
             return res.status(400).json({
                 status: "error",
                 message: err.message,
@@ -1139,7 +989,6 @@ exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
         });
     }
 });
-
 
 exports.getFarmName = asyncHandler(async (req, res) => {
     try {
@@ -1155,26 +1004,24 @@ exports.getFarmName = asyncHandler(async (req, res) => {
             return res.status(404).json({
                 status: "error",
                 message: "No farm found",
-                data: null
+                data: null,
             });
         }
 
-        // Return consistent response format
         res.status(200).json({
             status: "success",
             message: "Farm retrieved successfully",
-            data: farms[0] // Return single farm object since we're querying by specific farmId
+            data: farms[0],
         });
     } catch (error) {
         console.error("Error fetching farm:", error);
         res.status(500).json({
             status: "error",
             message: "Failed to fetch farm",
-            data: null
+            data: null,
         });
     }
 });
-
 
 /////delete
 
@@ -1185,124 +1032,103 @@ exports.deleteAsset = (req, res) => {
 
     // Validate input
     if (!numberOfUnits || numberOfUnits <= 0) {
-        return res.status(400).json({ message: 'Invalid number of units.' });
+        return res.status(400).json({ message: "Invalid number of units." });
     }
 
     if (!totalPrice || totalPrice <= 0) {
-        return res.status(400).json({ message: 'Invalid total price.' });
+        return res.status(400).json({ message: "Invalid total price." });
     }
 
-    db.plantcare.execute('SELECT * FROM currentasset WHERE userId = ? AND category = ? AND id = ?', [userId, category, assetId], (err, results) => {
-        if (err) {
-            console.error('Error retrieving asset:', err);
-            return res.status(500).json({ message: 'Server error.' });
-        }
-
-        if (!results.length) {
-            return res.status(404).json({ message: 'Asset not found.' });
-        }
-
-        const currentAsset = results[0];
-        const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
-        const newTotal = currentAsset.total - totalPrice;
-
-        // Validation checks
-        if (numberOfUnits > currentAsset.numOfUnit) {
-            return res.status(400).json({ message: 'Cannot remove more units than available.' });
-        }
-
-        if (totalPrice > currentAsset.total) {
-            return res.status(400).json({ message: 'Cannot remove more value than available.' });
-        }
-
-        if (newNumOfUnit < 0 || newTotal < 0) {
-            return res.status(400).json({ message: 'Invalid operation: insufficient units or value.' });
-        }
-
-        // FIRST: Insert the record while the asset still exists
-        db.plantcare.execute(
-            'INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice) VALUES (?, 0, ?, ?)',
-            [currentAsset.id, numberOfUnits, totalPrice],
-            (recordErr) => {
-                if (recordErr) {
-                    console.error('Error adding asset record:', recordErr);
-                    return res.status(500).json({ message: 'Failed to record transaction.' });
-                }
-
-                // THEN: Delete or update the asset
-                if (newNumOfUnit === 0 && newTotal === 0) {
-                    // Delete the entire asset
-                    db.plantcare.execute(
-                        'DELETE FROM currentasset WHERE userId = ? AND category = ? AND id = ?',
-                        [userId, category, assetId],
-                        (deleteErr) => {
-                            if (deleteErr) {
-                                console.error('Error deleting asset:', deleteErr);
-                                return res.status(500).json({ message: 'Failed to delete asset.' });
-                            }
-
-                            res.status(200).json({ message: 'Asset removed successfully.' });
-                        }
-                    );
-                } else {
-                    // Update the asset with new values
-                    db.plantcare.execute(
-                        'UPDATE currentasset SET numOfUnit = ?, total = ? WHERE userId = ? AND category = ? AND id = ?',
-                        [newNumOfUnit, newTotal, userId, category, assetId],
-                        (updateErr) => {
-                            if (updateErr) {
-                                console.error('Error updating asset:', updateErr);
-                                return res.status(500).json({ message: 'Failed to update asset.' });
-                            }
-
-                            res.status(200).json({ message: 'Asset updated successfully.' });
-                        }
-                    );
-                }
+    db.plantcare.execute(
+        "SELECT * FROM currentasset WHERE userId = ? AND category = ? AND id = ?",
+        [userId, category, assetId],
+        (err, results) => {
+            if (err) {
+                console.error("Error retrieving asset:", err);
+                return res.status(500).json({ message: "Server error." });
             }
-        );
-    });
+
+            if (!results.length) {
+                return res.status(404).json({ message: "Asset not found." });
+            }
+
+            const currentAsset = results[0];
+            const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
+            const newTotal = currentAsset.total - totalPrice;
+
+            // Validation checks
+            if (numberOfUnits > currentAsset.numOfUnit) {
+                return res
+                    .status(400)
+                    .json({ message: "Cannot remove more units than available." });
+            }
+
+            if (totalPrice > currentAsset.total) {
+                return res
+                    .status(400)
+                    .json({ message: "Cannot remove more value than available." });
+            }
+
+            if (newNumOfUnit < 0 || newTotal < 0) {
+                return res
+                    .status(400)
+                    .json({ message: "Invalid operation: insufficient units or value." });
+            }
+
+            // FIRST: Insert the record while the asset still exists
+            db.plantcare.execute(
+                "INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice) VALUES (?, 0, ?, ?)",
+                [currentAsset.id, numberOfUnits, totalPrice],
+                (recordErr) => {
+                    if (recordErr) {
+                        console.error("Error adding asset record:", recordErr);
+                        return res
+                            .status(500)
+                            .json({ message: "Failed to record transaction." });
+                    }
+
+                    if (newNumOfUnit === 0 && newTotal === 0) {
+                        // Delete the entire asset
+                        db.plantcare.execute(
+                            "DELETE FROM currentasset WHERE userId = ? AND category = ? AND id = ?",
+                            [userId, category, assetId],
+                            (deleteErr) => {
+                                if (deleteErr) {
+                                    console.error("Error deleting asset:", deleteErr);
+                                    return res
+                                        .status(500)
+                                        .json({ message: "Failed to delete asset." });
+                                }
+
+                                res
+                                    .status(200)
+                                    .json({ message: "Asset removed successfully." });
+                            },
+                        );
+                    } else {
+                        // Update the asset with new values
+                        db.plantcare.execute(
+                            "UPDATE currentasset SET numOfUnit = ?, total = ? WHERE userId = ? AND category = ? AND id = ?",
+                            [newNumOfUnit, newTotal, userId, category, assetId],
+                            (updateErr) => {
+                                if (updateErr) {
+                                    console.error("Error updating asset:", updateErr);
+                                    return res
+                                        .status(500)
+                                        .json({ message: "Failed to update asset." });
+                                }
+
+                                res
+                                    .status(200)
+                                    .json({ message: "Asset updated successfully." });
+                            },
+                        );
+                    }
+                },
+            );
+        },
+    );
 };
-
-
-// exports.updateCurrentAsset = asyncHandler(async (req, res) => {
-//     try {
-//         const assetId = req.params.assetId;
-//         const userId = req.user.ownerId;
-//         const staffId = req.user.id;
-
-//         const { numberOfUnits, unitPrice, totalPrice } = req.body;
-
-//         // Simple update object with just the changed fields
-//         const assetData = {
-//             userId: userId,
-//             staffId: staffId,
-//             numOfUnit: numberOfUnits,
-//             unitPrice: unitPrice,
-//             total: totalPrice
-//         };
-
-//         const result = await farmDao.updateCurrentAsset(assetId, assetData);
-
-//         if (result.affectedRows === 0) {
-//             return res.status(404).json({
-//                 status: 'error',
-//                 message: "Asset not found"
-//             });
-//         }
-
-//         res.status(200).json({
-//             status: 'success',
-//             message: "Asset updated successfully"
-//         });
-//     } catch (error) {
-//         console.error("Error updating current asset:", error);
-//         res.status(500).json({
-//             status: 'error',
-//             message: "Failed to update asset"
-//         });
-//     }
-// });
 
 exports.updateCurrentAsset = asyncHandler(async (req, res) => {
     try {
@@ -1312,19 +1138,19 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
         const { numberOfUnits, unitPrice, totalPrice } = req.body;
 
         // If numberOfUnits is 0, delete the asset
-        if (numberOfUnits === 0 || numberOfUnits === '0') {
+        if (numberOfUnits === 0 || numberOfUnits === "0") {
             const result = await farmDao.deleteCurrentAsset(assetId);
 
             if (result.affectedRows === 0) {
                 return res.status(404).json({
-                    status: 'error',
-                    message: "Asset not found"
+                    status: "error",
+                    message: "Asset not found",
                 });
             }
 
             return res.status(200).json({
-                status: 'success',
-                message: "Asset deleted successfully"
+                status: "success",
+                message: "Asset deleted successfully",
             });
         }
 
@@ -1334,39 +1160,35 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
             staffId: staffId,
             numOfUnit: numberOfUnits,
             unitPrice: unitPrice,
-            total: totalPrice
+            total: totalPrice,
         };
 
         const result = await farmDao.updateCurrentAsset(assetId, assetData);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
-                status: 'error',
-                message: "Asset not found"
+                status: "error",
+                message: "Asset not found",
             });
         }
 
         res.status(200).json({
-            status: 'success',
-            message: "Asset updated successfully"
+            status: "success",
+            message: "Asset updated successfully",
         });
     } catch (error) {
         console.error("Error updating current asset:", error);
         res.status(500).json({
-            status: 'error',
-            message: "Failed to update asset"
+            status: "error",
+            message: "Failed to update asset",
         });
     }
 });
 
-
-
 exports.getFarmExtend = asyncHandler(async (req, res) => {
     try {
-
         const farmId = req.params.farmId;
-
-        console.log("Fetching farm for farmId:", farmId);
+        console.log("Fetching farm extent for farmId:", farmId);
 
         const farms = await farmDao.getFarmExtend(farmId);
         console.log("farms", farms);
@@ -1375,23 +1197,83 @@ exports.getFarmExtend = asyncHandler(async (req, res) => {
             return res.status(404).json({
                 status: "error",
                 message: "No farm found",
-                data: null
+                data: null,
             });
         }
 
-        // Return consistent response format
+        const farmData = farms[0];
+
+        // Format response with clear extent information
+        const response = {
+            id: farmData.id,
+            farmName: farmData.farmName,
+            totalExtent: {
+                hectares: farmData.extentha,
+                acres: farmData.extentac,
+                perches: farmData.extentp,
+                totalPerches: farmData.totalExtentPerches,
+            },
+            cultivatedExtent: {
+                hectares: farmData.cultivatedExtentha,
+                acres: farmData.cultivatedExtentac,
+                perches: farmData.cultivatedExtentp,
+                totalPerches: farmData.cultivatedExtentPerches,
+            },
+            availableExtent: {
+                hectares: farmData.availableExtentha,
+                acres: farmData.availableExtentac,
+                perches: farmData.availableExtentp,
+                totalPerches: farmData.availableExtentPerches,
+            },
+        };
+
         res.status(200).json({
             status: "success",
-            message: "Farm retrieved successfully",
-            data: farms[0] // Return single farm object since we're querying by specific farmId
+            message: "Farm extent retrieved successfully",
+            data: response,
         });
     } catch (error) {
-        console.error("Error fetching farm:", error);
+        console.error("Error fetching farm extent:", error);
         res.status(500).json({
             status: "error",
-            message: "Failed to fetch farm",
-            data: null
+            message: "Failed to fetch farm extent",
+            data: null,
         });
     }
 });
 
+exports.getCurrectAssetAlredayHave = asyncHandler(async (req, res) => {
+    console.log("Getting already added assets");
+    try {
+        const farmId = parseInt(req.params.farmId, 10);
+
+        if (isNaN(farmId)) {
+            return res.status(400).json({
+                status: "error",
+                message: "Invalid farmId",
+            });
+        }
+
+        const results = await farmDao.getCurrectAssetAlredayHave(farmId);
+        console.log("Results:", results);
+
+        if (results.length === 0) {
+            return res.status(200).json({
+                status: "success",
+                message: "No assets found for this farm",
+                currentAssetsByCategory: [],
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            currentAssetsByCategory: results,
+        });
+    } catch (err) {
+        console.error("Error in getCurrectAssetAlredayHave:", err);
+        res.status(500).json({
+            status: "error",
+            message: `An error occurred: ${err.message}`,
+        });
+    }
+});

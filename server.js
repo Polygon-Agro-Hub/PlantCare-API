@@ -92,6 +92,9 @@ app.use(process.env.AUTHOR, calendartaskImages);
 const reportRoutes = require("./routes/reportRoutes");
 app.use(process.env.AUTHOR, reportRoutes);
 
+const pentionRoutes = require("./routes/pension");
+app.use(process.env.AUTHOR, pentionRoutes);
+
 app.get("/test", (req, res) => {
   res.json("test run!");
 });
@@ -104,6 +107,7 @@ app.use("/api/staff", staffRoutes);
 app.use("/api/requestInspection", requestInspectionRoutes);
 app.use("/api/certificate", certificateRoutes);
 app.use("/api/goviCapital", goviCapitalRoutes);
+app.use("/api/pension", pentionRoutes);
 
 app.use("", heathRoutes);
 
