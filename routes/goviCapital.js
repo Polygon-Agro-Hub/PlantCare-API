@@ -20,4 +20,8 @@ router.post(
     goviCapitalEp.createInvestmentRequest
 );
 
+router.get('/get-approvedStatus-details/:id', auth, goviCapitalEp.getApprovedStatusDetails);
+
+router.post('/update-review-status/:id', auth, goviCapitalEp.updateReviewStatus);
+
 module.exports = router;

@@ -1,41 +1,6 @@
 const db = require("../startup/database");
 
 
-// exports.getCrops = async (farmId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//             SELECT 
-//                 f.*,
-//                 cc.id as cropCalendarId,
-//                 cv.id as cropVarietyId,
-
-//                 cg.id as cropGroupId,
-//                 cg.cropNameEnglish,
-//                 cg.cropNameSinhala,
-//                 cg.cropNameTamil,
-//                 occ.ongoingCultivationId,
-//                 occ.cropCalendar as cropCalendarId,
-//                 oc.userId
-//             FROM farms f
-//             LEFT JOIN ongoingcultivations oc ON   oc.userId
-//             LEFT JOIN ongoingcultivationscrops occ ON oc.id = occ.ongoingCultivationId
-//             LEFT JOIN cropcalender cc ON occ.cropCalendar = cc.id
-//             LEFT JOIN cropvariety cv ON cc.cropVarietyId = cv.id
-//             LEFT JOIN cropgroup cg ON cv.cropGroupId = cg.id
-//             WHERE oc.userId = ?
-//             ORDER BY occ.ongoingCultivationId ASC, occ.cropCalendar ASC, occ.farmId
-//         `;
-
-//         db.plantcare.query(query, [farmId], (error, results) => {
-//             if (error) {
-//                 console.error("Error fetching farms with crops:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results);
-//             }
-//         });
-//     });
-// };
 
 exports.getCrops = async () => {
     return new Promise((resolve, reject) => {
@@ -79,37 +44,7 @@ exports.getFarmerDetails = async (userId) => {
     });
 };
 
-// exports.createInvestmentRequest = async (requestData) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//             INSERT INTO investmentrequest
-//             (cropId, farmerId, extentha, extentac, extentp, investment, expectedYield, startDate, nicFront, nicBack)
-//             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-//         `;
 
-//         const values = [
-//             requestData.cropId,
-//             requestData.farmerId,
-//             requestData.extentha,
-//             requestData.extentac,
-//             requestData.extentp,
-//             requestData.investment,
-//             requestData.expectedYield,
-//             requestData.startDate,
-//             requestData.nicFront,
-//             requestData.nicBack
-//         ];
-
-//         db.investments.query(query, values, (error, results) => {
-//             if (error) {
-//                 console.error("Error creating investment request:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results);
-//             }
-//         });
-//     });
-// };
 
 exports.createInvestmentRequest = async (requestData) => {
     return new Promise((resolve, reject) => {
@@ -219,24 +154,7 @@ exports.createInvestmentRequest = async (requestData) => {
     });
 };
 
-// exports.getInvestmentRequests = async (userId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//         SELECT  id,  cropId,  farmerId,  officerId,  jobId,extentha, extentac,  extentp,  investment,  expectedYield,  startDate, nicFront,nicBack,assignDate,  publishDate,assignedBy,publishBy, reqStatus,publishStatus,createdAt
-//         FROM investmentrequest
-//         WHERE farmerId = ?
 
-//       `;
-//         db.investments.query(query, [userId], (error, results) => {
-//             if (error) {
-//                 console.error("Error fetching Investment Requests:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results);
-//             }
-//         });
-//     });
-// };
 
 exports.getInvestmentRequests = async (userId) => {
     return new Promise((resolve, reject) => {
@@ -261,6 +179,7 @@ exports.getInvestmentRequests = async (userId) => {
                 ir.publishBy,
                 ir.reqStatus,
                 ir.publishStatus,
+                ir.isFistTime,
                 ir.createdAt,
                 cg.cropNameEnglish,
                 cg.cropNameSinhala,
@@ -281,3 +200,85 @@ exports.getInvestmentRequests = async (userId) => {
         });
     });
 };
+
+
+exports.getApprovedStatusDetails = async (invId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                ir.id AS requestId,
+                ir.jobId,
+                ir.officerId,
+                air.id AS approvedRequestId,
+                air.reqId AS approvedReqId,
+                air.totValue AS totalValue,
+                air.defineShares,
+                air.minShare,
+                air.maxShare,
+                air.defineBy,
+                air.createdAt AS approvedCreatedAt
+            FROM investmentrequest ir
+            LEFT JOIN approvedinvestmentrequest air ON ir.id = air.reqId
+            WHERE ir.id = ?
+        `;
+
+        const investmentQuery = `
+            SELECT 
+                id AS investmentId,
+                investerId,
+                reqId,
+                refCode,
+                investerName,
+                nic,
+                shares,
+                totInvt,
+                expextreturnInvt,
+                internalRate,
+                invtStatus,
+                createdAt AS investmentCreatedAt
+            FROM investment
+            WHERE reqId = ? AND invtStatus = 'Approved'
+        `;
+
+        db.investments.query(query, [invId], (error, requestResults) => {
+            if (error) {
+                console.error("Error fetching Investment request details:", error);
+                reject(error);
+            } else {
+                db.investments.query(investmentQuery, [invId], (invError, investmentResults) => {
+                    if (invError) {
+                        console.error("Error fetching Investment details:", invError);
+                        reject(invError);
+                    } else {
+                        const response = {
+                            ...requestResults[0],
+                            investments: investmentResults || []
+                        };
+                        resolve(response);
+                    }
+                });
+            }
+        });
+    });
+};
+
+
+exports.updateReviewStatus = async (invId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            UPDATE investmentrequest 
+            SET isFistTime = 1
+            WHERE id = ?
+        `;
+        db.investments.query(query, [invId], (error, results) => {
+            if (error) {
+                console.error("Error updating review status:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+
