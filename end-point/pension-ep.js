@@ -176,3 +176,31 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
+exports.updateFirstTimeStatus = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const result = await pensionRequestDao.updateFirstTimeStatus(userId);
+
+        if (!result) {
+            return res.status(404).json({
+                status: "error",
+                message: "No pension request found for this user."
+            });
+        }
+
+        res.status(200).json({
+            status: "success",
+            message: "First time status updated successfully.",
+            data: result
+        });
+    } catch (err) {
+        console.error("Error updating first time status:", err);
+        res.status(500).json({
+            status: "error",
+            message: "An error occurred while updating first time status."
+        });
+    }
+});
