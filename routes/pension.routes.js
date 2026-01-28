@@ -26,4 +26,6 @@ router.post(
   pensionRequestController.submitPensionRequest,
 );
 
+router.put('/pension-request/update-first-time', auth, pensionRequestController.updateFirstTimeStatus);
+
 module.exports = router;

@@ -41,7 +41,7 @@ exports.submitPensionRequestDAO = (pensionData) => {
                 sucFullName, sucType, sucNic, sucNicFront, sucNicBack, 
                 birthCrtFront, birthCrtBack, sucdob,
                 reqStatus, isFirstTime
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'To Review', 1)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'To Review', 0)
         `;
         
         db.plantcare.query(query, [
@@ -65,6 +65,28 @@ exports.submitPensionRequestDAO = (pensionData) => {
                 reject(err);
             } else {
                 resolve(result.insertId);
+            }
+        });
+    });
+};
+
+exports.updateFirstTimeStatus = (userId) => {
+    return new Promise((resolve, reject) => {
+        const sql = "UPDATE pensionrequest SET isFirstTime = 1 WHERE userId = ? AND reqStatus = 'Approved'";
+        db.plantcare.query(sql, [userId], (err, results) => {
+            if (err) {
+                console.error("Error executing query:", err);
+                reject(err);
+            } else {
+                if (results.affectedRows === 0) {
+                    resolve(null);
+                } else {
+                    resolve({
+                        userId: userId,
+                        isFirstTime: 1,
+                        updatedRows: results.affectedRows
+                    });
+                }
             }
         });
     });
