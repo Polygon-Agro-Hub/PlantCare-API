@@ -46,4 +46,4 @@ Now that you're more familiar with your Bitbucket repository, go ahead and add a
 
 
 Deploy
-test 3
+test 6
