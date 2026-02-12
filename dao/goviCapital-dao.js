@@ -95,7 +95,7 @@ exports.createInvestmentRequest = async (requestData) => {
                         nextJobId = 'GC' + nextNumber.toString().padStart(6, '0');
                     }
 
-                    console.log("Generated jobId:", nextJobId);
+                
 
                     // Insert the new investment request
                     const insertQuery = `

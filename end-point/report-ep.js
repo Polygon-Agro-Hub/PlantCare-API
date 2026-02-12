@@ -3,12 +3,8 @@ const transactionDAO = require('../dao/report-dao');
 
 exports.getUserWithBankDetails = async (req, res) => {
 
-  console.log('route: /report-user-details/:id');
   const { userId, centerId, companyId } = req.params;
 
-  console.log('userId:', userId);
-  console.log('centerId:', centerId);
-  console.log('companyId:', companyId);
 
   if (!userId) {
     return res.status(400).json({ error: "User ID is required" });
@@ -17,7 +13,6 @@ exports.getUserWithBankDetails = async (req, res) => {
   try {
 
     const rows = await transactionDAO.getUserWithBankDetailsById(userId, centerId, companyId);
-    console.log('rows:', rows);
 
 
     if (rows.length === 0) {
@@ -26,19 +21,17 @@ exports.getUserWithBankDetails = async (req, res) => {
 
     const user = rows[0];
 
-    // Convert the QR code from binary data (BLOB) to Base64
     let qrCodeBase64 = '';
     if (user.farmerQr) {
-      // Convert the binary BLOB data directly to Base64 using `toString('base64')`
       qrCodeBase64 = `data:image/png;base64,${user.farmerQr.toString('base64')}`;
       const qrCodePath = user.farmerQr.toString();
-      console.log('QR Code Path:', qrCodePath);
+
 
       try {
         if (fs.existsSync(qrCodePath)) {
           const qrCodeData = fs.readFileSync(qrCodePath);
           qrCodeBase64 = `data:image/png;base64,${qrCodeData.toString('base64')}`;
-          console.log('QR Code Base64:', qrCodeBase64);
+          
         } else {
           console.warn('QR code file not found at:', qrCodePath);
         }
@@ -47,7 +40,6 @@ exports.getUserWithBankDetails = async (req, res) => {
       }
     }
 
-    // Prepare the response data with company and center details
     const response = {
       userId: user.userId,
       firstName: user.firstName,
@@ -66,8 +58,6 @@ exports.getUserWithBankDetails = async (req, res) => {
       createdAt: user.createdAt
     };
 
-    console.log('response:', response);
-    // Send the response
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch user with bank details: " + error.message });
@@ -77,7 +67,6 @@ exports.getUserWithBankDetails = async (req, res) => {
 exports.GetFarmerReportDetails = async (req, res) => {
   const { userId, createdAt, farmerId } = req.params;
 
-  console.log('PARAMS---', req.params)// Extract userId, createdAt, and farmerId from params
 
   try {
     if (!userId || !createdAt || !farmerId) {
@@ -86,7 +75,6 @@ exports.GetFarmerReportDetails = async (req, res) => {
 
     const cropDetails = await transactionDAO.GetFarmerReportDetailsDao(userId, createdAt, farmerId);
     res.status(200).json(cropDetails);
-    console.log('cropDetails:', cropDetails);
   } catch (error) {
     console.error('Error fetching crop details:', error);
     res.status(500).json({ error: 'An error occurred while fetching crop details' });
@@ -102,7 +90,6 @@ exports.getTransactionHistory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    console.log('Request to get transaction history:', userId, page, limit);
 
     const transactions = await transactionDAO.getTransactionHistoryByUserId(userId, limit, offset);
     const totalCount = await transactionDAO.getTransactionCountByUserId(userId);
