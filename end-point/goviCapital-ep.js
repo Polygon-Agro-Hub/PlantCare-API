@@ -21,9 +21,7 @@ exports.uploadMultiple = multer({
 exports.getCrops = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log("userIddddddddddddddddddddddddddddd", userId);
         const crops = await goviCapitalDao.getCrops(userId);
-        console.log("farmmmmmmmmmmmmmmmmmmmmmmmmmmm", crops);
 
         if (!crops || crops.length === 0) {
             return res.status(404).json({ message: "No crops found" });
@@ -39,9 +37,7 @@ exports.getCrops = asyncHandler(async (req, res) => {
 exports.getFarmerDetails = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log("userIddddddddddddddddddddddddddddd", userId);
         const farmer = await goviCapitalDao.getFarmerDetails(userId);
-        console.log("farmmmmmmmmmmmmmmmmmmmmmmmmmmm", farmer);
 
         if (!farmer || farmer.length === 0) {
             return res.status(404).json({ message: "No farmer found" });
@@ -57,7 +53,6 @@ exports.getFarmerDetails = asyncHandler(async (req, res) => {
 exports.createInvestmentRequest = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log("aaaaaaaaaaaaaaaa");
 
         const {
             cropId,
@@ -69,7 +64,6 @@ exports.createInvestmentRequest = asyncHandler(async (req, res) => {
             startDate
         } = req.body;
 
-        console.log("----------------", cropId, startDate);
 
         // Joi Validation
         const { error } = createInvestmentRequestSchema.validate(req.body);
@@ -156,9 +150,7 @@ exports.createInvestmentRequest = asyncHandler(async (req, res) => {
 exports.getInvestmentRequests = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log("userIddddddddddddddddddddddddddddd", userId);
         const requests = await goviCapitalDao.getInvestmentRequests(userId);
-        console.log("requestsssssss", requests);
 
         if (!requests || requests.length === 0) {
             return res.status(404).json({ message: "No requests found" });
@@ -175,10 +167,8 @@ exports.getInvestmentRequests = asyncHandler(async (req, res) => {
 exports.getApprovedStatusDetails = asyncHandler(async (req, res) => {
     try {
         const invId = req.params.id;
-        console.log("invId", invId); // Fixed: was showing userId
 
         const invDetails = await goviCapitalDao.getApprovedStatusDetails(invId);
-        console.log("inv details", invDetails);
 
         if (!invDetails || invDetails.length === 0) {
             return res.status(404).json({ message: "No investment details found" });

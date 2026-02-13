@@ -43,7 +43,7 @@ COALESCE(
           ...post,
           postimage: post.postimage ? post.postimage.toString("base64") : null,
         }));
-        console.log("posts", posts)
+   
         resolve(posts);
       }
     });
@@ -98,7 +98,7 @@ exports.getRepliesByChatId = (chatId) => {
         reject(err);
       } else {
         resolve(results);
-        console.log(results);
+        
       }
     });
   });
@@ -172,7 +172,7 @@ exports.deletePost = (postId) => {
 }
 
 exports.getPostbyId = (postId) => {
-  console.log("postid", postId)
+ 
   return new Promise((resolve, reject) => {
     const sql = `SELECT * FROM publicforumposts WHERE id = ?`;
     db.plantcare.query(sql, [postId], (err, result) => {
@@ -180,7 +180,7 @@ exports.getPostbyId = (postId) => {
         reject(err);
       } else {
         resolve(result[0]);
-        console.log(result)
+       
       }
     });
   });

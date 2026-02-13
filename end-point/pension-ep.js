@@ -53,9 +53,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
     // Validate required fields
     const { fullName, nic, dob, sucFullName, sucType, sucdob } = req.body;
 
-    console.log("Received pension request data:", req.body);
-    console.log("Received files:", req.files);
-
     if (!fullName || !nic || !dob || !sucFullName || !sucType || !sucdob) {
       return res.status(400).json({
         status: false,

@@ -6,7 +6,7 @@ const multer = require('multer');
 exports.getFarmsCertificate = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
-        console.log("farmid////////////", farmId)
+
         // Validate farmId
         if (!farmId) {
             return res.status(400).json({ message: "Farm ID is required" });
@@ -33,13 +33,6 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
         const farmId = req.params.farmId;
         const { certificateId, amount, validityMonths } = req.body;
 
-        console.log("Received payment request:", {
-            userId,
-            farmId,
-            certificateId,
-            amount,
-            validityMonths
-        });
 
         // Validate required fields
         if (!certificateId || !amount || !validityMonths) {
@@ -67,14 +60,13 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
 
         // Generate transaction ID
         const transactionId = await certificateDao.generateTransactionId();
-        console.log("Generated transaction ID:", transactionId);
+     
 
         // Calculate expiry date (current date + validity months)
         const currentDate = new Date();
         const expireDate = new Date(currentDate);
         expireDate.setMonth(expireDate.getMonth() + parseInt(validityMonths));
 
-        console.log("Calculated expiry date:", expireDate);
 
         const paymentData = {
             certificateId: parseInt(certificateId),
@@ -86,7 +78,6 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
             farmId: parseInt(farmId)
         };
 
-        console.log("Payment data to be saved:", paymentData);
 
         // Save payment to database (this will now handle both tables)
         const result = await certificateDao.createCertificatePayment(paymentData);
@@ -98,7 +89,6 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Certificate payment created successfully:", result);
 
         res.status(201).json({
             message: "Certificate payment created successfully",
@@ -125,12 +115,9 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
 exports.getCropsCertificate = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
-        const cropId = req.params.cropId; // This is ongoingcultivationscrops.id
+        const cropId = req.params.cropId;
 
-        console.log("farmId............", farmId);
-        console.log("cropId (ongoingcultivationscrops.id)........", cropId);
 
-        // Validate farmId and cropId
         if (!farmId) {
             return res.status(400).json({ message: "Farm ID is required" });
         }
@@ -159,13 +146,6 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
         const cropId = req.params.cropId;
         const { certificateId, amount, validityMonths } = req.body;
 
-        console.log("Received payment request:", {
-            userId,
-            cropId,
-            certificateId,
-            amount,
-            validityMonths
-        });
 
         // Validate required fields
         if (!certificateId || !amount || !validityMonths) {
@@ -193,14 +173,14 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
 
         // Generate transaction ID
         const transactionId = await certificateDao.generateTransactionId();
-        console.log("Generated transaction ID:", transactionId);
+     
 
         // Calculate expiry date (current date + validity months)
         const currentDate = new Date();
         const expireDate = new Date(currentDate);
         expireDate.setMonth(expireDate.getMonth() + parseInt(validityMonths));
 
-        console.log("Calculated expiry date:", expireDate);
+        
 
         const paymentData = {
             certificateId: parseInt(certificateId),
@@ -212,7 +192,6 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
             cropId: parseInt(cropId)
         };
 
-        console.log("Payment data to be saved:", paymentData);
 
         // Save payment to database (this will now handle both tables)
         const result = await certificateDao.createCropCertificatePayment(paymentData);
@@ -224,7 +203,6 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Certificate payment created successfully:", result);
 
         res.status(201).json({
             message: "Certificate payment created successfully",
@@ -254,7 +232,6 @@ exports.getCropHvaeCertificate = asyncHandler(async (req, res) => {
 
         const certificates = await certificateDao.getCropHvaeCertificate(cropId, userId);
 
-        //  console.log("////////////////////////////////////////////", this.getCropHvaeCertificate.Date)
 
         if (!certificates || certificates.length === 0) {
             return res.status(200).json({
@@ -284,10 +261,7 @@ exports.getCropCertificateByid = asyncHandler(async (req, res) => {
         const cropId = req.params.cropId;
         const userId = req.user.id;
 
-        console.log("cropid......................", cropId)
         const certificates = await certificateDao.getCropCertificateByid(cropId, userId);
-
-        // console.log("certificate Q", this.getCropCertificateByid)
 
         if (!certificates || certificates.length === 0) {
             return res.status(404).json({ message: "No certificates found for farms" });
@@ -309,9 +283,8 @@ exports.getCropCertificateByid = asyncHandler(async (req, res) => {
 exports.updateQuestionItemByid = asyncHandler(async (req, res) => {
     try {
         const itemId = req.params.itemId;
-        const { type } = req.body; // 'tickOff' or get from item
+        const { type } = req.body;
 
-        console.log("Updating item ID:", itemId);
 
         // Get the item first to check its type
         const item = await certificateDao.getQuestionItemById(itemId);
@@ -406,9 +379,8 @@ exports.uploadQuestionnaireImage = asyncHandler(async (req, res) => {
 
 exports.getFarmName = asyncHandler(async (req, res) => {
     try {
-        const farmId = req.params.farmId; // Fixed: was cropId
+        const farmId = req.params.farmId;
 
-        console.log("farmId", farmId); // Fixed: was cropId
 
         const farm = await certificateDao.getFarmName(farmId);
 
@@ -430,7 +402,6 @@ exports.getFarmcertificateCrop = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId; // Fixed: was cropId
 
-        console.log("farmId", farmId); // Fixed: was cropId
 
         const farm = await certificateDao.getFarmcertificateCrop(farmId);
 
@@ -445,57 +416,22 @@ exports.getFarmcertificateCrop = asyncHandler(async (req, res) => {
     }
 });
 
-
-
-// exports.getFarmCertificate = asyncHandler(async (req, res) => {
-//     try {
-//         const farmId = req.params.farmId;
-//         const userId = req.user.id;
-
-//         const certificates = await certificateDao.getFarmCertificate(farmId, userId);
-
-//         if (!certificates || certificates.length === 0) {
-//             return res.status(200).json({
-//                 status: "notHaveFarmCertificate",
-//                 message: "No certificates found for this farm",
-//                 data: []
-//             });
-//         }
-
-//         res.status(200).json({
-//             status: "haveFarmCertificate",
-//             message: "Certificates found",
-//             data: certificates
-//         });
-//     } catch (error) {
-//         console.error("Error fetching farm certificates:", error);
-//         res.status(500).json({
-//             status: "error",
-//             message: "Failed to fetch farm certificates"
-//         });
-//     }
-// });
 exports.getFarmCertificate = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
         const userId = req.user.id;
 
-        console.log("Fetching farm certificate for farmId:", farmId, "userId:", userId);
 
         const certificates = await certificateDao.getFarmCertificate(farmId, userId);
 
-        console.log("Certificate query results:", certificates);
 
         if (!certificates || certificates.length === 0) {
-            console.log("No certificates found - returning noFarmCertificate status");
             return res.status(200).json({
-                status: "noFarmCertificate",  // ✅ Changed from "notHaveFarmCertificate"
+                status: "noFarmCertificate", 
                 message: "No certificates found for this farm",
                 data: []
             });
         }
-
-        console.log("Certificates found - returning haveFarmCertificate status");
         res.status(200).json({
             status: "haveFarmCertificate",
             message: "Certificates found",
@@ -511,64 +447,17 @@ exports.getFarmCertificate = asyncHandler(async (req, res) => {
 });
 
 
-
-// exports.createFarmQuestionnaire = asyncHandler(async (req, res) => {
-//     try {
-//         const farmId = req.params.farmId;
-//         const userId = req.user.id;
-
-//         const result = await certificateDao.createFarmQuestionnaire(farmId, userId);
-
-//         res.status(200).json({
-//             success: true,
-//             message: "Farm questionnaire created successfully",
-//             data: result
-//         });
-//     } catch (error) {
-//         console.error("Error in createFarmQuestionnaire endpoint:", error);
-//         res.status(500).json({
-//             success: false,
-//             message: "Failed to create farm questionnaire",
-//             error: error.message
-//         });
-//     }
-// });
-
-
-// exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
-//     try {
-//         const farmId = req.params.farmId;
-//         const userId = req.user.id;
-
-//         console.log("farmid......................", farmId)
-//         const certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
-
-//         // console.log("certificate Q", this.getCropCertificateByid)
-
-//         if (!certificates || certificates.length === 0) {
-//             return res.status(404).json({ message: "No certificates found for farms" });
-//         }
-
-//         res.status(200).json(certificates);
-//     } catch (error) {
-//         console.error("Error fetching farm certificates:", error);
-//         res.status(500).json({ message: "Failed to fetch farm certificates" });
-//     }
-// });
-
 exports.getFarmCertificateTask = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
         const userId = req.user.id;
 
-        console.log("farmId......................", farmId);
 
         // First, try to get farm certificates
         let certificates = await certificateDao.getFarmCertificateTask(farmId, userId);
 
         // If no farm certificates found, try to get cluster certificates
         if (!certificates || certificates.length === 0) {
-            console.log("No farm certificates found, checking cluster certificates...");
             certificates = await certificateDao.getClusterCertificateTask(farmId, userId);
         }
 
@@ -592,7 +481,6 @@ exports.removeQuestionnaireItem = asyncHandler(async (req, res) => {
         const itemId = req.params.itemId;
         const userId = req.user.id;
 
-        console.log(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", itemId)
 
         if (!itemId) {
             return res.status(400).json({ message: 'itemId is required.' });
@@ -642,12 +530,8 @@ exports.removeQuestionnaireItem = asyncHandler(async (req, res) => {
 exports.getCropNames = asyncHandler(async (req, res) => {
     try {
         const cropId = req.params.cropId;
-
-
-        console.log("cropid......................", cropId)
         const certificates = await certificateDao.getCropNames(cropId);
 
-        // console.log("certificate Q", this.getCropCertificateByid)
 
         if (!certificates || certificates.length === 0) {
             return res.status(404).json({ message: "No certificates found for farms" });

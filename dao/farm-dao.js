@@ -5,7 +5,7 @@ exports.createFarmWithStaff = async (farmData) => {
     let connection;
 
     try {
-        // Get connection from pool
+        
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -111,7 +111,7 @@ exports.createFarmWithStaff = async (farmData) => {
             `;
 
             for (const staff of farmData.staff) {
-                console.log("Inserting staff member:", staff);
+                
 
                 const staffValues = [
                     farmData.userId,
@@ -125,7 +125,7 @@ exports.createFarmWithStaff = async (farmData) => {
                     staff.image || null,
                 ];
 
-                console.log("Staff values being inserted:", staffValues);
+               
 
                 const [staffResult] = await connection
                     .promise()
@@ -435,7 +435,7 @@ exports.getOngoingCultivationsByUserIdAndFarmId = (
         ORDER BY oc.startedAt DESC, oc.cropCalendar ASC
     `;
 
-    console.log("DEBUG: Executing query with userId:", userId, "farmId:", farmId);
+    
 
     db.plantcare.query(sql, [userId, farmId], (err, results) => {
         if (err) {
@@ -443,11 +443,6 @@ exports.getOngoingCultivationsByUserIdAndFarmId = (
             return callback(err, null);
         }
 
-        console.log("DEBUG: Query results count:", results.length);
-        console.log(
-            "DEBUG: Sample result farmIds:",
-            results.slice(0, 3).map((r) => r.farmId),
-        );
 
         callback(null, results);
     });
@@ -533,7 +528,7 @@ exports.getEnrollOngoingCultivationCrop = (cropId, userId, farmId) => {
 };
 
 exports.getEnrollOngoingCultivationCropByid = (id) => {
-    console.log(id);
+ 
     const sql = `
     SELECT * 
     FROM ongoingcultivationscrops 
@@ -546,7 +541,7 @@ exports.getEnrollOngoingCultivationCropByid = (id) => {
                 reject(err);
             } else {
                 resolve(results);
-                console.log(results);
+               
             }
         });
     });
@@ -604,14 +599,7 @@ exports.updateSlaveCropCalendarDay = (id, formattedDate) => {
 };
 
 exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
-    console.log(
-        "enrollSlaveCrop",
-        userId,
-        cropId,
-        startDate,
-        onCulscropID,
-        farmId,
-    );
+
     return new Promise((resolve, reject) => {
         const fetchSql = `
             SELECT * FROM cropcalendardays
@@ -691,7 +679,7 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
                     console.error("Error inserting slave crop calendar days:", insertErr);
                     reject(insertErr);
                 } else {
-                    console.log("Inserted tasks:", result);
+                   
                     resolve(result);
                 }
             });
@@ -702,7 +690,7 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
 exports.phoneNumberChecker = (phoneNumber) => {
     return new Promise((resolve, reject) => {
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
-        console.log("DAO - formatted phone number:", formattedPhoneNumber);
+        
 
         const checkQuery = `
             SELECT phoneNumber FROM users WHERE phoneNumber = ?
@@ -718,7 +706,7 @@ exports.phoneNumberChecker = (phoneNumber) => {
                     console.error("Database error:", err);
                     reject(err);
                 } else {
-                    console.log("DAO - query results:", results);
+                  
                     resolve(results);
                 }
             },
@@ -739,7 +727,7 @@ exports.nicChecker = (nic) => {
                 console.error("Database error:", err);
                 reject(err);
             } else {
-                console.log("DAO - query results:", results);
+               
                 resolve(results);
             }
         });
@@ -1031,23 +1019,6 @@ exports.updateStaffMember = async (staffMemberId, staffData) => {
     });
 };
 
-//////////////renew
-// exports.deleteStaffMember = async (staffMemberId, farmId) => {
-//     return new Promise((resolve, reject) => {
-//         const query = `
-//             DELETE FROM farmstaff
-//             WHERE id = ?
-//         `;
-//         db.plantcare.query(query, [staffMemberId], (error, results) => {
-//             if (error) {
-//                 console.error("Error deleting staff member:", error);
-//                 reject(error);
-//             } else {
-//                 resolve(results);
-//             }
-//         });
-//     });
-// };
 exports.deleteStaffMember = async (staffMemberId, farmId) => {
     return new Promise((resolve, reject) => {
         const deleteQuery = `
@@ -1075,9 +1046,7 @@ exports.deleteStaffMember = async (staffMemberId, farmId) => {
                             console.error("Error updating appUserCount:", updateError);
                             reject(updateError);
                         } else {
-                            console.log(
-                                `✅ Staff member ${staffMemberId} deleted and appUserCount reduced for farm ${farmId}`,
-                            );
+          
                             resolve({
                                 deleteResult: results,
                                 updateResult: updateResults,
@@ -1157,14 +1126,7 @@ exports.deleteFarm = (farmId) => {
                         reject(err);
                         return;
                     }
-                    console.log(
-                        `Deleted ${slaveCropDeleteResult.affectedRows} slavecropcalendardays records for farm ${farmId}`,
-                    );
 
-                    // Step 2: Delete any other records that might reference farmstaff
-                    // Add more DELETE statements here for other tables that reference farmstaff if they exist
-
-                    // Step 3: Delete farmstaff records
                     const deleteFarmStaffSql = "DELETE FROM farmstaff WHERE farmId = ?";
                     db.plantcare.query(
                         deleteFarmStaffSql,
@@ -1175,9 +1137,7 @@ exports.deleteFarm = (farmId) => {
                                 reject(err);
                                 return;
                             }
-                            console.log(
-                                `Deleted ${farmStaffDeleteResult.affectedRows} farmstaff records for farm ${farmId}`,
-                            );
+
 
                             // Step 4: Delete currentasset records
                             const deleteCurrentAssetsSql =
@@ -1191,9 +1151,7 @@ exports.deleteFarm = (farmId) => {
                                         reject(err);
                                         return;
                                     }
-                                    console.log(
-                                        `Deleted ${currentAssetDeleteResult.affectedRows} currentasset records for farm ${farmId}`,
-                                    );
+
 
                                     // Step 5: Delete fixedasset records
                                     const deleteFixedAssetsSql =
@@ -1210,9 +1168,7 @@ exports.deleteFarm = (farmId) => {
                                                 reject(err);
                                                 return;
                                             }
-                                            console.log(
-                                                `Deleted ${fixedAssetDeleteResult.affectedRows} fixedasset records for farm ${farmId}`,
-                                            );
+
 
                                             const deleteSql = "DELETE FROM farms WHERE id = ?";
                                             db.plantcare.query(
@@ -1248,21 +1204,7 @@ exports.deleteFarm = (farmId) => {
                                                                 return;
                                                             }
 
-                                                            console.log(
-                                                                `Farm deleted successfully. ${updateResult.affectedRows} farm indexes were reordered.`,
-                                                            );
-                                                            console.log(
-                                                                `${slaveCropDeleteResult.affectedRows} slavecropcalendardays records were deleted.`,
-                                                            );
-                                                            console.log(
-                                                                `${farmStaffDeleteResult.affectedRows} farmstaff records were deleted.`,
-                                                            );
-                                                            console.log(
-                                                                `${currentAssetDeleteResult.affectedRows} currentasset records were deleted.`,
-                                                            );
-                                                            console.log(
-                                                                `${fixedAssetDeleteResult.affectedRows} fixedasset records were deleted.`,
-                                                            );
+                                                
                                                             resolve(true);
                                                         },
                                                     );
@@ -1362,8 +1304,7 @@ exports.createNewAsset = async (assetData) => {
             ];
         }
 
-        console.log("Executing query:", query);
-        console.log("With values:", values);
+
 
         db.plantcare.query(query, values, (error, results) => {
             if (error) {
@@ -1425,7 +1366,7 @@ exports.getAssetsByCategory = (userId, category, farmId) => {
 };
 
 exports.getAllCurrentAssets = (userId, farmId) => {
-    console.log("DAO - userId:", userId, "farmId:", farmId);
+
     return new Promise((resolve, reject) => {
         const categorySql = `
             SELECT category, SUM(total) AS totalSum 
@@ -1461,14 +1402,14 @@ exports.getAllCurrentAssets = (userId, farmId) => {
                     console.error("Category query error:", err);
                     return reject(err);
                 }
-                console.log("Category results:", categoryResults);
+                
 
                 db.plantcare.query(itemsSql, [userId, farmId], (err, itemResults) => {
                     if (err) {
                         console.error("Items query error:", err);
                         return reject(err);
                     }
-                    console.log("Items results count:", itemResults.length);
+              
 
                     // Group items by category
                     const itemsByCategory = itemResults.reduce((acc, item) => {
@@ -1486,10 +1427,6 @@ exports.getAllCurrentAssets = (userId, farmId) => {
                         items: itemsByCategory[cat.category] || [],
                     }));
 
-                    console.log(
-                        "Final results with items:",
-                        JSON.stringify(results, null, 2),
-                    );
                     resolve(results);
                 });
             },
@@ -1550,7 +1487,7 @@ exports.getFarmName = async (userId, farmId) => {
                 console.error("Error fetching farm:", error);
                 reject(error);
             } else {
-                console.log("Query results:", results);
+                
                 resolve(results);
             }
         });
@@ -1561,8 +1498,6 @@ exports.deleteCurrentAsset = async (assetId) => {
     return new Promise((resolve, reject) => {
         const query = "DELETE FROM currentasset WHERE id = ?";
 
-        console.log("Executing delete query:", query);
-        console.log("With assetId:", assetId);
 
         db.plantcare.query(query, [assetId], (error, results) => {
             if (error) {
@@ -1618,8 +1553,6 @@ exports.updateCurrentAsset = async (assetId, assetData) => {
             ];
         }
 
-        console.log("Executing update query:", query);
-        console.log("With values:", values);
 
         db.plantcare.query(query, values, (error, results) => {
             if (error) {
@@ -1686,7 +1619,6 @@ exports.getFarmExtend = async (farmId) => {
                     farm.cultivatedExtentp = cultivatedP;
                 }
 
-                console.log("Farm extent results:", results);
                 resolve(results);
             }
         });
@@ -1694,9 +1626,8 @@ exports.getFarmExtend = async (farmId) => {
 };
 
 exports.getCurrectAssetAlredayHave = (farmId) => {
-    console.log("farmId:", farmId);
 
-    return new Promise((resolve, reject) => {
+ return new Promise((resolve, reject) => {
         const query = `
             SELECT 
                 category,
