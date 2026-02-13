@@ -48,7 +48,6 @@ exports.getFarmerDetails = async (userId) => {
 
 exports.createInvestmentRequest = async (requestData) => {
     return new Promise((resolve, reject) => {
-        // Get a connection from the pool
         db.investments.getConnection((err, connection) => {
             if (err) {
                 console.error("Error getting connection:", err);
@@ -56,7 +55,6 @@ exports.createInvestmentRequest = async (requestData) => {
                 return;
             }
 
-            // Start a transaction
             connection.beginTransaction((transErr) => {
                 if (transErr) {
                     console.error("Error starting transaction:", transErr);
@@ -65,7 +63,6 @@ exports.createInvestmentRequest = async (requestData) => {
                     return;
                 }
 
-                // Get the last jobId that starts with 'GC' with row locking
                 const getLastJobIdQuery = `
                     SELECT jobId 
                     FROM investmentrequest 
@@ -95,13 +92,13 @@ exports.createInvestmentRequest = async (requestData) => {
                         nextJobId = 'GC' + nextNumber.toString().padStart(6, '0');
                     }
 
-                
+
 
                     // Insert the new investment request
                     const insertQuery = `
                         INSERT INTO investmentrequest
-                        (cropId, farmerId, jobId, extentha, extentac, extentp, investment, expectedYield, startDate, nicFront, nicBack)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (cropId, farmerId, jobId, extentha, extentac, extentp, investment, expectedYield, startDate, nicFront, nicBack,lndPlot,lndStreet,lndCity)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,? ,?)
                     `;
 
                     const values = [
@@ -115,7 +112,10 @@ exports.createInvestmentRequest = async (requestData) => {
                         requestData.expectedYield,
                         requestData.startDate,
                         requestData.nicFront,
-                        requestData.nicBack
+                        requestData.nicBack,
+                        requestData.plotNumber,
+                        requestData.streetName,
+                        requestData.landCity
                     ];
 
                     connection.query(insertQuery, values, (insertError, insertResults) => {

@@ -61,7 +61,10 @@ exports.createInvestmentRequest = asyncHandler(async (req, res) => {
             extentp,
             investment,
             expectedYield,
-            startDate
+            startDate,
+            plotNumber,
+            streetName,
+            landCity
         } = req.body;
 
 
@@ -109,7 +112,10 @@ exports.createInvestmentRequest = asyncHandler(async (req, res) => {
             expectedYield: parseFloat(expectedYield),
             startDate,
             nicFront: nicFrontUrl,
-            nicBack: nicBackUrl
+            nicBack: nicBackUrl,
+            plotNumber: plotNumber,
+            streetName: streetName,
+            landCity: landCity
         };
 
         // Insert into database
