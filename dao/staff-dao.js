@@ -1,37 +1,5 @@
 const db = require("../startup/database");
 
-
-// exports.getFarmByIdWithStaff = async (farmId, userId) => {
-//     return new Promise((resolve, reject) => {
-
-//         const staffQuery = `
-//                 SELECT id, ownerId, farmId, firstName, lastName, phoneCode, 
-//                        phoneNumber, role, LEFT(image, 256) as image, createdAt
-//                 FROM farmstaff
-//                 WHERE farmId = ?
-//                 ORDER BY role ASC, firstName ASC, lastName ASC
-//             `;
-
-//         db.plantcare.query(staffQuery, [farmId], (staffError, staffResults) => {
-//             if (staffError) {
-//                 console.error("Error fetching staff:", staffError);
-//                 reject(staffError);
-//                 return;
-//             }
-
-//             // Combine farm and staff data
-//             const result = {
-
-//                 staff: staffResults || []
-//             };
-
-//             resolve(result);
-//         });
-//     });
-
-// };
-
-
 exports.getFarmByIdWithStaff = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
         // First, get staffCount and appUserCount from farms table

@@ -1,6 +1,5 @@
 const db = require('../startup/database');
 
-// Create a new crop for the logged-in user
 const createCrop = (req, res) => {
   const { cropCalendar } = req.body;
   const userId = req.userId;

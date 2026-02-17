@@ -19,7 +19,6 @@ const auth = (req, res, next) => {
       });
     }
     
-    // console.log('Decoded token:', decoded); 
     req.user = decoded;
     next();
   });

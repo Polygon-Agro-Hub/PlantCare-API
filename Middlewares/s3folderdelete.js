@@ -10,13 +10,9 @@ const r2Client = new S3Client({
   forcePathStyle: true,
 });
 
-/**
- * Deletes all files in a folder from Cloudflare R2.
- * @param {string} folderPath - The folder path to delete (e.g., "users/profile-images/${userId}").
- * @returns {Promise<void>}
- */
+
 const deleteFolderFromR2 = async (folderPath) => {
-  console.log("Folder Path to delete:", folderPath);
+
 
   const listParams = {
     Bucket: process.env.R2_BUCKET_NAME,
@@ -29,7 +25,6 @@ const deleteFolderFromR2 = async (folderPath) => {
     const objects = response.Contents;
 
     if (!objects || objects.length === 0) {
-      console.log("No objects found in the folder.");
       return;
     }
 
@@ -42,10 +37,8 @@ const deleteFolderFromR2 = async (folderPath) => {
 
       const deleteCommand = new DeleteObjectCommand(deleteParams);
       await r2Client.send(deleteCommand);
-      console.log(`Deleted object: ${object.Key}`);
     }
 
-    console.log(`All objects in folder "${folderPath}" have been deleted.`);
   } catch (error) {
     console.error("Error deleting folder from R2:", error);
     throw new Error("Failed to delete folder from R2");

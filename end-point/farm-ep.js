@@ -23,13 +23,12 @@ const {
 const e = require("express");
 
 exports.CreateFarm = asyncHandler(async (req, res) => {
-    console.log("Farm creation request:", req.body);
+   
 
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-        console.log("User ID:", userId);
 
         const { value, error } = createFarm.validate(input);
         if (error) {
@@ -39,7 +38,7 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Validated input:", value);
+      
 
         const {
             farmName,
@@ -74,7 +73,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             staff,
         });
 
-        console.log("Farm creation result:", result);
 
         res.status(201).json({
             status: "success",
@@ -99,7 +97,7 @@ exports.getFarms = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farms = await farmDao.getAllFarmByUserId(userId);
-        console.log("far,ss", farms);
+  
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({ message: "No farms found" });
@@ -157,7 +155,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-        console.log("Payment request data:", input);
 
         const { value, error } = createPayment.validate(input);
         if (error) {
@@ -243,7 +240,7 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
 });
 
 exports.enroll = asyncHandler(async (req, res) => {
-    console.log("first");
+
     try {
         const cropId = req.body.cropId;
         const extentha = req.body.extentha || "0";
@@ -253,7 +250,6 @@ exports.enroll = asyncHandler(async (req, res) => {
         const userId = req.user.id;
         const farmId = req.params.farmId;
 
-        console.log("farmId", farmId);
 
         const { error } = enrollSchema.validate({
             extentha,
@@ -265,8 +261,6 @@ exports.enroll = asyncHandler(async (req, res) => {
             farmId,
         });
 
-        console.log("valide after");
-        console.log("Error:", error);
 
         if (error) {
             return res.status(400).json({ message: error.details[0].message });
@@ -316,13 +310,12 @@ exports.enroll = asyncHandler(async (req, res) => {
         );
         const enroledoncultivationcrop =
             await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
-        console.log("data", enroledoncultivationcrop);
-
+        
         let onCulscropID;
         if (enroledoncultivationcrop.length > 0) {
             onCulscropID = enroledoncultivationcrop[0].id;
         } else {
-            console.log("No records found for the given cultivationId.");
+            
             return res
                 .status(500)
                 .json({ message: "Failed to create cultivation record" });
@@ -350,26 +343,23 @@ exports.enroll = asyncHandler(async (req, res) => {
 });
 
 exports.phoneNumberChecker = asyncHandler(async (req, res) => {
-    console.log("beforeeeeee");
+    
     try {
         const { phoneNumber } = await signupCheckerSchema.validateAsync(req.body);
         const results = await farmDao.phoneNumberChecker(phoneNumber);
-        console.log("checkkk", phoneNumber);
-        // console.log("results from database:", results);
 
         let phoneNumberExists = false;
 
         const normalizedInputPhone = `+${String(phoneNumber).replace(/^\+/, "")}`;
-        //  console.log("normalized input:", normalizedInputPhone);
+
 
         results.forEach((user) => {
-            console.log("comparing with:", user.phoneNumber);
+           
             if (user.phoneNumber === normalizedInputPhone) {
                 phoneNumberExists = true;
             }
         });
 
-        console.log("phoneNumberExists:", phoneNumberExists);
 
         if (phoneNumberExists) {
             return res.status(409).json({
@@ -398,26 +388,25 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
 });
 
 exports.nicChecker = asyncHandler(async (req, res) => {
-    console.log("beforeeeeee");
+    
     try {
         const { nic } = await nicChecker.validateAsync(req.body);
         const results = await farmDao.nicChecker(nic);
-        console.log("checkkk", nic);
-        console.log("results from database:", results);
+
 
         let nicExists = false;
 
         const normalizedInputNic = String(nic).replace(/^\+/, "");
-        console.log("normalized input:", normalizedInputNic);
+       
 
         results.forEach((user) => {
-            console.log("comparing with:", user.nic);
+            
             if (user.nic === normalizedInputNic) {
                 nicExists = true;
             }
         });
 
-        console.log("nicExists:", nicExists);
+        
 
         if (nicExists) {
             return res.status(409).json({
@@ -468,13 +457,11 @@ exports.getCropCountByFarmId = asyncHandler(async (req, res) => {
 });
 
 exports.UpdateFarm = asyncHandler(async (req, res) => {
-    console.log("Farm update request:", req.body);
+    
 
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
-
-        console.log("User ID:", userId);
 
         const { value, error } = updateFarm.validate(input);
         if (error) {
@@ -484,7 +471,6 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Validated input:", value);
 
         const {
             farmId,
@@ -524,7 +510,6 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             staffCount,
         });
 
-        console.log("Farm update result:", result);
 
         res.status(200).json({
             status: "success",
@@ -544,11 +529,10 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
 });
 
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-    console.log("Staff member creation request:", req.body);
+    
     try {
         const userId = req.user.id;
         const { farmId } = req.params;
-        console.log("User ID:", userId, "Farm ID:", farmId);
 
         // Create input object for validation
         const input = {
@@ -565,7 +549,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Validated input:", value);
 
         const { firstName, lastName, phoneNumber, countryCode, role, nic } = value;
 
@@ -581,7 +564,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             nic,
         });
 
-        console.log("Staff member creation result:", result);
 
         res.status(201).json({
             status: "success",
@@ -600,7 +582,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
 });
 
 exports.getStaffMember = asyncHandler(async (req, res) => {
-    console.log("fdgd");
     try {
         const { staffMemberId } = req.params;
 
@@ -711,16 +692,11 @@ exports.getrenew = asyncHandler(async (req, res) => {
 });
 
 exports.deleteFarm = asyncHandler(async (req, res) => {
-    console.log("Deleting farm...");
-    console.log("Request params:", req.params);
-    console.log("Req body:", req.body);
 
     try {
         const { farmId } = req.params;
         const ownerId = req.user.ownerId;
 
-        console.log("Farm ID:", farmId);
-        console.log("Owner ID:", ownerId);
 
         // Delete farm from database (this will also reorder farmIndex)
         const deleteResult = await farmDao.deleteFarm(farmId);
@@ -766,7 +742,6 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId;
         const selectFarm = await farmDao.getSelectFarm(ownerId);
 
-        console.log("Select Farm", selectFarm);
 
         // Return the farm data for dropdown
         return res.status(200).json({
@@ -885,9 +860,6 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
         );
         const assets = await farmDao.getAssetsByCategory(userId, category, farmId);
 
-        console.log("hit----------", farmId, category, userId);
-
-        console.log("assetssssssssss", assets);
 
         if (assets.length === 0) {
             return res.status(404).json({
@@ -916,23 +888,11 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
 });
 
 exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
-    console.log("first");
     try {
         const userId = req.user.ownerId;
         const farmId = parseInt(req.params.farmId, 10);
 
-        console.log(
-            "userId:",
-            userId,
-            "farmId:",
-            farmId,
-            "farmId type:",
-            typeof farmId,
-        );
-
         const results = await farmDao.getAllCurrentAssets(userId, farmId);
-        console.log("Results:", results);
-
         if (results.length === 0) {
             return res.status(404).json({
                 status: "error",
@@ -953,7 +913,6 @@ exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
 });
 
 exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
-    console.log("///////////////////");
     try {
         const userId = req.user.ownerId;
         const { category, farmId } = req.params;
@@ -995,10 +954,8 @@ exports.getFarmName = asyncHandler(async (req, res) => {
         const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
-        console.log("Fetching farm for userId:", userId, "farmId:", farmId);
 
         const farms = await farmDao.getFarmName(userId, farmId);
-        console.log("farms", farms);
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({
@@ -1188,10 +1145,8 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
 exports.getFarmExtend = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
-        console.log("Fetching farm extent for farmId:", farmId);
 
         const farms = await farmDao.getFarmExtend(farmId);
-        console.log("farms", farms);
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({
@@ -1243,7 +1198,6 @@ exports.getFarmExtend = asyncHandler(async (req, res) => {
 });
 
 exports.getCurrectAssetAlredayHave = asyncHandler(async (req, res) => {
-    console.log("Getting already added assets");
     try {
         const farmId = parseInt(req.params.farmId, 10);
 
@@ -1255,7 +1209,6 @@ exports.getCurrectAssetAlredayHave = asyncHandler(async (req, res) => {
         }
 
         const results = await farmDao.getCurrectAssetAlredayHave(farmId);
-        console.log("Results:", results);
 
         if (results.length === 0) {
             return res.status(200).json({

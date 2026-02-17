@@ -13,7 +13,7 @@ exports.getAllCurrentAssets = (userId) => {
       if (err) {
         return reject(err); 
       }
-      console.log(results, "results in getAllCurrentAssets");
+      
       resolve(results); 
     });
   });

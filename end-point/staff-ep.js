@@ -23,20 +23,16 @@ exports.getFarmById = asyncHandler(async (req, res) => {
 
 
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-    console.log('Staff member creation request:', req.body);
     try {
         const userId = req.user.ownerId;
-        const { farmId } = req.params; // Get farmId from URL params
-        console.log('User ID:', userId, 'Farm ID:', farmId);
+        const { farmId } = req.params;
 
-        // Create input object for validation
         const input = {
             ...req.body,
-            farmId // Include farmId in input for validation
+            farmId 
         };
 
-        // Validate input (you'll need to create/update your validation schema)
-        const { value, error } = createStaffMember.validate(input); // Note: changed from createFarm
+        const { value, error } = createStaffMember.validate(input);
         if (error) {
             return res.status(400).json({
                 status: "error",
@@ -44,7 +40,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Validated input:", value);
 
         const {
             firstName,
@@ -67,7 +62,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             nic
         });
 
-        console.log("Staff member creation result:", result);
 
         res.status(201).json({
             status: "success",

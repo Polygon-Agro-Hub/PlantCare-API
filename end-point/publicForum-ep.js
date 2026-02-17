@@ -135,9 +135,7 @@ exports.createPost = asyncHandler(async (req, res) => {
 
 
 exports.deletePost = asyncHandler(async (req, res) => {
-  console.log("Deleting post...");
-  console.log("Request params:", req.params);
-  console.log("Req body:", req.body);
+
   try {
     const { postId } = req.params;
     await postsDao.deletePost(postId);
@@ -174,10 +172,9 @@ exports.getPostbyId = asyncHandler(async (req, res) => {
 })
 
 exports.updatepost = asyncHandler(async (req, res) => {
-  console.log("hittttttt update post by id")
+
 
   const { postId } = req.params;
-  console.log(postId, req.body)
 
   const { heading, message, prepostimage } = await updatepostschema.validateAsync(req.body);
   const userId = req.user.id;
@@ -257,7 +254,6 @@ exports.EditReply = asyncHandler(async (req, res) => {
 });
 
 exports.deleteReply = asyncHandler(async (req, res) => {
-  console.log("Deleting Reply...");
   try {
     const { commentId } = req.params; // Get commentId from URL params
 

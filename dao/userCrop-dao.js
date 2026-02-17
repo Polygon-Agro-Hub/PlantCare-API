@@ -193,7 +193,7 @@ exports.getEnrollOngoingCultivationCrop = (cropId, UserId) => {
 
 
 exports.getEnrollOngoingCultivationCropByid = (id) => {
-    console.log(id)
+ 
     const sql = `
     SELECT * 
     FROM ongoingcultivationscrops 
@@ -206,7 +206,7 @@ exports.getEnrollOngoingCultivationCropByid = (id) => {
                 reject(err);
             } else {
                 resolve(results);
-                console.log(results)
+              
             }
         });
     });
@@ -256,7 +256,7 @@ exports.updateSlaveCropCalendarDay = (id, formattedDate) => {
 
 
 exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID) => {
-    console.log("enrollSlaveCrop", userId, cropId, startDate, onCulscropID);
+ 
     return new Promise((resolve, reject) => {
         const fetchSql = `
       SELECT * FROM cropcalendardays
@@ -328,7 +328,7 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID) => {
                 if (insertErr) {
                     reject(insertErr);
                 } else {
-                    console.log("Inserted tasks:", result);
+                   
                     resolve(result);
                 }
             });

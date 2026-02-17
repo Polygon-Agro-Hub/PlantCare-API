@@ -5,7 +5,6 @@ exports.getOfficerservices = asyncHandler(async (req, res) => {
     try {
 
         const requestInspection = await requestInspectionDao.getOfficerservices();
-        console.log("far,ss", requestInspection)
 
         if (!requestInspection || requestInspection.length === 0) {
             return res.status(404).json({ message: "No requestInspection found" });
@@ -22,9 +21,7 @@ exports.getFarms = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farmId = req.params.farmId;
-        console.log("userIDdddddddddddddddddddddddddddd", userId)
         const farms = await requestInspectionDao.getAllFarmByUserId(userId);
-        console.log("farmmmmmmmmmmmmmmmmmmmmmmmmmmm", farms)
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({ message: "No farms found" });
@@ -42,9 +39,7 @@ exports.getFramCrop = asyncHandler(async (req, res) => {
     try {
 
         const farmId = req.params.farmId;
-        console.log("farmIddddddddddddddddddddddddddddd", farmId)
         const farms = await requestInspectionDao.getFramCrop(farmId);
-        console.log("farmmmmmmmmmmmmmmmmmmmmmmmmmmm", farms)
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({ message: "No farms found" });
@@ -146,7 +141,6 @@ exports.getRequest = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const requestInspection = await requestInspectionDao.getRequest(userId);
-        console.log("All requestInspection data fetcing", requestInspection)
 
         if (!requestInspection || requestInspection.length === 0) {
             return res.status(404).json({ message: "No requestInspection found" });
