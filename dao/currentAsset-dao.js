@@ -13,7 +13,7 @@ exports.getAllCurrentAssets = (userId) => {
       if (err) {
         return reject(err); 
       }
-      console.log(results, "results in getAllCurrentAssets");
+      
       resolve(results); 
     });
   });
@@ -165,6 +165,32 @@ exports.insertAssetRecord = (recordValues) => {
                 return reject(err);
             }
             resolve();
+        });
+    });
+};
+
+exports.getCurrectAssetAlredayHaveByUser = (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                category,
+                asset,
+                brand,
+                batchNum,
+                unit,
+                unitVolume
+            FROM plant_care.currentasset 
+            WHERE userId = ? AND status = 'Still valid'
+            GROUP BY category, asset, brand, batchNum, unit, unitVolume
+            ORDER BY category ASC, asset ASC, brand ASC, batchNum ASC
+        `;
+
+        db.plantcare.query(query, [userId], (err, results) => {
+            if (err) {
+                console.error("Error fetching current assets by user:", err);
+                return reject(err);
+            }
+            resolve(results);
         });
     });
 };

@@ -25,7 +25,6 @@ exports.uploadImage = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId;
         const userId = req.user.id;
 
-        console.log("req body", ownerId, farmId, onCulscropID);
 
         if (!slaveId) {
             return res.status(400).json({ message: 'No slaveId provided.' });

@@ -16,4 +16,10 @@ router.get(
 
 router.delete('/removeAsset/:category/:assetId', authMiddleware, currentAssetController.deleteAsset);
 
+router.get(
+    "/get-currentasset-alreadyHave-byuser",
+    authMiddleware,
+    currentAssetsEp.getCurrectAssetAlredayHaveByUser
+);
+
 module.exports = router;

@@ -8,5 +8,8 @@ exports.createInvestmentRequestSchema = Joi.object({
     extentp: Joi.number().required(),
     investment: Joi.number().required(),
     expectedYield: Joi.number().required(),
-    startDate: Joi.date().required()
+    startDate: Joi.date().required(),
+    plotNumber: Joi.string().required(),
+    streetName: Joi.string().required(),
+    landCity: Joi.string().required()
 });

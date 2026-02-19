@@ -1,7 +1,6 @@
 const db = require('../startup/database');
 
 exports.getAllCurrentAssets = async (req, res) => {
-    console.log("hitt")
     try {
         const userId = req.user.id;
 
@@ -38,17 +37,10 @@ exports.getAllCurrentAssets = async (req, res) => {
 
 
 exports.handleAddFixedAsset = (req, res) => {
-    const userId = req.user.ownerId;  // Should be the owner's ID from users table
-    const staffId = req.user.id;      // Staff's ID from farmstaff table
+    const userId = req.user.ownerId; 
+    const staffId = req.user.id;    
     const userFarmId = req.user.farmId;
 
-    // Debug logging
-    console.log('=== DEBUG INFO ===');
-    console.log('req.user:', req.user);
-    console.log('userId (should exist in users table):', userId);
-    console.log('staffId (should exist in farmstaff table):', staffId);
-    console.log('userFarmId:', userFarmId);
-    console.log('==================');
 
     const {
         category,
@@ -85,7 +77,6 @@ exports.handleAddFixedAsset = (req, res) => {
     const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
     const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
 
-    console.log('Starting validation process...');
 
     // First, verify that the userId exists in the users table
     const userCheckSql = `SELECT id FROM users WHERE id = ?`;
@@ -97,7 +88,7 @@ exports.handleAddFixedAsset = (req, res) => {
         }
 
         if (userResults.length === 0) {
-            console.log('User validation failed - userId not found in users table:', userId);
+            
             return res.status(400).json({
                 status: 'error',
                 message: `User with ID ${userId} does not exist in users table. Cannot create asset.`
@@ -113,7 +104,7 @@ exports.handleAddFixedAsset = (req, res) => {
             }
 
             const staffExists = staffResults.length > 0;
-            console.log('Staff validation result:', staffExists ? 'Valid' : 'Invalid');
+           
 
             // Always use the validated userId, only include staffId if it exists
             const checkAssetSql = `SELECT * FROM currentasset WHERE userId = ? AND category = ? AND asset = ? AND brand = ? AND batchNum = ? AND farmId = ?`;
@@ -125,8 +116,6 @@ exports.handleAddFixedAsset = (req, res) => {
                 }
 
                 if (results.length > 0) {
-                    // Update existing asset
-                    console.log('Existing asset found, updating...');
                     const existingAsset = results[0];
 
                     const updatedNumOfUnits = parseFloat(existingAsset.numOfUnit) + parseFloat(numberOfUnits);
@@ -182,8 +171,7 @@ exports.handleAddFixedAsset = (req, res) => {
                         });
                     });
                 } else {
-                    // Create new asset
-                    console.log('Creating new asset...');
+
                     const insertSql = `
                         INSERT INTO currentasset (
                             userId, ${staffExists ? 'staffId,' : ''} 
@@ -206,7 +194,6 @@ exports.handleAddFixedAsset = (req, res) => {
                         formattedPurchaseDate, formattedExpireDate, status
                     ];
 
-                    console.log('Executing insert with values:', insertValues);
 
                     db.plantcare.query(insertSql, insertValues, (insertErr, insertResult) => {
                         if (insertErr) {

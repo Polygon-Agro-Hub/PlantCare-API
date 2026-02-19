@@ -131,10 +131,9 @@ const generateTransactionId = async (connection) => {
             // Check if no results or transactionId is null/empty
             if (results.length === 0 || !results[0].transactionId) {
                 newTransactionId = 'GTID0000001';
-                console.log("No previous transaction ID found, starting with:", newTransactionId);
+            
             } else {
                 const lastTransactionId = results[0].transactionId;
-                console.log("Last transaction ID:", lastTransactionId);
 
                 const match = lastTransactionId.match(/(\d+)$/);
 
@@ -144,13 +143,12 @@ const generateTransactionId = async (connection) => {
                     const paddedNumber = newNumber.toString().padStart(7, '0');
                     newTransactionId = `GTID${paddedNumber}`;
                 } else {
-                    // If format doesn't match, start fresh
                     newTransactionId = 'GTID0000001';
-                    console.log("Invalid transaction ID format, starting fresh with:", newTransactionId);
+               
                 }
             }
 
-            console.log("Generated new transaction ID:", newTransactionId);
+
             resolve(newTransactionId);
         });
     });
@@ -315,32 +313,24 @@ exports.submitRequestInspection = async (userId, requestItems) => {
     let transactionStarted = false;
 
     try {
-        // Get connection from pool
-        connection = await getConnection();
-        console.log("Database connection acquired");
 
-        // Start database transaction
+        connection = await getConnection();
+
         await beginTransaction(connection);
         transactionStarted = true;
-        console.log("Transaction started");
+
 
         const results = [];
 
         for (const item of requestItems) {
-            // Generate unique job ID
             const jobId = await generateJobId(connection);
-            console.log(`Generated Job ID: ${jobId}`);
-
-            // Generate transaction ID for payment
+     
             const transactionId = await generateTransactionId(connection);
-            console.log(`Generated Transaction ID: ${transactionId}`);
 
-            // Get crop count from frontend
             const cropCount = item.crops ? item.crops.length : 0;
-
-            // 1. Update farm details if modified
+d
             if (item.plotNo || item.streetName || item.city) {
-                console.log(`Updating farm details for farm ID: ${item.farmId}`);
+      
                 await updateFarmDetails(
                     connection,
                     item.farmId,
@@ -348,21 +338,21 @@ exports.submitRequestInspection = async (userId, requestItems) => {
                     item.streetName,
                     item.city
                 );
-                console.log(`Farm details updated for farm ID: ${item.farmId}`);
+                
             }
 
             // 2. Insert into govilinkjobs table with crop count
             const jobResult = await insertJob(connection, jobId, userId, item, cropCount);
             const insertedId = jobResult.insertId;
-            console.log(`Inserted job: ${jobId} with ID: ${insertedId}, Crop Count: ${cropCount}`);
+            
 
             // 3. Insert crops into jobrequestcrops table
             await insertCrops(connection, insertedId, item.crops);
-            console.log(`Inserted ${cropCount} crops for job ID: ${insertedId}`);
+           
 
             // 4. Insert payment with transaction ID
             await insertPayment(connection, insertedId, item.amount, transactionId);
-            console.log(`Inserted payment for job ID: ${insertedId}, Amount: ${item.amount}, Transaction ID: ${transactionId}`);
+           
 
             results.push({
                 id: insertedId,
@@ -383,7 +373,7 @@ exports.submitRequestInspection = async (userId, requestItems) => {
         // Commit transaction if all successful
         await commitTransaction(connection);
         transactionStarted = false;
-        console.log("Transaction committed successfully");
+
 
         return results;
 
@@ -394,7 +384,7 @@ exports.submitRequestInspection = async (userId, requestItems) => {
         if (transactionStarted && connection) {
             try {
                 await rollbackTransaction(connection);
-                console.log("Transaction rolled back due to error");
+               
             } catch (rollbackError) {
                 console.error("Error during rollback:", rollbackError);
             }
@@ -403,10 +393,9 @@ exports.submitRequestInspection = async (userId, requestItems) => {
         throw error;
 
     } finally {
-        // Always release connection back to pool
         if (connection) {
             connection.release();
-            console.log("Database connection released");
+            
         }
     }
 };

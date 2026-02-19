@@ -2,7 +2,7 @@ const db = require("../startup/database");
 
 
 exports.getTransactionHistoryByUserId = (userId, limit, offset) => {
-  console.log('DAO: getTransactionHistoryByUserId', userId, limit, offset);
+ 
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -50,7 +50,7 @@ exports.getTransactionHistoryByUserId = (userId, limit, offset) => {
       if (error) {
         return reject(error);
       }
-      console.log('Result of transaction history:', results.length);
+      
       resolve(results);
     });
   });
@@ -101,7 +101,7 @@ exports.getUserWithBankDetailsById = async (userId, centerId, companyId) => {
     db.plantcare.query(query, [companyId, centerId, userId], (err, result) => {
       if (err) return reject(err);
       resolve(result);
-      console.log(result);
+      
     });
   });
 };
@@ -142,15 +142,10 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
   `;
 
   return new Promise((resolve, reject) => {
-    console.log('@@@@@@@@ UserId:', userId);
-    console.log('@@@@@@@@@   registeredFarmerId:', registeredFarmerId);
-    console.log('@@@@@@@@@   createdAtDate:', createdAtDate);
 
     db.collectionofficer.query(query, [userId, registeredFarmerId, createdAtDate], (error, results) => {
       if (error) return reject(error);
 
-
-      console.log('Raw query results:', results.map(r => ({ id: r.id, createdAt: r.createdAt })));
 
       const transformedResults = results.flatMap(row => {
         const entries = [];
@@ -206,7 +201,6 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
         return entries;
       });
 
-      console.log('Transformed Results:', transformedResults);
       resolve(transformedResults);
     });
   });
