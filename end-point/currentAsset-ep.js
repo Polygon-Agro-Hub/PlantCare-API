@@ -183,3 +183,21 @@ exports.handleAddFixedAsset = async (req, res) => {
   }
 };
 
+exports.getCurrectAssetAlredayHaveByUser = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id; 
+
+        const results = await fixedAssetDao.getCurrectAssetAlredayHaveByUser(userId);
+
+        return res.status(200).json({
+            status: "success",
+            currentAssetsByCategory: results.length === 0 ? [] : results,
+        });
+    } catch (err) {
+        console.error("Error in getCurrectAssetAlredayHaveByUser:", err);
+        res.status(500).json({
+            status: "error",
+            message: `An error occurred: ${err.message}`,
+        });
+    }
+});
