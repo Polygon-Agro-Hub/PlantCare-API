@@ -180,7 +180,7 @@ exports.addFixedAsset = (req, res) => {
                                             ];
                                             break;
 
-                                        case "Permit Building":
+                                        case "Permitted Building":
                                             ownershipSql = `INSERT INTO ownershippermitfixedasset (buildingAssetId, issuedDate, permitFeeAnnually) VALUES (?, ?, ?)`;
                                             ownershipParams = [
                                                 buildingAssetId,
@@ -373,7 +373,7 @@ exports.addFixedAsset = (req, res) => {
                                                 });
                                             },
                                         );
-                                    } else if (landownership === "Permited") {
+                                    } else if (landownership === "Permitted") {
                                         const ownershipPermitSql = `INSERT INTO ownershippermitfixedasset (landAssetId, issuedDate, permitFeeAnnually)
                                     VALUES (?, ?, ?)`;
                                         db.plantcare.query(
@@ -964,7 +964,7 @@ exports.getFixedAssetDetailsById = (req, res) => {
                             olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths
                         FROM ownershipleastfixedasset olf
                         WHERE olf.buildingAssetId = ?`;
-                    } else if (ownershipType === "Permit Building") {
+                    } else if (ownershipType === "Permitted Building") {
                         ownershipQuery = `
                         SELECT
                             opf.issuedDate, opf.permitFeeAnnually
@@ -990,7 +990,7 @@ exports.getFixedAssetDetailsById = (req, res) => {
                             olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths
                         FROM ownershipleastfixedasset olf
                         WHERE olf.landAssetId = ?`;
-                    } else if (ownershipType === "Permited") {
+                    } else if (ownershipType === "Permitted") {
                         ownershipQuery = `
                         SELECT
                             opf.issuedDate, opf.permitFeeAnnually
@@ -1201,7 +1201,7 @@ exports.updateFixedAsset = (req, res) => {
                                         : "0",
                                     ownershipDetails.leastAmountAnnually || null,
                                 ]);
-                            } else if (ownership === "Permited") {
+                            } else if (ownership === "Permitted") {
                                 deleteQueries = [
                                     `DELETE FROM ownershipownerfixedasset WHERE landAssetId = ?`,
                                     `DELETE FROM ownershipleastfixedasset WHERE landAssetId = ?`,
@@ -1282,7 +1282,7 @@ exports.updateFixedAsset = (req, res) => {
                                     ownershipDetails.leastAmountAnnually || null,
                                     assetId,
                                 ]);
-                            } else if (ownership === "Permited") {
+                            } else if (ownership === "Permitted") {
                                 ownershipUpdateQueries.push(`
                                 UPDATE ownershippermitfixedasset 
                                 SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate),
@@ -1421,7 +1421,7 @@ exports.updateFixedAsset = (req, res) => {
                                             : "0",
                                         ownershipDetails.leastAmountAnnually || null,
                                     ]);
-                                } else if (ownership === "Permit Building") {
+                                } else if (ownership === "Permitted Building") {
                                     deleteQueries = [
                                         `DELETE FROM ownershipownerfixedasset WHERE buildingAssetId = ?`,
                                         `DELETE FROM ownershipleastfixedasset WHERE buildingAssetId = ?`,
@@ -1497,7 +1497,7 @@ exports.updateFixedAsset = (req, res) => {
                                         ownershipDetails.leastAmountAnnually || null,
                                         assetId,
                                     ]);
-                                } else if (ownership === "Permit Building") {
+                                } else if (ownership === "Permitted Building") {
                                     let formattedIssuedDate = ownershipDetails.issuedDate;
 
                                     if (formattedIssuedDate) {

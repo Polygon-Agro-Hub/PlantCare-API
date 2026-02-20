@@ -131,7 +131,7 @@ const generateTransactionId = async (connection) => {
             // Check if no results or transactionId is null/empty
             if (results.length === 0 || !results[0].transactionId) {
                 newTransactionId = 'GTID0000001';
-            
+
             } else {
                 const lastTransactionId = results[0].transactionId;
 
@@ -144,7 +144,7 @@ const generateTransactionId = async (connection) => {
                     newTransactionId = `GTID${paddedNumber}`;
                 } else {
                     newTransactionId = 'GTID0000001';
-               
+
                 }
             }
 
@@ -324,13 +324,13 @@ exports.submitRequestInspection = async (userId, requestItems) => {
 
         for (const item of requestItems) {
             const jobId = await generateJobId(connection);
-     
+
             const transactionId = await generateTransactionId(connection);
 
             const cropCount = item.crops ? item.crops.length : 0;
-d
+
             if (item.plotNo || item.streetName || item.city) {
-      
+
                 await updateFarmDetails(
                     connection,
                     item.farmId,
@@ -338,21 +338,21 @@ d
                     item.streetName,
                     item.city
                 );
-                
+
             }
 
             // 2. Insert into govilinkjobs table with crop count
             const jobResult = await insertJob(connection, jobId, userId, item, cropCount);
             const insertedId = jobResult.insertId;
-            
+
 
             // 3. Insert crops into jobrequestcrops table
             await insertCrops(connection, insertedId, item.crops);
-           
+
 
             // 4. Insert payment with transaction ID
             await insertPayment(connection, insertedId, item.amount, transactionId);
-           
+
 
             results.push({
                 id: insertedId,
@@ -384,7 +384,7 @@ d
         if (transactionStarted && connection) {
             try {
                 await rollbackTransaction(connection);
-               
+
             } catch (rollbackError) {
                 console.error("Error during rollback:", rollbackError);
             }
@@ -395,7 +395,7 @@ d
     } finally {
         if (connection) {
             connection.release();
-            
+
         }
     }
 };
