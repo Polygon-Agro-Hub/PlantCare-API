@@ -218,7 +218,7 @@ const insertJob = (connection, jobId, userId, item, cropCount) => {
 
         connection.query(
             query,
-            [jobId, userId, item.serviceId, item.farmId, item.scheduleDate, cropCount, "Request Placed"],
+            [jobId, userId, item.serviceId, item.farmId, item.scheduleDate, cropCount, "Pending"],
             (error, results) => {
                 if (error) {
                     reject(error);
