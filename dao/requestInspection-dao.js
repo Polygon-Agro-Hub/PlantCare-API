@@ -328,7 +328,7 @@ exports.submitRequestInspection = async (userId, requestItems) => {
             const transactionId = await generateTransactionId(connection);
 
             const cropCount = item.crops ? item.crops.length : 0;
-
+            
             if (item.plotNo || item.streetName || item.city) {
 
                 await updateFarmDetails(
