@@ -3,17 +3,15 @@ const db = require("../startup/database");
 const asyncHandler = require("express-async-handler");
 const userAuthDao = require("../dao/userAuth-dao");
 const userProfileDao = require("../dao/userAuth-dao");
-const signupDao = require('../dao/userAuth-dao');
-const ValidationSchema = require('../validations/userAuth-validation')
-const uploadFileToS3 = require('../Middlewares/s3upload');
-const delectfilesOnS3 = require('../Middlewares/s3delete')
-const delectfloders3 = require('../Middlewares/s3folderdelete')
-
+const signupDao = require("../dao/userAuth-dao");
+const ValidationSchema = require("../validations/userAuth-validation");
+const uploadFileToS3 = require("../Middlewares/s3upload");
+const delectfilesOnS3 = require("../Middlewares/s3delete");
 
 exports.loginUser = async (req, res) => {
-
     try {
-        const { phonenumber } = await ValidationSchema.loginUserSchema.validateAsync(req.body);
+        const { phonenumber } =
+            await ValidationSchema.loginUserSchema.validateAsync(req.body);
         const users = await userAuthDao.loginUser(phonenumber);
 
         if (!users || users.length === 0) {
@@ -25,19 +23,20 @@ exports.loginUser = async (req, res) => {
 
         const user = users[0];
 
-        const token = jwt.sign({
-            id: user.id, phoneNumber: user.phoneNumber, membership: user.membership, ownerId: user.ownerId, role: user.role, farmId: user.farmId
-
-        },
-            process.env.JWT_SECRET || Tl, {
-            expiresIn: "8h",
-        }
-
+        const token = jwt.sign(
+            {
+                id: user.id,
+                phoneNumber: user.phoneNumber,
+                membership: user.membership,
+                ownerId: user.ownerId,
+                role: user.role,
+                farmId: user.farmId,
+            },
+            process.env.JWT_SECRET || Tl,
+            {
+                expiresIn: "8h",
+            },
         );
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "Tl");
-        const { membership, paymentActiveStatus, farmCount } = decoded;
-
 
         res.status(200).json({
             status: "success",
@@ -48,11 +47,11 @@ exports.loginUser = async (req, res) => {
                 paymentActiveStatus: user.paymentActiveStatus,
                 farmCount: user.farmCount,
                 role: user.role,
-                farmId: user.farmId
-            }
+                farmId: user.farmId,
+            },
         });
     } catch (err) {
-        console.error("hi.... Error:", err);
+        console.error("Error:", err);
         if (err.isJoi) {
             return res.status(400).json({
                 status: "error",
@@ -65,22 +64,26 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-
 exports.SignupUser = asyncHandler(async (req, res) => {
     try {
-        const { firstName, lastName, phoneNumber, NICnumber, district, farmerLanguage } =
-            await ValidationSchema.signupUserSchema.validateAsync(req.body);
-
+        const {
+            firstName,
+            lastName,
+            phoneNumber,
+            NICnumber,
+            district,
+            farmerLanguage,
+        } = await ValidationSchema.signupUserSchema.validateAsync(req.body);
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
 
-        const existingUser = await userAuthDao.checkUserByPhoneNumber(
-            formattedPhoneNumber
-        );
+        const existingUser =
+            await userAuthDao.checkUserByPhoneNumber(formattedPhoneNumber);
 
         if (existingUser.length > 0) {
             return res.status(400).json({
-                message: "This mobile number exists in the database, please try another number!",
+                message:
+                    "This mobile number exists in the database, please try another number!",
             });
         }
 
@@ -90,7 +93,7 @@ exports.SignupUser = asyncHandler(async (req, res) => {
             formattedPhoneNumber,
             NICnumber,
             district,
-            farmerLanguage
+            farmerLanguage,
         );
 
         const newUserId = result.insertId;
@@ -98,18 +101,15 @@ exports.SignupUser = asyncHandler(async (req, res) => {
         const payload = {
             id: newUserId,
             phoneNumber: formattedPhoneNumber,
-            membership: 'Basic',      
-            ownerId: newUserId,      
-            role: 'Owner',              
-            farmId: null                
+            membership: "Basic",
+            ownerId: newUserId,
+            role: "Owner",
+            farmId: null,
         };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: "24h",
         });
-
-        // Verify token creation
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         res.status(200).json({
             message: "User registered successfully!",
@@ -120,9 +120,9 @@ exports.SignupUser = asyncHandler(async (req, res) => {
                 firstName,
                 lastName,
                 phoneNumber: formattedPhoneNumber,
-                membership: 'Basic',
-                role: 'Owner'
-            }
+                membership: "Basic",
+                role: "Owner",
+            },
         });
     } catch (err) {
         console.error("Error in SignUp:", err);
@@ -133,19 +133,17 @@ exports.SignupUser = asyncHandler(async (req, res) => {
     }
 });
 
-
-
-
 exports.getProfileDetails = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        const ownerId = req.user.ownerId
-        const userrole = req.user.role
+        const ownerId = req.user.ownerId;
+        const userrole = req.user.role;
 
-
-        // Retrieve user profile from the database using the DAO function
-        const user = await userProfileDao.getUserProfileById(userId, ownerId, userrole);
-
+        const user = await userProfileDao.getUserProfileById(
+            userId,
+            ownerId,
+            userrole,
+        );
 
         if (!user) {
             return res.status(404).json({
@@ -154,8 +152,14 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
             });
         }
 
-        // Extract the additional fields from the user object
-        const { id, membership, paymentActiveStatus, farmCount, role, ...userProfile } = user;
+        const {
+            id,
+            membership,
+            paymentActiveStatus,
+            farmCount,
+            role,
+            ...userProfile
+        } = user;
 
         res.status(200).json({
             status: "success",
@@ -165,8 +169,8 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
                 membership: membership,
                 paymentActiveStatus: paymentActiveStatus,
                 farmCount: farmCount,
-                role: role
-            }
+                role: role,
+            },
         });
     } catch (err) {
         console.error("Error fetching profile details:", err);
@@ -180,12 +184,11 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
 exports.updatePhoneNumber = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    // Validate the request body
     await updatePhoneNumberSchema.validateAsync(req.body);
 
     const results = await userAuthDao.updateUserPhoneNumber(
         userId,
-        newPhoneNumber
+        newPhoneNumber,
     );
 
     if (results.affectedRows === 0) {
@@ -212,27 +215,28 @@ exports.signupChecker = asyncHandler(async (req, res) => {
         let NICnumberExists = false;
 
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
-        const phoneDigits = String(phoneNumber).replace(/^\+94/, "").replace(/^\+/, "");
+        const phoneDigits = String(phoneNumber)
+            .replace(/^\+94/, "")
+            .replace(/^\+/, "");
 
         results.forEach((user, index) => {
-
-            // Check phone number - simplified logic
-            if (user.userType === 'user' && user.phoneNumber === formattedPhoneNumber) {
+            if (
+                user.userType === "user" &&
+                user.phoneNumber === formattedPhoneNumber
+            ) {
                 phoneNumberExists = true;
-                
-            } else if (user.userType === 'farmstaff' && user.phoneNumber === phoneDigits) {
+            } else if (
+                user.userType === "farmstaff" &&
+                user.phoneNumber === phoneDigits
+            ) {
                 phoneNumberExists = true;
-            
             }
 
-            // Check NIC
             const userNIC = user.NICnumber || user.nic;
             if (NICnumber && userNIC === NICnumber) {
                 NICnumberExists = true;
-               
             }
         });
-
 
         if (phoneNumberExists && NICnumberExists) {
             return res
@@ -261,15 +265,17 @@ exports.signupChecker = asyncHandler(async (req, res) => {
 
 exports.updateFirstLastName = asyncHandler(async (req, res) => {
     try {
-        
-
-
         const sanitizedBody = Object.fromEntries(
-            Object.entries(req.body).map(([key, value]) => [key, value === "" ? null : value])
+            Object.entries(req.body).map(([key, value]) => [
+                key,
+                value === "" ? null : value,
+            ]),
         );
 
         const { firstName, lastName, buidingname, streetname, city, district } =
-            await ValidationSchema.updateFirstLastNameSchema.validateAsync(sanitizedBody);
+            await ValidationSchema.updateFirstLastNameSchema.validateAsync(
+                sanitizedBody,
+            );
 
         const userId = req.user.id;
 
@@ -280,7 +286,7 @@ exports.updateFirstLastName = asyncHandler(async (req, res) => {
             buidingname,
             streetname,
             city,
-            district
+            district,
         );
 
         if (affectedRows === 0) {
@@ -308,24 +314,8 @@ exports.updateFirstLastName = asyncHandler(async (req, res) => {
     }
 });
 
-const query = (sql, params) => {
-    return new Promise((resolve, reject) => {
-        db.plantcare.query(sql, params, (err, result) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(result);
-        });
-    });
-};
-
 exports.registerBankDetails = async (req, res) => {
-    const {
-        accountNumber,
-        accountHolderName,
-        bankName,
-        branchName,
-    } = req.body;
+    const { accountNumber, accountHolderName, bankName, branchName } = req.body;
 
     const userId = req.user.id;
     const ownerId = req.user.ownerId;
@@ -345,16 +335,16 @@ exports.registerBankDetails = async (req, res) => {
                 accountNumber,
                 accountHolderName,
                 bankName,
-                branchName
+                branchName,
             );
 
             await new Promise((resolve, reject) => {
-                userAuthDao.createQrCode(userId, ownerId)
-                    .then(successMessage => {
-                        
+                userAuthDao
+                    .createQrCode(userId, ownerId)
+                    .then((successMessage) => {
                         resolve(successMessage);
                     })
-                    .catch(qrErr => {
+                    .catch((qrErr) => {
                         console.error("Error creating QR code:", qrErr);
                         reject(qrErr);
                     });
@@ -367,11 +357,10 @@ exports.registerBankDetails = async (req, res) => {
                     accountHolderName,
                     accountNumber,
                     bankName,
-                    branchName
+                    branchName,
                 },
             });
         } catch (transactionErr) {
-
             await db.plantcare.promise().rollback();
             console.error("Error during transaction:", transactionErr);
             return res.status(500).json({
@@ -388,13 +377,10 @@ exports.registerBankDetails = async (req, res) => {
     }
 };
 
-
 exports.uploadProfileImage = async (req, res) => {
     try {
         const userId = req.user.id;
-        const ownerId = req.user.ownerId
-
-
+        const ownerId = req.user.ownerId;
 
         const existingProfileImage = await userAuthDao.getUserProfileImage(userId);
         if (existingProfileImage) {
@@ -407,7 +393,11 @@ exports.uploadProfileImage = async (req, res) => {
             const fileName = req.file.originalname;
             const imageBuffer = req.file.buffer;
 
-            const uploadedImage = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/user${userId}`);
+            const uploadedImage = await uploadFileToS3(
+                imageBuffer,
+                fileName,
+                `plantcareuser/owner${ownerId}/user${userId}`,
+            );
             profileImageUrl = uploadedImage;
         } else {
         }
@@ -435,8 +425,7 @@ exports.uploadProfileImage = async (req, res) => {
 exports.deleteUser = async (req, res) => {
     try {
         const userId = req.user?.id;
-        const userRole = req.user?.role || 'Owner'; 
-
+        const userRole = req.user?.role || "Owner";
 
         if (!userId) {
             return res.status(400).json({
@@ -445,7 +434,11 @@ exports.deleteUser = async (req, res) => {
             });
         }
 
-        const userdetailsresult = await userAuthDao.getUserProfileById(userId, userId, userRole);
+        const userdetailsresult = await userAuthDao.getUserProfileById(
+            userId,
+            userId,
+            userRole,
+        );
 
         if (!userdetailsresult) {
             return res.status(404).json({
@@ -457,10 +450,12 @@ exports.deleteUser = async (req, res) => {
         const firstname = userdetailsresult.firstName;
         const lastname = userdetailsresult.lastName;
 
-        const deleteuserResult = await userAuthDao.savedeletedUser(firstname, lastname);
+        const deleteuserResult = await userAuthDao.savedeletedUser(
+            firstname,
+            lastname,
+        );
         const deletedUserId = deleteuserResult.insertId;
 
-        // Save feedback if provided
         const { feedbackIds } = req.body;
         if (feedbackIds && Array.isArray(feedbackIds)) {
             for (const feedbackId of feedbackIds) {
@@ -493,22 +488,20 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-
-
 exports.getFeedbackOptions = async (req, res) => {
     try {
         const feedbackOptions = await userAuthDao.getFeedbackOptions();
 
         return res.status(200).json({
-            status: 'success',
+            status: "success",
             feedbackOptions,
         });
     } catch (err) {
-        console.error('Error fetching feedback options:', err);
+        console.error("Error fetching feedback options:", err);
 
         return res.status(500).json({
-            status: 'error',
-            message: 'Internal server error. Please try again later.',
+            status: "error",
+            message: "Internal server error. Please try again later.",
         });
     }
-}
+};

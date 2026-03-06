@@ -86,9 +86,11 @@ router.get("/get-farmName/:farmId", auth, farmEp.getFarmName);
 
 router.get("/get-farm-extend/:farmId", auth, farmEp.getFarmExtend);
 
-
-//get alreday add currect asset 
-router.get("/get-currectasset-alreadyHave/:farmId", auth, farmEp.getCurrectAssetAlredayHave);
-
+//get alreday add currect asset
+router.get(
+    "/get-currectasset-alreadyHave/:farmId",
+    auth,
+    farmEp.getCurrectAssetAlredayHave,
+);
 
 module.exports = router;

@@ -6,29 +6,19 @@ const {
     signupCheckerSchema,
     updateFarm,
     createStaffMember,
-    getSlaveCropCalendarDaysSchema,
     nicChecker,
+    enrollSchema,
 } = require("../validations/farm-validation");
-const delectfilesOnS3 = require("../Middlewares/s3delete");
 const delectfloders3 = require("../Middlewares/s3folderdelete");
 const db = require("../startup/database");
 const {
     getAssetsByCategorySchema,
 } = require("../validations/currentAsset-validation");
 
-const {
-    ongoingCultivationSchema,
-    enrollSchema,
-} = require("../validations/farm-validation");
-const e = require("express");
-
 exports.CreateFarm = asyncHandler(async (req, res) => {
-   
-
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
-
 
         const { value, error } = createFarm.validate(input);
         if (error) {
@@ -37,8 +27,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
                 message: error.details[0].message,
             });
         }
-
-      
 
         const {
             farmName,
@@ -73,7 +61,6 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             staff,
         });
 
-
         res.status(201).json({
             status: "success",
             message: "Farm and staff created successfully.",
@@ -97,7 +84,6 @@ exports.getFarms = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farms = await farmDao.getAllFarmByUserId(userId);
-  
 
         if (!farms || farms.length === 0) {
             return res.status(404).json({ message: "No farms found" });
@@ -155,7 +141,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
         const userId = req.user.id;
         const input = { ...req.body, userId };
 
-
         const { value, error } = createPayment.validate(input);
         if (error) {
             return res.status(400).json({
@@ -189,8 +174,6 @@ exports.CreatePayment = asyncHandler(async (req, res) => {
         });
     }
 });
-
-//////////////cultivation
 
 exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
     try {
@@ -240,7 +223,6 @@ exports.OngoingCultivaionGetById = asyncHandler(async (req, res) => {
 });
 
 exports.enroll = asyncHandler(async (req, res) => {
-
     try {
         const cropId = req.body.cropId;
         const extentha = req.body.extentha || "0";
@@ -249,7 +231,6 @@ exports.enroll = asyncHandler(async (req, res) => {
         const startDate = req.body.startDate;
         const userId = req.user.id;
         const farmId = req.params.farmId;
-
 
         const { error } = enrollSchema.validate({
             extentha,
@@ -260,7 +241,6 @@ exports.enroll = asyncHandler(async (req, res) => {
             createdAt: undefined,
             farmId,
         });
-
 
         if (error) {
             return res.status(400).json({ message: error.details[0].message });
@@ -278,14 +258,12 @@ exports.enroll = asyncHandler(async (req, res) => {
             cultivationId = ongoingCultivationResult[0].id;
         }
 
-        // Updated: Check crop count for specific farm
         const cropCountResult = await farmDao.checkCropCountByFarm(
             cultivationId,
             farmId,
         );
         const cropCount = cropCountResult[0].count;
 
-        // Updated: Check enrolled crops for specific farm
         const enrolledCrops = await farmDao.checkEnrollCropByFarm(
             cultivationId,
             farmId,
@@ -310,12 +288,11 @@ exports.enroll = asyncHandler(async (req, res) => {
         );
         const enroledoncultivationcrop =
             await farmDao.getEnrollOngoingCultivationCrop(cropId, userId, farmId);
-        
+
         let onCulscropID;
         if (enroledoncultivationcrop.length > 0) {
             onCulscropID = enroledoncultivationcrop[0].id;
         } else {
-            
             return res
                 .status(500)
                 .json({ message: "Failed to create cultivation record" });
@@ -329,7 +306,6 @@ exports.enroll = asyncHandler(async (req, res) => {
             farmId,
         );
 
-        // UPDATED: Return the onCulscropID in the response
         return res.json({
             message: "Enrollment successful",
             ongoingCultivationCropId: onCulscropID,
@@ -343,7 +319,6 @@ exports.enroll = asyncHandler(async (req, res) => {
 });
 
 exports.phoneNumberChecker = asyncHandler(async (req, res) => {
-    
     try {
         const { phoneNumber } = await signupCheckerSchema.validateAsync(req.body);
         const results = await farmDao.phoneNumberChecker(phoneNumber);
@@ -352,14 +327,11 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
 
         const normalizedInputPhone = `+${String(phoneNumber).replace(/^\+/, "")}`;
 
-
         results.forEach((user) => {
-           
             if (user.phoneNumber === normalizedInputPhone) {
                 phoneNumberExists = true;
             }
         });
-
 
         if (phoneNumberExists) {
             return res.status(409).json({
@@ -388,25 +360,19 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
 });
 
 exports.nicChecker = asyncHandler(async (req, res) => {
-    
     try {
         const { nic } = await nicChecker.validateAsync(req.body);
         const results = await farmDao.nicChecker(nic);
 
-
         let nicExists = false;
 
         const normalizedInputNic = String(nic).replace(/^\+/, "");
-       
 
         results.forEach((user) => {
-            
             if (user.nic === normalizedInputNic) {
                 nicExists = true;
             }
         });
-
-        
 
         if (nicExists) {
             return res.status(409).json({
@@ -434,8 +400,6 @@ exports.nicChecker = asyncHandler(async (req, res) => {
     }
 });
 
-///farmcount
-
 exports.getCropCountByFarmId = asyncHandler(async (req, res) => {
     try {
         const farmId = req.params.farmId;
@@ -457,8 +421,6 @@ exports.getCropCountByFarmId = asyncHandler(async (req, res) => {
 });
 
 exports.UpdateFarm = asyncHandler(async (req, res) => {
-    
-
     try {
         const userId = req.user.id;
         const input = { ...req.body, userId };
@@ -470,7 +432,6 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
                 message: error.details[0].message,
             });
         }
-
 
         const {
             farmId,
@@ -510,7 +471,6 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
             staffCount,
         });
 
-
         res.status(200).json({
             status: "success",
             message: "Farm updated successfully.",
@@ -529,18 +489,15 @@ exports.UpdateFarm = asyncHandler(async (req, res) => {
 });
 
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-    
     try {
         const userId = req.user.id;
         const { farmId } = req.params;
 
-        // Create input object for validation
         const input = {
             ...req.body,
             farmId,
         };
 
-        // Validate input (you'll need to create/update your validation schema)
         const { value, error } = createStaffMember.validate(input);
         if (error) {
             return res.status(400).json({
@@ -549,10 +506,8 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             });
         }
 
-
         const { firstName, lastName, phoneNumber, countryCode, role, nic } = value;
 
-        // Create staff member
         const result = await farmDao.CreateStaffMember({
             userId,
             farmId,
@@ -563,7 +518,6 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             role,
             nic,
         });
-
 
         res.status(201).json({
             status: "success",
@@ -585,14 +539,12 @@ exports.getStaffMember = asyncHandler(async (req, res) => {
     try {
         const { staffMemberId } = req.params;
 
-        // Get staff member data
         const staffMemberData = await farmDao.getStaffMember(staffMemberId);
 
         if (!staffMemberData || staffMemberData.length === 0) {
             return res.status(404).json({ message: "Staff member not found" });
         }
 
-        // Return single staff member (first result)
         res.status(200).json(staffMemberData[0]);
     } catch (error) {
         console.error("Error fetching Staff member:", error);
@@ -626,7 +578,6 @@ exports.updateStaffMember = asyncHandler(async (req, res) => {
     }
 });
 
-/////////////renew
 exports.deleteStaffMember = asyncHandler(async (req, res) => {
     try {
         const { staffMemberId, farmId } = req.params;
@@ -657,7 +608,6 @@ exports.getrenew = asyncHandler(async (req, res) => {
             });
         }
 
-        // Conditions for renewal
         const isExpired = new Date(farmData.expireDate) < new Date();
         const isInactive = farmData.activeStatus === 0;
         const isBlocked = farmData.isBlock === 1;
@@ -692,13 +642,10 @@ exports.getrenew = asyncHandler(async (req, res) => {
 });
 
 exports.deleteFarm = asyncHandler(async (req, res) => {
-
     try {
         const { farmId } = req.params;
         const ownerId = req.user.ownerId;
 
-
-        // Delete farm from database (this will also reorder farmIndex)
         const deleteResult = await farmDao.deleteFarm(farmId);
 
         if (!deleteResult) {
@@ -708,12 +655,10 @@ exports.deleteFarm = asyncHandler(async (req, res) => {
             });
         }
 
-        // Delete S3 folder
         try {
             await delectfloders3(`plantcareuser/owner${ownerId}/farm${farmId}`);
         } catch (s3Error) {
             console.warn("S3 deletion warning:", s3Error);
-            // Continue even if S3 deletion fails
         }
 
         res.status(200).json({
@@ -742,8 +687,6 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId;
         const selectFarm = await farmDao.getSelectFarm(ownerId);
 
-
-        // Return the farm data for dropdown
         return res.status(200).json({
             status: "success",
             message: "Farms retrieved successfully",
@@ -763,8 +706,6 @@ exports.getSelectFarm = asyncHandler(async (req, res) => {
         });
     }
 });
-
-////currect asset
 
 exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
     try {
@@ -787,7 +728,6 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             status,
         } = req.body;
 
-        // Validate volume
         const volumeInt = parseInt(volume, 10);
         if (isNaN(volumeInt)) {
             return res.status(400).json({
@@ -796,7 +736,6 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             });
         }
 
-        // Format dates
         const formattedPurchaseDate = new Date(purchaseDate)
             .toISOString()
             .slice(0, 19)
@@ -806,7 +745,6 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
             .slice(0, 19)
             .replace("T", " ");
 
-        // Create new asset data
         const assetData = {
             userId: userId,
             staffId: staffId,
@@ -827,7 +765,6 @@ exports.handleAddFixedAsset = asyncHandler(async (req, res) => {
 
         const insertResult = await farmDao.createNewAsset(assetData);
 
-        // Add record for new asset
         const recordData = {
             currentAssetId: insertResult.insertId,
             numOfPlusUnit: numberOfUnits,
@@ -859,7 +796,6 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
             req.query,
         );
         const assets = await farmDao.getAssetsByCategory(userId, category, farmId);
-
 
         if (assets.length === 0) {
             return res.status(404).json({
@@ -954,7 +890,6 @@ exports.getFarmName = asyncHandler(async (req, res) => {
         const userId = req.user.ownerId;
         const farmId = req.params.farmId;
 
-
         const farms = await farmDao.getFarmName(userId, farmId);
 
         if (!farms || farms.length === 0) {
@@ -980,14 +915,11 @@ exports.getFarmName = asyncHandler(async (req, res) => {
     }
 });
 
-/////delete
-
 exports.deleteAsset = (req, res) => {
     const { category, assetId } = req.params;
     const { numberOfUnits, totalPrice } = req.body;
     const userId = req.user.ownerId;
 
-    // Validate input
     if (!numberOfUnits || numberOfUnits <= 0) {
         return res.status(400).json({ message: "Invalid number of units." });
     }
@@ -1013,7 +945,6 @@ exports.deleteAsset = (req, res) => {
             const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
             const newTotal = currentAsset.total - totalPrice;
 
-            // Validation checks
             if (numberOfUnits > currentAsset.numOfUnit) {
                 return res
                     .status(400)
@@ -1032,7 +963,6 @@ exports.deleteAsset = (req, res) => {
                     .json({ message: "Invalid operation: insufficient units or value." });
             }
 
-            // FIRST: Insert the record while the asset still exists
             db.plantcare.execute(
                 "INSERT INTO currentassetrecord (currentAssetId, numOfPlusUnit, numOfMinUnit, totalPrice) VALUES (?, 0, ?, ?)",
                 [currentAsset.id, numberOfUnits, totalPrice],
@@ -1045,7 +975,6 @@ exports.deleteAsset = (req, res) => {
                     }
 
                     if (newNumOfUnit === 0 && newTotal === 0) {
-                        // Delete the entire asset
                         db.plantcare.execute(
                             "DELETE FROM currentasset WHERE userId = ? AND category = ? AND id = ?",
                             [userId, category, assetId],
@@ -1063,7 +992,6 @@ exports.deleteAsset = (req, res) => {
                             },
                         );
                     } else {
-                        // Update the asset with new values
                         db.plantcare.execute(
                             "UPDATE currentasset SET numOfUnit = ?, total = ? WHERE userId = ? AND category = ? AND id = ?",
                             [newNumOfUnit, newTotal, userId, category, assetId],
@@ -1094,7 +1022,6 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
         const staffId = req.user.id;
         const { numberOfUnits, unitPrice, totalPrice } = req.body;
 
-        // If numberOfUnits is 0, delete the asset
         if (numberOfUnits === 0 || numberOfUnits === "0") {
             const result = await farmDao.deleteCurrentAsset(assetId);
 
@@ -1111,7 +1038,6 @@ exports.updateCurrentAsset = asyncHandler(async (req, res) => {
             });
         }
 
-        // Otherwise, update the asset
         const assetData = {
             userId: userId,
             staffId: staffId,
@@ -1158,7 +1084,6 @@ exports.getFarmExtend = asyncHandler(async (req, res) => {
 
         const farmData = farms[0];
 
-        // Format response with clear extent information
         const response = {
             id: farmData.id,
             farmName: farmData.farmName,

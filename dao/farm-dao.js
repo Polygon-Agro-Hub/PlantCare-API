@@ -1,11 +1,9 @@
-const e = require("express");
 const db = require("../startup/database");
 
 exports.createFarmWithStaff = async (farmData) => {
     let connection;
 
     try {
-        
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -13,7 +11,6 @@ exports.createFarmWithStaff = async (farmData) => {
             });
         });
 
-        // Start transaction
         await new Promise((resolve, reject) => {
             connection.beginTransaction((err) => {
                 if (err) return reject(err);
@@ -21,7 +18,6 @@ exports.createFarmWithStaff = async (farmData) => {
             });
         });
 
-        // Get user's NIC number for regCode generation
         const getUserSql = `SELECT NICnumber FROM users WHERE id = ?`;
         const [userResult] = await connection
             .promise()
@@ -33,7 +29,6 @@ exports.createFarmWithStaff = async (farmData) => {
 
         const userNIC = userResult[0].NICnumber;
 
-        // Get the current farm count for this user to generate farmIndex
         const getFarmCountSql = `SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?`;
         const [countResult] = await connection
             .promise()
@@ -41,19 +36,15 @@ exports.createFarmWithStaff = async (farmData) => {
         const currentFarmCount = countResult[0].farmCount;
         const nextFarmIndex = currentFarmCount + 1;
 
-        // Validate and clean staff data
         if (farmData.staff && Array.isArray(farmData.staff)) {
             farmData.staff = farmData.staff.map((staff) => {
-                // Clean phone number (remove any non-digit characters except +)
                 let phoneCode = staff.phoneCode || "+94";
                 let phoneNumber = staff.phoneNumber;
 
-                // Ensure phoneCode starts with +
                 if (!phoneCode.startsWith("+")) {
                     phoneCode = "+" + phoneCode;
                 }
 
-                // Clean phoneNumber (remove any non-digit characters)
                 phoneNumber = phoneNumber.replace(/\D/g, "");
 
                 return {
@@ -65,7 +56,6 @@ exports.createFarmWithStaff = async (farmData) => {
             });
         }
 
-        // Insert farm WITHOUT regCode first (to get farmId)
         const insertFarmSql = `
             INSERT INTO farms 
             (userId, farmName, farmIndex, extentha, extentac, extentp, district, plotNo, street, city, staffCount, appUserCount, imageId)
@@ -93,16 +83,13 @@ exports.createFarmWithStaff = async (farmData) => {
             .query(insertFarmSql, farmValues);
         const farmId = farmResult.insertId;
 
-        // Generate regCode
         const regCode = generateRegCode(userNIC, farmId, nextFarmIndex);
 
-        // Update farm with regCode
         const updateRegCodeSql = `UPDATE farms SET regCode = ? WHERE id = ?`;
         await connection.promise().query(updateRegCodeSql, [regCode, farmId]);
 
         const staffIds = [];
 
-        // Insert staff if provided
         if (farmData.staff && farmData.staff.length > 0) {
             const insertStaffSql = `
                 INSERT INTO farmstaff 
@@ -111,8 +98,6 @@ exports.createFarmWithStaff = async (farmData) => {
             `;
 
             for (const staff of farmData.staff) {
-                
-
                 const staffValues = [
                     farmData.userId,
                     farmId,
@@ -125,8 +110,6 @@ exports.createFarmWithStaff = async (farmData) => {
                     staff.image || null,
                 ];
 
-               
-
                 const [staffResult] = await connection
                     .promise()
                     .query(insertStaffSql, staffValues);
@@ -134,7 +117,6 @@ exports.createFarmWithStaff = async (farmData) => {
             }
         }
 
-        // Commit transaction
         await new Promise((resolve, reject) => {
             connection.commit((err) => {
                 if (err) return reject(err);
@@ -151,7 +133,6 @@ exports.createFarmWithStaff = async (farmData) => {
             message: "Farm and staff created successfully",
         };
     } catch (error) {
-        // Rollback transaction if connection exists
         if (connection) {
             await new Promise((resolve) => {
                 connection.rollback(() => resolve(true));
@@ -160,7 +141,6 @@ exports.createFarmWithStaff = async (farmData) => {
         console.error("Database error:", error);
         throw error;
     } finally {
-        // Release connection back to pool
         if (connection) {
             connection.release();
         }
@@ -239,7 +219,6 @@ exports.getAllFarmByUserId = async (userId) => {
 
 exports.getFarmByIdWithStaff = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
-        // First get farm data
         const farmQuery = `
             SELECT id, userId, farmName, farmIndex, extentha, extentac, extentp, 
                    district, plotNo, street, city, staffCount, appUserCount, imageId ,regCode
@@ -261,7 +240,6 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
 
             const farm = farmResults[0];
 
-            // Get staff data for this farm
             const staffQuery = `
                 SELECT id, ownerId, farmId, firstName, lastName, phoneCode, 
                        phoneNumber, role, LEFT(image, 256) as image, createdAt
@@ -277,7 +255,6 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
                     return;
                 }
 
-                // Combine farm and staff data
                 const result = {
                     farm: farm,
                     staff: staffResults || [],
@@ -303,7 +280,6 @@ exports.getMemberShip = async (userId) => {
                 console.error("Error fetching user membership:", error);
                 reject(error);
             } else {
-                // Since we're looking for a single user, return the first result or null
                 resolve(results.length > 0 ? results[0] : null);
             }
         });
@@ -314,7 +290,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
     let connection;
 
     try {
-        // Get connection from pool
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -322,7 +297,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             });
         });
 
-        // Start transaction
         await new Promise((resolve, reject) => {
             connection.beginTransaction((err) => {
                 if (err) return reject(err);
@@ -330,7 +304,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             });
         });
 
-        // Check if user has existing payments (for reference/logging)
         const checkExistingPaymentsSql = `
             SELECT COUNT(*) as paymentCount 
             FROM membershippayment 
@@ -342,7 +315,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             .query(checkExistingPaymentsSql, [paymentData.userId]);
         const isFirstPayment = existingPayments[0].paymentCount === 0;
 
-        // Insert new payment record (always create new row)
         const insertPaymentSql = `
             INSERT INTO membershippayment 
             (userId, payment, plan, expireDate, activeStatus)
@@ -361,7 +333,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             .query(insertPaymentSql, paymentValues);
         const paymentId = paymentResult.insertId;
 
-        // Update user membership to 'Pro' (or extend existing Pro membership)
         const updateUserSql = `
             UPDATE users 
             SET membership = 'Pro'
@@ -372,7 +343,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
             .promise()
             .query(updateUserSql, [paymentData.userId]);
 
-        // Commit transaction
         await new Promise((resolve, reject) => {
             connection.commit((err) => {
                 if (err) return reject(err);
@@ -391,7 +361,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
                 : "Additional payment processed successfully - membership extended",
         };
     } catch (error) {
-        // Rollback transaction if connection exists
         if (connection) {
             await new Promise((resolve) => {
                 connection.rollback(() => resolve(true));
@@ -400,7 +369,6 @@ exports.createPaymentAndUpdateMembership = async (paymentData) => {
         console.error("Database error:", error);
         throw error;
     } finally {
-        // Release connection back to pool
         if (connection) {
             connection.release();
         }
@@ -435,14 +403,11 @@ exports.getOngoingCultivationsByUserIdAndFarmId = (
         ORDER BY oc.startedAt DESC, oc.cropCalendar ASC
     `;
 
-    
-
     db.plantcare.query(sql, [userId, farmId], (err, results) => {
         if (err) {
             console.error("Database error:", err);
             return callback(err, null);
         }
-
 
         callback(null, results);
     });
@@ -505,7 +470,6 @@ exports.enrollOngoingCultivationCrop = (
     ]);
 };
 
-// Updated: Get enrolled crop with farmId
 exports.getEnrollOngoingCultivationCrop = (cropId, userId, farmId) => {
     const sql = `
     SELECT ocs.id  
@@ -528,7 +492,6 @@ exports.getEnrollOngoingCultivationCrop = (cropId, userId, farmId) => {
 };
 
 exports.getEnrollOngoingCultivationCropByid = (id) => {
- 
     const sql = `
     SELECT * 
     FROM ongoingcultivationscrops 
@@ -541,7 +504,6 @@ exports.getEnrollOngoingCultivationCropByid = (id) => {
                 reject(err);
             } else {
                 resolve(results);
-               
             }
         });
     });
@@ -599,7 +561,6 @@ exports.updateSlaveCropCalendarDay = (id, formattedDate) => {
 };
 
 exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
-
     return new Promise((resolve, reject) => {
         const fetchSql = `
             SELECT * FROM cropcalendardays
@@ -679,7 +640,6 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
                     console.error("Error inserting slave crop calendar days:", insertErr);
                     reject(insertErr);
                 } else {
-                   
                     resolve(result);
                 }
             });
@@ -690,7 +650,6 @@ exports.enrollSlaveCrop = (userId, cropId, startDate, onCulscropID, farmId) => {
 exports.phoneNumberChecker = (phoneNumber) => {
     return new Promise((resolve, reject) => {
         const formattedPhoneNumber = `+${String(phoneNumber).replace(/^\+/, "")}`;
-        
 
         const checkQuery = `
             SELECT phoneNumber FROM users WHERE phoneNumber = ?
@@ -706,7 +665,6 @@ exports.phoneNumberChecker = (phoneNumber) => {
                     console.error("Database error:", err);
                     reject(err);
                 } else {
-                  
                     resolve(results);
                 }
             },
@@ -727,7 +685,6 @@ exports.nicChecker = (nic) => {
                 console.error("Database error:", err);
                 reject(err);
             } else {
-               
                 resolve(results);
             }
         });
@@ -756,7 +713,6 @@ exports.updateFarm = async (farmData) => {
     let connection;
 
     try {
-        // Get connection from pool
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -787,7 +743,6 @@ exports.updateFarm = async (farmData) => {
                 imageId = ?
             WHERE id = ? AND userId = ?
         `;
-        // ↑ Changed 'farmId' to 'id' - replace with your actual column name
 
         const farmValues = [
             farmData.farmName,
@@ -815,7 +770,6 @@ exports.updateFarm = async (farmData) => {
             );
         }
 
-        // Commit transaction
         await new Promise((resolve, reject) => {
             connection.commit((err) => {
                 if (err) return reject(err);
@@ -830,7 +784,6 @@ exports.updateFarm = async (farmData) => {
             message: "Farm updated successfully",
         };
     } catch (error) {
-        // Rollback transaction if connection exists
         if (connection) {
             await new Promise((resolve) => {
                 connection.rollback(() => resolve(true));
@@ -839,19 +792,15 @@ exports.updateFarm = async (farmData) => {
         console.error("Database error:", error);
         throw error;
     } finally {
-        // Release connection back to pool
         if (connection) {
             connection.release();
         }
     }
 };
 
-/////////////
-
 exports.CreateStaffMember = async (farmData) => {
     let connection;
     try {
-        // Get connection from pool
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -859,7 +808,6 @@ exports.CreateStaffMember = async (farmData) => {
             });
         });
 
-        // Start transaction
         await new Promise((resolve, reject) => {
             connection.beginTransaction((err) => {
                 if (err) return reject(err);
@@ -867,7 +815,6 @@ exports.CreateStaffMember = async (farmData) => {
             });
         });
 
-        // Check if farm exists and user has permission
         const checkFarmSql = `SELECT id, appUserCount FROM farms WHERE id = ? AND userId = ?`;
         const [farmCheck] = await connection
             .promise()
@@ -877,7 +824,6 @@ exports.CreateStaffMember = async (farmData) => {
             throw new Error("Farm not found or user does not have permission");
         }
 
-        // Check if staff member already exists (optional - based on your business logic)
         const checkStaffSql = `
             SELECT id FROM farmstaff 
             WHERE farmId = ? AND phoneNumber = ? AND phoneCode = ?
@@ -896,7 +842,6 @@ exports.CreateStaffMember = async (farmData) => {
             );
         }
 
-        // Insert staff member
         const insertStaffSql = `
             INSERT INTO farmstaff 
             (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, nic)
@@ -908,7 +853,7 @@ exports.CreateStaffMember = async (farmData) => {
             farmData.farmId,
             farmData.firstName,
             farmData.lastName,
-            farmData.countryCode, // Note: using countryCode for phoneCode
+            farmData.countryCode,
             farmData.phoneNumber,
             farmData.role,
             farmData.nic,
@@ -919,7 +864,6 @@ exports.CreateStaffMember = async (farmData) => {
             .query(insertStaffSql, staffValues);
         const staffId = insertResult.insertId;
 
-        // Update appUserCount in farms table (+1)
         const updateFarmSql = `
             UPDATE farms 
             SET appUserCount = appUserCount + 1 
@@ -927,7 +871,6 @@ exports.CreateStaffMember = async (farmData) => {
         `;
         await connection.promise().query(updateFarmSql, [farmData.farmId]);
 
-        // Get the created staff member data
         const getStaffSql = `
             SELECT id, ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, createdAt
             FROM farmstaff 
@@ -937,7 +880,6 @@ exports.CreateStaffMember = async (farmData) => {
             .promise()
             .query(getStaffSql, [staffId]);
 
-        // Commit transaction
         await new Promise((resolve, reject) => {
             connection.commit((err) => {
                 if (err) return reject(err);
@@ -952,7 +894,6 @@ exports.CreateStaffMember = async (farmData) => {
             message: "Staff member created successfully",
         };
     } catch (error) {
-        // Rollback transaction if connection exists
         if (connection) {
             await new Promise((resolve) => {
                 connection.rollback(() => resolve(true));
@@ -961,7 +902,6 @@ exports.CreateStaffMember = async (farmData) => {
         console.error("Database error:", error);
         throw error;
     } finally {
-        // Release connection back to pool
         if (connection) {
             connection.release();
         }
@@ -1031,7 +971,6 @@ exports.deleteStaffMember = async (staffMemberId, farmId) => {
                 console.error("Error deleting staff member:", error);
                 reject(error);
             } else {
-                // After deleting, reduce appUserCount by 1
                 const updateQuery = `
           UPDATE farms 
           SET appUserCount = GREATEST(appUserCount - 1, 0)
@@ -1046,7 +985,6 @@ exports.deleteStaffMember = async (staffMemberId, farmId) => {
                             console.error("Error updating appUserCount:", updateError);
                             reject(updateError);
                         } else {
-          
                             resolve({
                                 deleteResult: results,
                                 updateResult: updateResults,
@@ -1097,7 +1035,6 @@ exports.getrenew = async (userId) => {
 
 exports.deleteFarm = (farmId) => {
     return new Promise((resolve, reject) => {
-        // First check if farm exists and get its details
         const checkSql = "SELECT id, userId, farmIndex FROM farms WHERE id = ?";
         db.plantcare.query(checkSql, [farmId], (err, checkResult) => {
             if (err) {
@@ -1105,13 +1042,12 @@ exports.deleteFarm = (farmId) => {
                 return;
             }
             if (checkResult.length === 0) {
-                resolve(false); // Farm doesn't exist
+                resolve(false);
                 return;
             }
             const farmToDelete = checkResult[0];
             const { userId, farmIndex } = farmToDelete;
 
-            // Step 1: Delete slavecropcalendardays records that reference farmstaff from this farm
             const deleteSlaveCropCalendarSql = `
                 DELETE scd FROM slavecropcalendardays scd
                 INNER JOIN farmstaff fs ON scd.completedStaffId = fs.id
@@ -1138,8 +1074,6 @@ exports.deleteFarm = (farmId) => {
                                 return;
                             }
 
-
-                            // Step 4: Delete currentasset records
                             const deleteCurrentAssetsSql =
                                 "DELETE FROM currentasset WHERE farmId = ?";
                             db.plantcare.query(
@@ -1152,8 +1086,6 @@ exports.deleteFarm = (farmId) => {
                                         return;
                                     }
 
-
-                                    // Step 5: Delete fixedasset records
                                     const deleteFixedAssetsSql =
                                         "DELETE FROM fixedasset WHERE farmId = ?";
                                     db.plantcare.query(
@@ -1168,7 +1100,6 @@ exports.deleteFarm = (farmId) => {
                                                 reject(err);
                                                 return;
                                             }
-
 
                                             const deleteSql = "DELETE FROM farms WHERE id = ?";
                                             db.plantcare.query(
@@ -1185,7 +1116,6 @@ exports.deleteFarm = (farmId) => {
                                                         return;
                                                     }
 
-                                                    // Step 8: Update farmIndex for remaining farms
                                                     const updateIndexSql = `
                                     UPDATE farms 
                                     SET farmIndex = farmIndex - 1 
@@ -1204,7 +1134,6 @@ exports.deleteFarm = (farmId) => {
                                                                 return;
                                                             }
 
-                                                
                                                             resolve(true);
                                                         },
                                                     );
@@ -1242,15 +1171,11 @@ exports.getSelectFarm = async (ownerId) => {
     });
 };
 
-////currect asset
-
 exports.createNewAsset = async (assetData) => {
     return new Promise((resolve, reject) => {
-        // Determine if we should include staffId in the query
         const includeStaffId =
             assetData.staffId && assetData.staffId !== assetData.userId;
 
-        // Build dynamic query based on whether to include staffId
         let query, values;
 
         if (includeStaffId) {
@@ -1303,8 +1228,6 @@ exports.createNewAsset = async (assetData) => {
                 assetData.status,
             ];
         }
-
-
 
         db.plantcare.query(query, values, (error, results) => {
             if (error) {
@@ -1366,7 +1289,6 @@ exports.getAssetsByCategory = (userId, category, farmId) => {
 };
 
 exports.getAllCurrentAssets = (userId, farmId) => {
-
     return new Promise((resolve, reject) => {
         const categorySql = `
             SELECT category, SUM(total) AS totalSum 
@@ -1402,16 +1324,13 @@ exports.getAllCurrentAssets = (userId, farmId) => {
                     console.error("Category query error:", err);
                     return reject(err);
                 }
-                
 
                 db.plantcare.query(itemsSql, [userId, farmId], (err, itemResults) => {
                     if (err) {
                         console.error("Items query error:", err);
                         return reject(err);
                     }
-              
 
-                    // Group items by category
                     const itemsByCategory = itemResults.reduce((acc, item) => {
                         if (!acc[item.category]) {
                             acc[item.category] = [];
@@ -1420,7 +1339,6 @@ exports.getAllCurrentAssets = (userId, farmId) => {
                         return acc;
                     }, {});
 
-                    // Combine category totals with their items
                     const results = categoryResults.map((cat) => ({
                         category: cat.category,
                         totalSum: cat.totalSum,
@@ -1437,7 +1355,7 @@ exports.getAllCurrentAssets = (userId, farmId) => {
 exports.getFixedAssetsByCategory = (userId, category, farmId) => {
     return new Promise((resolve, reject) => {
         let sqlQuery = "";
-        let queryParams = [userId, farmId]; // Add farmId to parameters
+        let queryParams = [userId, farmId];
 
         if (category === "Land") {
             sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
@@ -1487,7 +1405,6 @@ exports.getFarmName = async (userId, farmId) => {
                 console.error("Error fetching farm:", error);
                 reject(error);
             } else {
-                
                 resolve(results);
             }
         });
@@ -1497,7 +1414,6 @@ exports.getFarmName = async (userId, farmId) => {
 exports.deleteCurrentAsset = async (assetId) => {
     return new Promise((resolve, reject) => {
         const query = "DELETE FROM currentasset WHERE id = ?";
-
 
         db.plantcare.query(query, [assetId], (error, results) => {
             if (error) {
@@ -1553,7 +1469,6 @@ exports.updateCurrentAsset = async (assetId, assetData) => {
             ];
         }
 
-
         db.plantcare.query(query, values, (error, results) => {
             if (error) {
                 console.error("Error updating current asset:", error);
@@ -1595,19 +1510,16 @@ exports.getFarmExtend = async (farmId) => {
                 if (results && results.length > 0) {
                     const farm = results[0];
 
-                    // Convert available perches back to hectares, acres, perches
                     const availablePerches = farm.availableExtentPerches;
                     const availableHa = Math.floor(availablePerches / 160);
                     const remainingAfterHa = availablePerches % 160;
                     const availableAc = Math.floor(remainingAfterHa / 4);
                     const availableP = remainingAfterHa % 4;
 
-                    // Add calculated fields to result
                     farm.availableExtentha = availableHa;
                     farm.availableExtentac = availableAc;
                     farm.availableExtentp = availableP;
 
-                    // Convert cultivated perches
                     const cultivatedPerches = farm.cultivatedExtentPerches;
                     const cultivatedHa = Math.floor(cultivatedPerches / 160);
                     const remainingCultivated = cultivatedPerches % 160;
@@ -1626,8 +1538,7 @@ exports.getFarmExtend = async (farmId) => {
 };
 
 exports.getCurrectAssetAlredayHave = (farmId) => {
-
- return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const query = `
             SELECT 
                 category,

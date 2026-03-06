@@ -2,7 +2,6 @@ const pensionRequestDao = require("../dao/pension-dao");
 const asyncHandler = require("express-async-handler");
 const uploadFileToS3 = require("../Middlewares/s3upload");
 
-// Check Pension Request Status
 exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
@@ -35,12 +34,10 @@ exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
   }
 });
 
-// Submit Pension Request
 exports.submitPensionRequest = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check if user already has a pension request
     const existingRequest =
       await pensionRequestDao.checkPensionRequestByUserId(userId);
     if (existingRequest) {
@@ -50,7 +47,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Validate required fields
     const { fullName, nic, dob, sucFullName, sucType, sucdob } = req.body;
 
     if (!fullName || !nic || !dob || !sucFullName || !sucType || !sucdob) {
@@ -60,7 +56,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Validate required files
     if (!req.files || !req.files.nicFront || !req.files.nicBack) {
       return res.status(400).json({
         status: false,
@@ -68,7 +63,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Upload applicant NIC images to Cloudflare R2
     const nicFrontUrl = await uploadFileToS3(
       req.files.nicFront[0].buffer,
       req.files.nicFront[0].originalname,
@@ -81,13 +75,11 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       `pension-requests/${userId}/applicant`,
     );
 
-    // Upload successor NIC images if provided
     let sucNicFrontUrl = null;
     let sucNicBackUrl = null;
     let birthCrtFrontUrl = null;
     let birthCrtBackUrl = null;
 
-    // Check if successor is over 18 (based on date)
     const sucDob = new Date(sucdob);
     const today = new Date();
     const age = today.getFullYear() - sucDob.getFullYear();
@@ -95,7 +87,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
     const isOver18 = age > 18 || (age === 18 && monthDiff >= 0);
 
     if (isOver18) {
-      // Successor is over 18, require NIC
       if (!req.files.sucNicFront || !req.files.sucNicBack) {
         return res.status(400).json({
           status: false,
@@ -116,7 +107,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
         `pension-requests/${userId}/successor`,
       );
     } else {
-      // Successor is under 18, require birth certificate
       if (!req.files.birthCrtFront || !req.files.birthCrtBack) {
         return res.status(400).json({
           status: false,
@@ -138,7 +128,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       );
     }
 
-    // Prepare pension data
     const pensionData = {
       userId,
       fullName,
@@ -156,7 +145,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       sucdob,
     };
 
-    // Create pension request
     const requestId =
       await pensionRequestDao.submitPensionRequestDAO(pensionData);
 
@@ -174,30 +162,29 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
   }
 });
 
-
 exports.updateFirstTimeStatus = asyncHandler(async (req, res) => {
-    try {
-        const userId = req.user.id;
+  try {
+    const userId = req.user.id;
 
-        const result = await pensionRequestDao.updateFirstTimeStatus(userId);
+    const result = await pensionRequestDao.updateFirstTimeStatus(userId);
 
-        if (!result) {
-            return res.status(404).json({
-                status: "error",
-                message: "No pension request found for this user."
-            });
-        }
-
-        res.status(200).json({
-            status: "success",
-            message: "First time status updated successfully.",
-            data: result
-        });
-    } catch (err) {
-        console.error("Error updating first time status:", err);
-        res.status(500).json({
-            status: "error",
-            message: "An error occurred while updating first time status."
-        });
+    if (!result) {
+      return res.status(404).json({
+        status: "error",
+        message: "No pension request found for this user.",
+      });
     }
+
+    res.status(200).json({
+      status: "success",
+      message: "First time status updated successfully.",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Error updating first time status:", err);
+    res.status(500).json({
+      status: "error",
+      message: "An error occurred while updating first time status.",
+    });
+  }
 });

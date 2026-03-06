@@ -1,7 +1,7 @@
 const express = require("express");
 const auth = require("../Middlewares/auth.middleware");
 const router = express.Router();
-const userCrop = require("../end-point/userCrop-ep");
+const userCrop = require("../end-point/crop-ep");
 
 router.get("/get-all-crop/:categorie", userCrop.getCropByCategory);
 router.get("/get-all-crop-bydistrict/:categorie/:district", userCrop.getCropByDistrict),

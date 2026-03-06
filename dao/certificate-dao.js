@@ -1,6 +1,5 @@
 const db = require("../startup/database");
 
-
 exports.getFarmsCertificate = async (farmId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -52,11 +51,8 @@ exports.getFarmsCertificate = async (farmId) => {
     });
 };
 
-// Certificate Payment DAO - Fixed Version
-
 exports.generateTransactionId = async () => {
     return new Promise((resolve, reject) => {
-        // Query to get the last transaction ID
         const query = `
             SELECT transactionId 
             FROM certificationpayment 
@@ -73,39 +69,30 @@ exports.generateTransactionId = async () => {
             let newTransactionId;
 
             if (results.length === 0) {
-                // No previous transactions, start with CTID0000001
-                newTransactionId = 'CTID0000001';
+                newTransactionId = "CTID0000001";
             } else {
                 const lastTransactionId = results[0].transactionId;
-                
 
-                // Extract the numeric part from the transaction ID
-                // Assuming format is like CTID0000001, CTID0000002, etc.
                 const match = lastTransactionId.match(/(\d+)$/);
 
                 if (match) {
                     const lastNumber = parseInt(match[1]);
                     const newNumber = lastNumber + 1;
 
-                    // Pad with zeros to maintain consistent length (7 digits)
-                    const paddedNumber = newNumber.toString().padStart(7, '0');
+                    const paddedNumber = newNumber.toString().padStart(7, "0");
                     newTransactionId = `CTID${paddedNumber}`;
                 } else {
-                    // If format doesn't match, start fresh
-                    newTransactionId = 'CTID0000001';
+                    newTransactionId = "CTID0000001";
                 }
             }
 
-            
             resolve(newTransactionId);
         });
     });
 };
 
-
 exports.createCertificatePayment = async (paymentData) => {
     return new Promise((resolve, reject) => {
-        // First insert into certificationpayment table
         const paymentQuery = `
             INSERT INTO certificationpayment 
             (certificateId, userId, payType, transactionId, amount, expireDate, createdAt)
@@ -118,10 +105,8 @@ exports.createCertificatePayment = async (paymentData) => {
             paymentData.payType,
             paymentData.transactionId,
             paymentData.amount,
-            paymentData.expireDate
+            paymentData.expireDate,
         ];
-
-       
 
         db.plantcare.query(paymentQuery, paymentValues, (error, paymentResults) => {
             if (error) {
@@ -132,9 +117,7 @@ exports.createCertificatePayment = async (paymentData) => {
             }
 
             const paymentId = paymentResults.insertId;
-            
 
-            // Insert into certificationpaymentfarm table
             const farmLinkQuery = `
                 INSERT INTO certificationpaymentfarm 
                 (paymentId, farmId, createdAt)
@@ -143,36 +126,35 @@ exports.createCertificatePayment = async (paymentData) => {
 
             const farmLinkValues = [paymentId, paymentData.farmId];
 
-           
+            db.plantcare.query(
+                farmLinkQuery,
+                farmLinkValues,
+                (error, farmLinkResults) => {
+                    if (error) {
+                        console.error("Error linking payment to farm:", error);
+                        rollbackPayment(paymentId);
+                        return reject(error);
+                    }
 
-            db.plantcare.query(farmLinkQuery, farmLinkValues, (error, farmLinkResults) => {
-                if (error) {
-                    console.error("Error linking payment to farm:", error);
-                    rollbackPayment(paymentId);
-                    return reject(error);
-                }
-
-               
-
-                // Insert into slavequestionnaire table
-                const slaveQuestionnaireQuery = `
+                    const slaveQuestionnaireQuery = `
                     INSERT INTO slavequestionnaire 
                     (crtPaymentId, createdAt)
                     VALUES (?, NOW())
                 `;
 
-                db.plantcare.query(slaveQuestionnaireQuery, [paymentId], (error, slaveResults) => {
-                    if (error) {
-                        console.error("Error creating slave questionnaire:", error);
-                        rollbackPayment(paymentId);
-                        return reject(error);
-                    }
+                    db.plantcare.query(
+                        slaveQuestionnaireQuery,
+                        [paymentId],
+                        (error, slaveResults) => {
+                            if (error) {
+                                console.error("Error creating slave questionnaire:", error);
+                                rollbackPayment(paymentId);
+                                return reject(error);
+                            }
 
-                    const slaveId = slaveResults.insertId;
-                    
+                            const slaveId = slaveResults.insertId;
 
-                    // Copy questionnaire items from questionnaire table to slavequestionnaireitems
-                    const copyItemsQuery = `
+                            const copyItemsQuery = `
                         INSERT INTO slavequestionnaireitems 
                         (slaveId, type, qNo, qEnglish, qSinhala, qTamil)
                         SELECT ?, type, qNo, qEnglish, qSinhala, qTamil
@@ -181,27 +163,30 @@ exports.createCertificatePayment = async (paymentData) => {
                         ORDER BY qNo
                     `;
 
-                    db.plantcare.query(copyItemsQuery, [slaveId, paymentData.certificateId], (error, itemsResults) => {
-                        if (error) {
-                            console.error("Error copying questionnaire items:", error);
-                            rollbackPayment(paymentId);
-                            return reject(error);
-                        }
+                            db.plantcare.query(
+                                copyItemsQuery,
+                                [slaveId, paymentData.certificateId],
+                                (error, itemsResults) => {
+                                    if (error) {
+                                        console.error("Error copying questionnaire items:", error);
+                                        rollbackPayment(paymentId);
+                                        return reject(error);
+                                    }
 
-                        
-
-                        resolve({
-                            paymentId: paymentId,
-                            farmLinkId: farmLinkResults.insertId,
-                            slaveQuestionnaireId: slaveId,
-                            itemsCopied: itemsResults.affectedRows
-                        });
-                    });
-                });
-            });
+                                    resolve({
+                                        paymentId: paymentId,
+                                        farmLinkId: farmLinkResults.insertId,
+                                        slaveQuestionnaireId: slaveId,
+                                        itemsCopied: itemsResults.affectedRows,
+                                    });
+                                },
+                            );
+                        },
+                    );
+                },
+            );
         });
 
-        // Helper function to rollback payment on error
         function rollbackPayment(paymentId) {
             const deleteQuery = `DELETE FROM certificationpayment WHERE id = ?`;
             db.plantcare.query(deleteQuery, [paymentId], (deleteError) => {
@@ -274,10 +259,8 @@ exports.getCropsCertificate = async (farmId, cropId) => {
     });
 };
 
-
 exports.createCropCertificatePayment = async (paymentData) => {
     return new Promise((resolve, reject) => {
-        // First insert into certificationpayment table
         const paymentQuery = `
             INSERT INTO certificationpayment 
             (certificateId, userId, payType, transactionId, amount, expireDate, createdAt)
@@ -290,10 +273,8 @@ exports.createCropCertificatePayment = async (paymentData) => {
             paymentData.payType,
             paymentData.transactionId,
             paymentData.amount,
-            paymentData.expireDate
+            paymentData.expireDate,
         ];
-
-        
 
         db.plantcare.query(paymentQuery, paymentValues, (error, paymentResults) => {
             if (error) {
@@ -304,9 +285,7 @@ exports.createCropCertificatePayment = async (paymentData) => {
             }
 
             const paymentId = paymentResults.insertId;
-           
 
-            // Insert into certificationpaymentcrop table
             const cropLinkQuery = `
                 INSERT INTO certificationpaymentcrop 
                 (paymentId, cropId, createdAt)
@@ -315,36 +294,35 @@ exports.createCropCertificatePayment = async (paymentData) => {
 
             const cropLinkValues = [paymentId, paymentData.cropId];
 
-           
+            db.plantcare.query(
+                cropLinkQuery,
+                cropLinkValues,
+                (error, cropLinkResults) => {
+                    if (error) {
+                        console.error("Error linking payment to crop:", error);
+                        rollbackPayment(paymentId);
+                        return reject(error);
+                    }
 
-            db.plantcare.query(cropLinkQuery, cropLinkValues, (error, cropLinkResults) => {
-                if (error) {
-                    console.error("Error linking payment to crop:", error);
-                    rollbackPayment(paymentId);
-                    return reject(error);
-                }
-
-               
-
-                // Insert into slavequestionnaire table
-                const slaveQuestionnaireQuery = `
+                    const slaveQuestionnaireQuery = `
                     INSERT INTO slavequestionnaire 
                     (crtPaymentId, createdAt)
                     VALUES (?, NOW())
                 `;
 
-                db.plantcare.query(slaveQuestionnaireQuery, [paymentId], (error, slaveResults) => {
-                    if (error) {
-                        console.error("Error creating slave questionnaire:", error);
-                        rollbackPayment(paymentId);
-                        return reject(error);
-                    }
+                    db.plantcare.query(
+                        slaveQuestionnaireQuery,
+                        [paymentId],
+                        (error, slaveResults) => {
+                            if (error) {
+                                console.error("Error creating slave questionnaire:", error);
+                                rollbackPayment(paymentId);
+                                return reject(error);
+                            }
 
-                    const slaveId = slaveResults.insertId;
-                  
+                            const slaveId = slaveResults.insertId;
 
-                    // Copy questionnaire items from questionnaire table to slavequestionnaireitems
-                    const copyItemsQuery = `
+                            const copyItemsQuery = `
                         INSERT INTO slavequestionnaireitems 
                         (slaveId, type, qNo, qEnglish, qSinhala, qTamil)
                         SELECT ?, type, qNo, qEnglish, qSinhala, qTamil
@@ -353,27 +331,30 @@ exports.createCropCertificatePayment = async (paymentData) => {
                         ORDER BY qNo
                     `;
 
-                    db.plantcare.query(copyItemsQuery, [slaveId, paymentData.certificateId], (error, itemsResults) => {
-                        if (error) {
-                            console.error("Error copying questionnaire items:", error);
-                            rollbackPayment(paymentId);
-                            return reject(error);
-                        }
+                            db.plantcare.query(
+                                copyItemsQuery,
+                                [slaveId, paymentData.certificateId],
+                                (error, itemsResults) => {
+                                    if (error) {
+                                        console.error("Error copying questionnaire items:", error);
+                                        rollbackPayment(paymentId);
+                                        return reject(error);
+                                    }
 
-                       
-
-                        resolve({
-                            paymentId: paymentId,
-                            cropLinkId: cropLinkResults.insertId,
-                            slaveQuestionnaireId: slaveId,
-                            itemsCopied: itemsResults.affectedRows
-                        });
-                    });
-                });
-            });
+                                    resolve({
+                                        paymentId: paymentId,
+                                        cropLinkId: cropLinkResults.insertId,
+                                        slaveQuestionnaireId: slaveId,
+                                        itemsCopied: itemsResults.affectedRows,
+                                    });
+                                },
+                            );
+                        },
+                    );
+                },
+            );
         });
 
-        // Helper function to rollback payment on error
         function rollbackPayment(paymentId) {
             const deleteQuery = `DELETE FROM certificationpayment WHERE id = ?`;
             db.plantcare.query(deleteQuery, [paymentId], (deleteError) => {
@@ -384,7 +365,6 @@ exports.createCropCertificatePayment = async (paymentData) => {
         }
     });
 };
-
 
 exports.getCropHvaeCertificate = async (cropId, userId) => {
     return new Promise((resolve, reject) => {
@@ -415,8 +395,6 @@ exports.getCropHvaeCertificate = async (cropId, userId) => {
         });
     });
 };
-
-
 
 exports.getCropCertificateByid = async (cropId, userId) => {
     return new Promise((resolve, reject) => {
@@ -468,16 +446,14 @@ exports.getCropCertificateByid = async (cropId, userId) => {
                 return resolve([]);
             }
 
-            // Get questionnaire items for each slave questionnaire
             const certificatesWithItems = [];
             let processedCount = 0;
 
             results.forEach((certificate, index) => {
                 if (!certificate.slaveQuestionnaireId) {
-                    // No questionnaire for this certificate
                     certificatesWithItems.push({
                         ...certificate,
-                        questionnaireItems: []
+                        questionnaireItems: [],
                     });
                     processedCount++;
 
@@ -487,7 +463,6 @@ exports.getCropCertificateByid = async (cropId, userId) => {
                     return;
                 }
 
-                // Fetch questionnaire items
                 const itemsQuery = `
                     SELECT 
                         id,
@@ -507,51 +482,55 @@ exports.getCropCertificateByid = async (cropId, userId) => {
                     ORDER BY qNo ASC
                 `;
 
-                db.plantcare.query(itemsQuery, [certificate.slaveQuestionnaireId], (itemError, items) => {
-                    if (itemError) {
-                        console.error("Error fetching questionnaire items:", itemError);
-                        certificatesWithItems.push({
-                            ...certificate,
-                            questionnaireItems: []
-                        });
-                    } else {
-                        certificatesWithItems.push({
-                            ...certificate,
-                            questionnaireItems: items || []
-                        });
-                    }
+                db.plantcare.query(
+                    itemsQuery,
+                    [certificate.slaveQuestionnaireId],
+                    (itemError, items) => {
+                        if (itemError) {
+                            console.error("Error fetching questionnaire items:", itemError);
+                            certificatesWithItems.push({
+                                ...certificate,
+                                questionnaireItems: [],
+                            });
+                        } else {
+                            certificatesWithItems.push({
+                                ...certificate,
+                                questionnaireItems: items || [],
+                            });
+                        }
 
-                    processedCount++;
+                        processedCount++;
 
-                    if (processedCount === results.length) {
-                        resolve(certificatesWithItems);
-                    }
-                });
+                        if (processedCount === results.length) {
+                            resolve(certificatesWithItems);
+                        }
+                    },
+                );
             });
         });
     });
 };
-
 
 exports.updateQuestionItemByid = async (itemId, updateData) => {
     return new Promise((resolve, reject) => {
         let query;
         let params;
 
-        // Get current timestamp and add 5 hours 30 minutes for Sri Lanka timezone
         const currentDate = new Date();
-        const sriLankaTime = new Date(currentDate.getTime() + (5.5 * 60 * 60 * 1000));
-        const currentTimestamp = sriLankaTime.toISOString().slice(0, 19).replace('T', ' ');
+        const sriLankaTime = new Date(currentDate.getTime() + 5.5 * 60 * 60 * 1000);
+        const currentTimestamp = sriLankaTime
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ");
 
-        // Check if it's a tick-off update or image upload update
-        if (updateData.type === 'tickOff') {
+        if (updateData.type === "tickOff") {
             query = `
                 UPDATE slavequestionnaireitems 
                 SET tickResult = ?, doneDate = ?
                 WHERE id = ?
             `;
             params = [1, currentTimestamp, itemId];
-        } else if (updateData.type === 'photoProof') {
+        } else if (updateData.type === "photoProof") {
             query = `
                 UPDATE slavequestionnaireitems 
                 SET uploadImage = ?, doneDate = ?
@@ -559,20 +538,20 @@ exports.updateQuestionItemByid = async (itemId, updateData) => {
             `;
             params = [updateData.imageUrl, currentTimestamp, itemId];
         } else {
-            return reject(new Error('Invalid update type'));
+            return reject(new Error("Invalid update type"));
         }
 
         db.plantcare.query(query, params, (err, result) => {
             if (err) {
-                reject(new Error('Error updating questionnaire item: ' + err.message));
+                reject(new Error("Error updating questionnaire item: " + err.message));
             } else {
                 if (result.affectedRows === 0) {
-                    reject(new Error('No questionnaire item found with the given ID'));
+                    reject(new Error("No questionnaire item found with the given ID"));
                 } else {
                     resolve({
                         success: true,
-                        message: 'Questionnaire item updated successfully',
-                        affectedRows: result.affectedRows
+                        message: "Questionnaire item updated successfully",
+                        affectedRows: result.affectedRows,
                     });
                 }
             }
@@ -580,7 +559,6 @@ exports.updateQuestionItemByid = async (itemId, updateData) => {
     });
 };
 
-// Get questionnaire item by ID to check type
 exports.getQuestionItemById = async (itemId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -592,14 +570,13 @@ exports.getQuestionItemById = async (itemId) => {
 
         db.plantcare.query(query, [itemId], (err, results) => {
             if (err) {
-                reject(new Error('Error fetching questionnaire item: ' + err.message));
+                reject(new Error("Error fetching questionnaire item: " + err.message));
             } else {
                 resolve(results[0]);
             }
         });
     });
 };
-
 
 exports.getFarmName = async (farmId) => {
     return new Promise((resolve, reject) => {
@@ -620,8 +597,6 @@ exports.getFarmName = async (farmId) => {
         });
     });
 };
-
-
 
 exports.getFarmcertificateCrop = async (farmId) => {
     return new Promise((resolve, reject) => {
@@ -645,18 +620,14 @@ exports.getFarmcertificateCrop = async (farmId) => {
                 console.error("Error fetching farm certificate crops:", error);
                 reject(error);
             } else {
-                
                 resolve(results);
             }
         });
     });
 };
 
-
-
 exports.getFarmCertificate = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
-        // First check if farm is in a cluster
         const clusterCheckQuery = `
             SELECT farmId 
             FROM plant_care.farmclusterfarmers 
@@ -664,26 +635,28 @@ exports.getFarmCertificate = async (farmId, userId) => {
             LIMIT 1
         `;
 
-        db.plantcare.query(clusterCheckQuery, [farmId], (clusterError, clusterResults) => {
-            if (clusterError) {
-                console.error("Error checking farm cluster:", clusterError);
-                reject(clusterError);
-                return;
-            }
+        db.plantcare.query(
+            clusterCheckQuery,
+            [farmId],
+            (clusterError, clusterResults) => {
+                if (clusterError) {
+                    console.error("Error checking farm cluster:", clusterError);
+                    reject(clusterError);
+                    return;
+                }
 
-            // If farm is in a cluster, return it as having certificate
-            if (clusterResults && clusterResults.length > 0) {
-           
-                resolve([{
-                    farmId: farmId,
-                    certificateSource: 'cluster',
-                    hasClusterCertificate: true
-                }]);
-                return;
-            }
+                if (clusterResults && clusterResults.length > 0) {
+                    resolve([
+                        {
+                            farmId: farmId,
+                            certificateSource: "cluster",
+                            hasClusterCertificate: true,
+                        },
+                    ]);
+                    return;
+                }
 
-            // If not in cluster, check regular certificate payment
-            const certificateQuery = `
+                const certificateQuery = `
                 SELECT 
                     cp.id as paymentId,
                     cp.certificateId,
@@ -704,18 +677,22 @@ exports.getFarmCertificate = async (farmId, userId) => {
                 LIMIT 1
             `;
 
-            db.plantcare.query(certificateQuery, [userId, farmId], (certError, certResults) => {
-                if (certError) {
-                    console.error("Error fetching farm certificates:", certError);
-                    reject(certError);
-                } else {
-                    resolve(certResults);
-                }
-            });
-        });
+                db.plantcare.query(
+                    certificateQuery,
+                    [userId, farmId],
+                    (certError, certResults) => {
+                        if (certError) {
+                            console.error("Error fetching farm certificates:", certError);
+                            reject(certError);
+                        } else {
+                            resolve(certResults);
+                        }
+                    },
+                );
+            },
+        );
     });
 };
-
 
 exports.getFarmCertificateTask = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
@@ -773,7 +750,6 @@ exports.getFarmCertificateTask = async (farmId, userId) => {
     });
 };
 
-// New function to get cluster certificates
 exports.getClusterCertificateTask = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -828,24 +804,22 @@ exports.getClusterCertificateTask = async (farmId, userId) => {
                 return resolve([]);
             }
 
-            // Group results by cluster to handle multiple questionnaires per cluster
             const clusterMap = new Map();
 
-            results.forEach(row => {
+            results.forEach((row) => {
                 const clusterKey = `${row.clusterId}_${row.certificateId}`;
 
                 if (!clusterMap.has(clusterKey)) {
                     clusterMap.set(clusterKey, {
                         ...row,
-                        questionnaires: []
+                        questionnaires: [],
                     });
                 }
 
-                // Add questionnaire if it exists and not already added
                 if (row.slaveQuestionnaireId) {
                     const cluster = clusterMap.get(clusterKey);
                     const questionnaireExists = cluster.questionnaires.some(
-                        q => q.slaveQuestionnaireId === row.slaveQuestionnaireId
+                        (q) => q.slaveQuestionnaireId === row.slaveQuestionnaireId,
                     );
 
                     if (!questionnaireExists) {
@@ -854,7 +828,7 @@ exports.getClusterCertificateTask = async (farmId, userId) => {
                             clusterFarmId: row.clusterFarmId,
                             crtPaymentId: row.crtPaymentId,
                             slaveQuestionnaireCreatedAt: row.slaveQuestionnaireCreatedAt,
-                            isCluster: row.isCluster
+                            isCluster: row.isCluster,
                         });
                     }
                 }
@@ -862,12 +836,10 @@ exports.getClusterCertificateTask = async (farmId, userId) => {
 
             const uniqueCertificates = Array.from(clusterMap.values());
 
-            // Process questionnaire items for all certificates
             processMultipleClusterQuestionnaires(uniqueCertificates, resolve, reject);
         });
     });
 };
-
 
 function processMultipleClusterQuestionnaires(certificates, resolve, reject) {
     const certificatesWithItems = [];
@@ -880,14 +852,13 @@ function processMultipleClusterQuestionnaires(certificates, resolve, reject) {
     certificates.forEach((certificate) => {
         const questionnaires = certificate.questionnaires || [];
 
-        // Remove questionnaires array from certificate object
         const { questionnaires: _, ...certWithoutQuestionnaires } = certificate;
 
         if (questionnaires.length === 0) {
             certificatesWithItems.push({
                 ...certWithoutQuestionnaires,
                 slaveQuestionnaireId: null,
-                questionnaireItems: []
+                questionnaireItems: [],
             });
             processedCount++;
 
@@ -897,7 +868,6 @@ function processMultipleClusterQuestionnaires(certificates, resolve, reject) {
             return;
         }
 
-        // Process each questionnaire for this cluster
         let questionnaireProcessedCount = 0;
 
         questionnaires.forEach((questionnaire) => {
@@ -920,45 +890,50 @@ function processMultipleClusterQuestionnaires(certificates, resolve, reject) {
                 ORDER BY qNo ASC
             `;
 
-            db.plantcare.query(itemsQuery, [questionnaire.slaveQuestionnaireId], (itemError, items) => {
-                if (itemError) {
-                    console.error("Error fetching questionnaire items:", itemError);
-                    certificatesWithItems.push({
-                        ...certWithoutQuestionnaires,
-                        slaveQuestionnaireId: questionnaire.slaveQuestionnaireId,
-                        clusterFarmId: questionnaire.clusterFarmId,
-                        crtPaymentId: questionnaire.crtPaymentId,
-                        slaveQuestionnaireCreatedAt: questionnaire.slaveQuestionnaireCreatedAt,
-                        isCluster: questionnaire.isCluster,
-                        questionnaireItems: []
-                    });
-                } else {
-                    certificatesWithItems.push({
-                        ...certWithoutQuestionnaires,
-                        slaveQuestionnaireId: questionnaire.slaveQuestionnaireId,
-                        clusterFarmId: questionnaire.clusterFarmId,
-                        crtPaymentId: questionnaire.crtPaymentId,
-                        slaveQuestionnaireCreatedAt: questionnaire.slaveQuestionnaireCreatedAt,
-                        isCluster: questionnaire.isCluster,
-                        questionnaireItems: items || []
-                    });
-                }
-
-                questionnaireProcessedCount++;
-
-                if (questionnaireProcessedCount === questionnaires.length) {
-                    processedCount++;
-
-                    if (processedCount === certificates.length) {
-                        resolve(certificatesWithItems);
+            db.plantcare.query(
+                itemsQuery,
+                [questionnaire.slaveQuestionnaireId],
+                (itemError, items) => {
+                    if (itemError) {
+                        console.error("Error fetching questionnaire items:", itemError);
+                        certificatesWithItems.push({
+                            ...certWithoutQuestionnaires,
+                            slaveQuestionnaireId: questionnaire.slaveQuestionnaireId,
+                            clusterFarmId: questionnaire.clusterFarmId,
+                            crtPaymentId: questionnaire.crtPaymentId,
+                            slaveQuestionnaireCreatedAt:
+                                questionnaire.slaveQuestionnaireCreatedAt,
+                            isCluster: questionnaire.isCluster,
+                            questionnaireItems: [],
+                        });
+                    } else {
+                        certificatesWithItems.push({
+                            ...certWithoutQuestionnaires,
+                            slaveQuestionnaireId: questionnaire.slaveQuestionnaireId,
+                            clusterFarmId: questionnaire.clusterFarmId,
+                            crtPaymentId: questionnaire.crtPaymentId,
+                            slaveQuestionnaireCreatedAt:
+                                questionnaire.slaveQuestionnaireCreatedAt,
+                            isCluster: questionnaire.isCluster,
+                            questionnaireItems: items || [],
+                        });
                     }
-                }
-            });
+
+                    questionnaireProcessedCount++;
+
+                    if (questionnaireProcessedCount === questionnaires.length) {
+                        processedCount++;
+
+                        if (processedCount === certificates.length) {
+                            resolve(certificatesWithItems);
+                        }
+                    }
+                },
+            );
         });
     });
 }
 
-// Keep the original processQuestionnaireItems for farm certificates
 function processQuestionnaireItems(results, resolve, reject) {
     const certificatesWithItems = [];
     let processedCount = 0;
@@ -967,7 +942,7 @@ function processQuestionnaireItems(results, resolve, reject) {
         if (!certificate.slaveQuestionnaireId) {
             certificatesWithItems.push({
                 ...certificate,
-                questionnaireItems: []
+                questionnaireItems: [],
             });
             processedCount++;
 
@@ -996,43 +971,46 @@ function processQuestionnaireItems(results, resolve, reject) {
             ORDER BY qNo ASC
         `;
 
-        db.plantcare.query(itemsQuery, [certificate.slaveQuestionnaireId], (itemError, items) => {
-            if (itemError) {
-                console.error("Error fetching questionnaire items:", itemError);
-                certificatesWithItems.push({
-                    ...certificate,
-                    questionnaireItems: []
-                });
-            } else {
-                certificatesWithItems.push({
-                    ...certificate,
-                    questionnaireItems: items || []
-                });
-            }
+        db.plantcare.query(
+            itemsQuery,
+            [certificate.slaveQuestionnaireId],
+            (itemError, items) => {
+                if (itemError) {
+                    console.error("Error fetching questionnaire items:", itemError);
+                    certificatesWithItems.push({
+                        ...certificate,
+                        questionnaireItems: [],
+                    });
+                } else {
+                    certificatesWithItems.push({
+                        ...certificate,
+                        questionnaireItems: items || [],
+                    });
+                }
 
-            processedCount++;
+                processedCount++;
 
-            if (processedCount === results.length) {
-                resolve(certificatesWithItems);
-            }
-        });
+                if (processedCount === results.length) {
+                    resolve(certificatesWithItems);
+                }
+            },
+        );
     });
 }
-
 
 exports.removeQuestionItemCompletion = async (itemId, itemType) => {
     return new Promise((resolve, reject) => {
         let query;
         let params;
 
-        if (itemType === 'Tick Off') {
+        if (itemType === "Tick Off") {
             query = `
                 UPDATE slavequestionnaireitems 
                 SET tickResult = 0, doneDate = NULL
                 WHERE id = ?
             `;
             params = [itemId];
-        } else if (itemType === 'Photo Proof') {
+        } else if (itemType === "Photo Proof") {
             query = `
                 UPDATE slavequestionnaireitems 
                 SET uploadImage = NULL, doneDate = NULL
@@ -1040,27 +1018,30 @@ exports.removeQuestionItemCompletion = async (itemId, itemType) => {
             `;
             params = [itemId];
         } else {
-            return reject(new Error('Invalid item type'));
+            return reject(new Error("Invalid item type"));
         }
 
         db.plantcare.query(query, params, (err, result) => {
             if (err) {
-                reject(new Error('Error removing questionnaire item completion: ' + err.message));
+                reject(
+                    new Error(
+                        "Error removing questionnaire item completion: " + err.message,
+                    ),
+                );
             } else {
                 if (result.affectedRows === 0) {
-                    reject(new Error('No questionnaire item found with the given ID'));
+                    reject(new Error("No questionnaire item found with the given ID"));
                 } else {
                     resolve({
                         success: true,
-                        message: 'Questionnaire item completion removed successfully',
-                        affectedRows: result.affectedRows
+                        message: "Questionnaire item completion removed successfully",
+                        affectedRows: result.affectedRows,
                     });
                 }
             }
         });
     });
 };
-
 
 exports.getCropNames = async (cropId) => {
     return new Promise((resolve, reject) => {
@@ -1089,16 +1070,12 @@ exports.getCropNames = async (cropId) => {
                 console.error("Error fetching crop names:", error);
                 reject(error);
             } else {
-                
                 resolve(results);
             }
         });
     });
 };
 
-
-
-// dao.js - Update query to filter by farmId
 exports.getAllFarmByUserId = async (userId, farmId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -1133,7 +1110,8 @@ exports.getAllFarmByUserId = async (userId, farmId) => {
                      f.isBlock, cpf.farmId, fcf.farmId
             ORDER BY f.id DESC
         `;
-        db.plantcare.query(query, [userId, farmId], (error, results) => { // Added farmId parameter
+        db.plantcare.query(query, [userId, farmId], (error, results) => {
+
             if (error) {
                 console.error("Error fetching farms:", error);
                 reject(error);

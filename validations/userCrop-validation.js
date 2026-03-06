@@ -1,16 +1,13 @@
 const Joi = require("joi");
 
-// Validation schema for getting crop by category
 exports.getCropByCategorySchema = Joi.object({
     categorie: Joi.string().required().label("Category"),
 });
 
-// Validator to ensure cropId is a number and is required
 exports.getCropByIdSchema = Joi.object({
     id: Joi.number().required().label("Crop ID"),
 });
 
-// Validate cropId from URL parameters
 exports.cropCalendarFeedSchema = Joi.object({
     cropid: Joi.string().required().messages({
         "string.base": `"Crop ID" should be a type of 'text'`,
@@ -19,10 +16,9 @@ exports.cropCalendarFeedSchema = Joi.object({
     }),
 });
 
-// You can use this if you need to validate query parameters, such as pagination.
 exports.ongoingCultivationSchema = Joi.object({
-    limit: Joi.number().optional(), // For pagination, optional
-    offset: Joi.number().optional(), // For pagination, optional
+    limit: Joi.number().optional(),
+    offset: Joi.number().optional(),
 });
 
 exports.enrollSchema = Joi.object({
@@ -53,22 +49,21 @@ exports.enrollSchema = Joi.object({
         "number.integer": `"Ongoing Cultivation ID" should be an integer`,
         "any.required": `"Extent" is required`,
     }),
-    createdAt: Joi.date().timestamp().default(() => new Date()).messages({
-        "date.base": `"Created At" should be a valid timestamp`,
-    }),
+    createdAt: Joi.date()
+        .timestamp()
+        .default(() => new Date())
+        .messages({
+            "date.base": `"Created At" should be a valid timestamp`,
+        }),
 });
 
 exports.getSlaveCropCalendarDaysSchema = Joi.object({
     cropCalendarId: Joi.string().required().label("Crop Calendar ID"),
-    farmId: Joi.number().integer().required()
+    farmId: Joi.number().integer().required(),
 });
 
 exports.updateCropCalendarStatusSchema = Joi.object({
     id: Joi.number().required().label("Task ID"),
     status: Joi.string().valid("pending", "completed").required().label("Status"),
-    onCulscropID: Joi.number()
+    onCulscropID: Joi.number(),
 });
-
-// module.exports = {
-//   ongoingCultivationSchema,
-// };
