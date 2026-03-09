@@ -1,6 +1,6 @@
 const Joi = require("joi");
 
-const createFarm = Joi.object({
+exports.createFarm = Joi.object({
   userId: Joi.number().required(),
 
   farmName: Joi.string().required(),
@@ -35,7 +35,7 @@ const createFarm = Joi.object({
     .required(),
 });
 
-const createPayment = Joi.object({
+exports.createPayment = Joi.object({
   userId: Joi.number().integer().positive().required(),
   payment: Joi.number().positive().required(),
   plan: Joi.string()
@@ -45,7 +45,7 @@ const createPayment = Joi.object({
   activeStatus: Joi.number().valid(0, 1).default(1),
 });
 
-const updateFarm = Joi.object({
+exports.updateFarm = Joi.object({
   userId: Joi.number().required(),
 
   farmId: Joi.number().required(),
@@ -65,7 +65,7 @@ const updateFarm = Joi.object({
   staffCount: Joi.string().required(),
 });
 
-const createStaffMember = Joi.object({
+exports.createStaffMember = Joi.object({
   farmId: Joi.number().integer().positive().required(),
   firstName: Joi.string().min(2).max(50).required(),
   lastName: Joi.string().min(2).max(50).required(),
@@ -84,7 +84,7 @@ exports.ongoingCultivationSchema = Joi.object({
   offset: Joi.number().optional(),
 });
 
-const enrollSchema = Joi.object({
+exports.enrollSchema = Joi.object({
   ongoingCultivationId: Joi.number().integer().positive().allow(null).messages({
     "number.base": `"Ongoing Cultivation ID" should be a number`,
     "number.integer": `"Ongoing Cultivation ID" should be an integer`,
@@ -138,22 +138,11 @@ exports.signupCheckerSchema = Joi.object({
     }),
 });
 
-const nicSchema = Joi.object({
+exports.nicSchema = Joi.object({
   nic: Joi.string().required().min(10).max(12),
 });
 
-const getSlaveCropCalendarDaysSchema = Joi.object({
+exports.getSlaveCropCalendarDaysSchema = Joi.object({
   cropCalendarId: Joi.number().integer().required(),
   farmId: Joi.number().integer().required(),
 });
-
-module.exports = {
-  createFarm,
-  createPayment,
-  enrollSchema,
-  signupCheckerSchema: exports.signupCheckerSchema,
-  updateFarm,
-  createStaffMember,
-  getSlaveCropCalendarDaysSchema,
-  nicChecker: nicSchema,
-};
