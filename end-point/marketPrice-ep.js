@@ -1,20 +1,11 @@
 const asyncHandler = require("express-async-handler");
-const { getAllMarketSchema } = require("../validations/marketPrice-validation");
 const { getAllMarketData } = require("../dao/marketPrice-dao");
-
-
 
 exports.getAllMarket = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.ownerId;
     const staffId = req.user.id;
     const farmId = req.user.farmId;
-    const { error } = getAllMarketSchema.validate(req.query);
-    if (error) {
-      return res
-        .status(400)
-        .json({ status: "error", message: error.details[0].message });
-    }
 
     const isOwner = userId === staffId;
     const results = await getAllMarketData(userId, isOwner ? null : farmId);
@@ -56,5 +47,3 @@ exports.getAllMarket = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Internal Server Error!" });
   }
 });
-
-

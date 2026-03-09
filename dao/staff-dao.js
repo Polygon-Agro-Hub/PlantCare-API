@@ -2,7 +2,6 @@ const db = require("../startup/database");
 
 exports.getFarmByIdWithStaff = async (farmId, userId) => {
     return new Promise((resolve, reject) => {
-        // First, get staffCount and appUserCount from farms table
         const farmQuery = `
             SELECT staffCount, appUserCount
             FROM farms
@@ -16,11 +15,11 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
                 return;
             }
 
-            const farmCounts = farmResults && farmResults.length > 0
-                ? farmResults[0]
-                : { staffCount: 0, appUserCount: 0 };
+            const farmCounts =
+                farmResults && farmResults.length > 0
+                    ? farmResults[0]
+                    : { staffCount: 0, appUserCount: 0 };
 
-            // Then get staff details
             const staffQuery = `
                 SELECT id, ownerId, farmId, firstName, lastName, phoneCode, 
                        phoneNumber, role, image, createdAt
@@ -36,11 +35,10 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
                     return;
                 }
 
-                // Combine farm counts and staff data
                 const result = {
                     staff: staffResults || [],
                     staffCount: farmCounts.staffCount,
-                    appUserCount: farmCounts.appUserCount
+                    appUserCount: farmCounts.appUserCount,
                 };
 
                 resolve(result);
@@ -49,11 +47,9 @@ exports.getFarmByIdWithStaff = async (farmId, userId) => {
     });
 };
 
-
 exports.CreateStaffMember = async (farmData) => {
     let connection;
     try {
-        // Get connection from pool
         connection = await new Promise((resolve, reject) => {
             db.plantcare.getConnection((err, conn) => {
                 if (err) return reject(err);
@@ -61,38 +57,40 @@ exports.CreateStaffMember = async (farmData) => {
             });
         });
 
-        // Start transaction
         await new Promise((resolve, reject) => {
-            connection.beginTransaction(err => {
+            connection.beginTransaction((err) => {
                 if (err) return reject(err);
                 resolve(true);
             });
         });
 
-        // Check if farm exists and user has permission
         const checkFarmSql = `SELECT id, appUserCount FROM farms WHERE id = ? AND userId = ?`;
-        const [farmCheck] = await connection.promise().query(checkFarmSql, [farmData.farmId, farmData.userId]);
+        const [farmCheck] = await connection
+            .promise()
+            .query(checkFarmSql, [farmData.farmId, farmData.userId]);
 
         if (farmCheck.length === 0) {
-            throw new Error('Farm not found or user does not have permission');
+            throw new Error("Farm not found or user does not have permission");
         }
 
-        // Check if staff member already exists (optional - based on your business logic)
         const checkStaffSql = `
             SELECT id FROM farmstaff 
             WHERE farmId = ? AND phoneNumber = ? AND phoneCode = ?
         `;
-        const [existingStaff] = await connection.promise().query(checkStaffSql, [
-            farmData.farmId,
-            farmData.phoneNumber,
-            farmData.countryCode
-        ]);
+        const [existingStaff] = await connection
+            .promise()
+            .query(checkStaffSql, [
+                farmData.farmId,
+                farmData.phoneNumber,
+                farmData.countryCode,
+            ]);
 
         if (existingStaff.length > 0) {
-            throw new Error('Staff member with this phone number already exists in this farm');
+            throw new Error(
+                "Staff member with this phone number already exists in this farm",
+            );
         }
 
-        // Insert staff member
         const insertStaffSql = `
             INSERT INTO farmstaff 
             (ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, nic)
@@ -104,16 +102,17 @@ exports.CreateStaffMember = async (farmData) => {
             farmData.farmId,
             farmData.firstName,
             farmData.lastName,
-            farmData.countryCode, // Note: using countryCode for phoneCode
+            farmData.countryCode,
             farmData.phoneNumber,
             farmData.role,
-            farmData.nic
+            farmData.nic,
         ];
 
-        const [insertResult] = await connection.promise().query(insertStaffSql, staffValues);
+        const [insertResult] = await connection
+            .promise()
+            .query(insertStaffSql, staffValues);
         const staffId = insertResult.insertId;
 
-        // Update appUserCount in farms table (+1)
         const updateFarmSql = `
             UPDATE farms 
             SET appUserCount = appUserCount + 1 
@@ -121,17 +120,17 @@ exports.CreateStaffMember = async (farmData) => {
         `;
         await connection.promise().query(updateFarmSql, [farmData.farmId]);
 
-        // Get the created staff member data
         const getStaffSql = `
             SELECT id, ownerId, farmId, firstName, lastName, phoneCode, phoneNumber, role, createdAt
             FROM farmstaff 
             WHERE id = ?
         `;
-        const [staffData] = await connection.promise().query(getStaffSql, [staffId]);
+        const [staffData] = await connection
+            .promise()
+            .query(getStaffSql, [staffId]);
 
-        // Commit transaction
         await new Promise((resolve, reject) => {
-            connection.commit(err => {
+            connection.commit((err) => {
                 if (err) return reject(err);
                 resolve(true);
             });
@@ -141,23 +140,19 @@ exports.CreateStaffMember = async (farmData) => {
             success: true,
             staffId: staffId,
             data: staffData[0],
-            message: 'Staff member created successfully'
+            message: "Staff member created successfully",
         };
-
     } catch (error) {
-        // Rollback transaction if connection exists
         if (connection) {
-            await new Promise(resolve => {
+            await new Promise((resolve) => {
                 connection.rollback(() => resolve(true));
             });
         }
-        console.error('Database error:', error);
+        console.error("Database error:", error);
         throw error;
     } finally {
-        // Release connection back to pool
         if (connection) {
             connection.release();
         }
     }
 };
-

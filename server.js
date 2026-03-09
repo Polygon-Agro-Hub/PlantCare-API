@@ -28,21 +28,19 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Apply CORS for a specific origin
 app.use(
   cors({
-    origin: "http://localhost:8081", // The client origin that is allowed to access the resource
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed methods
-    credentials: true, // Allow credentials (cookies, auth headers)
+    origin: "http://localhost:8081",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
   }),
 );
 
-// Explicitly handle OPTIONS requests for preflight
 app.options(
   "*",
   cors({
-    origin: "http://localhost:8081", // Allow the client origin for preflight
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed methods for the preflight response
+    origin: "http://localhost:8081",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   }),
 );
@@ -64,14 +62,13 @@ const DatabaseConnection = (db, name) => {
   });
 };
 
-// Initial database connections
 DatabaseConnection(plantcare, "PlantCare");
 DatabaseConnection(collectionofficer, "CollectionOfficer");
 DatabaseConnection(marketPlace, "MarketPlace");
 DatabaseConnection(admin, "Admin");
 DatabaseConnection(investments, "Investment");
 
-const myCropRoutes = require("./routes/UserCrop.routes");
+const myCropRoutes = require("./routes/userCrop.routes");
 app.use(process.env.AUTHOR, myCropRoutes);
 
 const userRoutes = require("./routes/userAutth.routes");

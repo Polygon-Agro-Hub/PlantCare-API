@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../Middlewares/auth.middleware');
+const auth = require('../middleware/auth.middleware');
 const requestInspectionEp = require("../end-point/requestInspection-ep");
 
 router.get('/get-officerservices', auth, requestInspectionEp.getOfficerservices);

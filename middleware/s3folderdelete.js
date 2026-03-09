@@ -1,4 +1,8 @@
-const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
 
 const r2Client = new S3Client({
   region: "auto",
@@ -10,10 +14,7 @@ const r2Client = new S3Client({
   forcePathStyle: true,
 });
 
-
 const deleteFolderFromR2 = async (folderPath) => {
-
-
   const listParams = {
     Bucket: process.env.R2_BUCKET_NAME,
     Prefix: folderPath,
@@ -28,7 +29,6 @@ const deleteFolderFromR2 = async (folderPath) => {
       return;
     }
 
-    // Delete each object in the folder
     for (const object of objects) {
       const deleteParams = {
         Bucket: process.env.R2_BUCKET_NAME,
@@ -38,7 +38,6 @@ const deleteFolderFromR2 = async (folderPath) => {
       const deleteCommand = new DeleteObjectCommand(deleteParams);
       await r2Client.send(deleteCommand);
     }
-
   } catch (error) {
     console.error("Error deleting folder from R2:", error);
     throw new Error("Failed to delete folder from R2");

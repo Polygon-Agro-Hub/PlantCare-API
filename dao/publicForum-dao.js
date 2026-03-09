@@ -1,6 +1,5 @@
 const db = require("../startup/database");
 
-
 exports.getPaginatedPosts = (limit, offset) => {
   return new Promise((resolve, reject) => {
     const sql = `
@@ -43,14 +42,12 @@ COALESCE(
           ...post,
           postimage: post.postimage ? post.postimage.toString("base64") : null,
         }));
-   
+
         resolve(posts);
       }
     });
   });
 };
-
-
 
 exports.getTotalPostsCount = () => {
   return new Promise((resolve, reject) => {
@@ -64,8 +61,6 @@ exports.getTotalPostsCount = () => {
     });
   });
 };
-
-
 
 exports.getRepliesByChatId = (chatId) => {
   return new Promise((resolve, reject) => {
@@ -98,26 +93,23 @@ exports.getRepliesByChatId = (chatId) => {
         reject(err);
       } else {
         resolve(results);
-        
       }
     });
   });
 };
-
-
-
 
 exports.createReply = (chatId, replyId, replyMessage, userId, role) => {
   return new Promise((resolve, reject) => {
     let sql;
     let values;
 
-
     if (role === "Owner") {
-      sql = "INSERT INTO publicforumreplies (chatId, replyId, replyMessage) VALUES (?, ?, ?)";
+      sql =
+        "INSERT INTO publicforumreplies (chatId, replyId, replyMessage) VALUES (?, ?, ?)";
       values = [chatId, replyId, replyMessage];
     } else {
-      sql = "INSERT INTO publicforumreplies (chatId, replyId, replyMessage,replyStaffId) VALUES (?, ?, ?, ?)";
+      sql =
+        "INSERT INTO publicforumreplies (chatId, replyId, replyMessage,replyStaffId) VALUES (?, ?, ?, ?)";
       values = [chatId, replyId, replyMessage, userId];
     }
 
@@ -131,8 +123,6 @@ exports.createReply = (chatId, replyId, replyMessage, userId, role) => {
   });
 };
 
-
-
 exports.createPost = (userId, heading, message, postimage, ownerId, role) => {
   return new Promise((resolve, reject) => {
     let sql;
@@ -140,7 +130,7 @@ exports.createPost = (userId, heading, message, postimage, ownerId, role) => {
 
     if (role === "Owner") {
       sql =
-        "INSERT INTO publicforumposts (userId, heading, message, postimage) VALUES (?, ?, ?, ?)"
+        "INSERT INTO publicforumposts (userId, heading, message, postimage) VALUES (?, ?, ?, ?)";
       values = [userId, heading, message, postimage];
     } else {
       sql =
@@ -169,10 +159,9 @@ exports.deletePost = (postId) => {
       }
     });
   });
-}
+};
 
 exports.getPostbyId = (postId) => {
- 
   return new Promise((resolve, reject) => {
     const sql = `SELECT * FROM publicforumposts WHERE id = ?`;
     db.plantcare.query(sql, [postId], (err, result) => {
@@ -180,36 +169,33 @@ exports.getPostbyId = (postId) => {
         reject(err);
       } else {
         resolve(result[0]);
-       
       }
     });
   });
-}
+};
 
 exports.updatePost = (postId, heading, message, postimage) => {
   return new Promise((resolve, reject) => {
-    // Update the post by its postId
     const sql = `
       UPDATE publicforumposts 
       SET heading = ?, message = ?, postimage = ?
       WHERE id = ?
     `;
 
-    // If postimage is null (no new image), pass NULL in the query
-    db.plantcare.query(sql, [heading, message, postimage || null, postId], (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result); // Return result of the update operation
-      }
-    });
+    db.plantcare.query(
+      sql,
+      [heading, message, postimage || null, postId],
+      (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      },
+    );
   });
 };
 
-
-
-
-// Update the reply message
 exports.editReply = (replyId, newMessage) => {
   return new Promise((resolve, reject) => {
     const sql = `
@@ -223,9 +209,8 @@ exports.editReply = (replyId, newMessage) => {
         reject(err);
       } else {
         if (result.affectedRows === 0) {
-          resolve(null); // No rows updated
+          resolve(null);
         } else {
-          // Return the updated reply
           const getSql = `SELECT * FROM publicforumreplies WHERE id = ?`;
           db.plantcare.query(getSql, [replyId], (err, updatedReply) => {
             if (err) reject(err);
@@ -237,10 +222,6 @@ exports.editReply = (replyId, newMessage) => {
   });
 };
 
-
-
-
-// Delete the reply
 exports.deleteReply = (id) => {
   return new Promise((resolve, reject) => {
     const sql = "DELETE FROM publicforumreplies WHERE id = ?";

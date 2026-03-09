@@ -19,7 +19,6 @@ exports.getOfficerservices = async () => {
     });
 };
 
-
 exports.getAllFarmByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -37,7 +36,6 @@ exports.getAllFarmByUserId = async (userId) => {
         });
     });
 };
-
 
 exports.getFramCrop = async (farmId) => {
     return new Promise((resolve, reject) => {
@@ -78,8 +76,8 @@ const generateJobId = async (connection) => {
     return new Promise((resolve, reject) => {
         const now = new Date();
         const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const date = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const date = String(now.getDate()).padStart(2, "0");
         const prefix = `SR${year}${month}${date}`;
 
         const query = `
@@ -104,13 +102,12 @@ const generateJobId = async (connection) => {
                 }
             }
 
-            const newJobId = `${prefix}${String(sequence).padStart(3, '0')}`;
+            const newJobId = `${prefix}${String(sequence).padStart(3, "0")}`;
             resolve(newJobId);
         });
     });
 };
 
-// Generate transaction ID for payment tracking
 const generateTransactionId = async (connection) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -128,10 +125,8 @@ const generateTransactionId = async (connection) => {
 
             let newTransactionId;
 
-            // Check if no results or transactionId is null/empty
             if (results.length === 0 || !results[0].transactionId) {
-                newTransactionId = 'GTID0000001';
-
+                newTransactionId = "GTID0000001";
             } else {
                 const lastTransactionId = results[0].transactionId;
 
@@ -140,21 +135,18 @@ const generateTransactionId = async (connection) => {
                 if (match) {
                     const lastNumber = parseInt(match[1]);
                     const newNumber = lastNumber + 1;
-                    const paddedNumber = newNumber.toString().padStart(7, '0');
+                    const paddedNumber = newNumber.toString().padStart(7, "0");
                     newTransactionId = `GTID${paddedNumber}`;
                 } else {
-                    newTransactionId = 'GTID0000001';
-
+                    newTransactionId = "GTID0000001";
                 }
             }
-
 
             resolve(newTransactionId);
         });
     });
 };
 
-// Get connection from pool
 const getConnection = () => {
     return new Promise((resolve, reject) => {
         db.plantcare.getConnection((error, connection) => {
@@ -167,7 +159,6 @@ const getConnection = () => {
     });
 };
 
-// Start database transaction
 const beginTransaction = (connection) => {
     return new Promise((resolve, reject) => {
         connection.beginTransaction((error) => {
@@ -180,7 +171,6 @@ const beginTransaction = (connection) => {
     });
 };
 
-// Commit transaction
 const commitTransaction = (connection) => {
     return new Promise((resolve, reject) => {
         connection.commit((error) => {
@@ -193,7 +183,6 @@ const commitTransaction = (connection) => {
     });
 };
 
-// Rollback transaction
 const rollbackTransaction = (connection) => {
     return new Promise((resolve, reject) => {
         connection.rollback((error) => {
@@ -206,10 +195,8 @@ const rollbackTransaction = (connection) => {
     });
 };
 
-// Insert into govilinkjobs table with crop count
 const insertJob = (connection, jobId, userId, item, cropCount) => {
     return new Promise((resolve, reject) => {
-        // isAllCrops now stores the crop count from frontend
         const query = `
             INSERT INTO govilinkjobs
             (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops,status, createdAt) 
@@ -218,22 +205,29 @@ const insertJob = (connection, jobId, userId, item, cropCount) => {
 
         connection.query(
             query,
-            [jobId, userId, item.serviceId, item.farmId, item.scheduleDate, cropCount, "Pending"],
+            [
+                jobId,
+                userId,
+                item.serviceId,
+                item.farmId,
+                item.scheduleDate,
+                cropCount,
+                "Pending",
+            ],
             (error, results) => {
                 if (error) {
                     reject(error);
                 } else {
                     resolve({
                         insertId: results.insertId,
-                        jobId: jobId
+                        jobId: jobId,
                     });
                 }
-            }
+            },
         );
     });
 };
 
-// Insert crops into jobrequestcrops table
 const insertCrops = (connection, insertedId, crops) => {
     return new Promise((resolve, reject) => {
         if (!crops || crops.length === 0) {
@@ -244,15 +238,15 @@ const insertCrops = (connection, insertedId, crops) => {
         const values = [];
         const placeholders = [];
 
-        crops.forEach(crop => {
-            placeholders.push('(?, ?, NOW())');
+        crops.forEach((crop) => {
+            placeholders.push("(?, ?, NOW())");
             values.push(insertedId, crop.cropGroupId || crop.id);
         });
 
         const query = `
             INSERT INTO jobrequestcrops 
             (jobId, cropId, createdAt) 
-            VALUES ${placeholders.join(', ')}
+            VALUES ${placeholders.join(", ")}
         `;
 
         connection.query(query, values, (error, results) => {
@@ -265,7 +259,6 @@ const insertCrops = (connection, insertedId, crops) => {
     });
 };
 
-// Insert payment with transaction ID
 const insertPayment = (connection, insertedId, amount, transactionId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -274,17 +267,20 @@ const insertPayment = (connection, insertedId, amount, transactionId) => {
             VALUES (?, ?, ?, NOW())
         `;
 
-        connection.query(query, [insertedId, amount, transactionId], (error, results) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(results);
-            }
-        });
+        connection.query(
+            query,
+            [insertedId, amount, transactionId],
+            (error, results) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results);
+                }
+            },
+        );
     });
 };
 
-// Update farm details
 const updateFarmDetails = (connection, farmId, plotNo, streetName, city) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -302,23 +298,20 @@ const updateFarmDetails = (connection, farmId, plotNo, streetName, city) => {
                 } else {
                     resolve(results);
                 }
-            }
+            },
         );
     });
 };
 
-// Update the main submitRequestInspection function
 exports.submitRequestInspection = async (userId, requestItems) => {
     let connection = null;
     let transactionStarted = false;
 
     try {
-
         connection = await getConnection();
 
         await beginTransaction(connection);
         transactionStarted = true;
-
 
         const results = [];
 
@@ -328,31 +321,29 @@ exports.submitRequestInspection = async (userId, requestItems) => {
             const transactionId = await generateTransactionId(connection);
 
             const cropCount = item.crops ? item.crops.length : 0;
-            
-            if (item.plotNo || item.streetName || item.city) {
 
+            if (item.plotNo || item.streetName || item.city) {
                 await updateFarmDetails(
                     connection,
                     item.farmId,
                     item.plotNo,
                     item.streetName,
-                    item.city
+                    item.city,
                 );
-
             }
 
-            // 2. Insert into govilinkjobs table with crop count
-            const jobResult = await insertJob(connection, jobId, userId, item, cropCount);
+            const jobResult = await insertJob(
+                connection,
+                jobId,
+                userId,
+                item,
+                cropCount,
+            );
             const insertedId = jobResult.insertId;
 
-
-            // 3. Insert crops into jobrequestcrops table
             await insertCrops(connection, insertedId, item.crops);
 
-
-            // 4. Insert payment with transaction ID
             await insertPayment(connection, insertedId, item.amount, transactionId);
-
 
             results.push({
                 id: insertedId,
@@ -366,40 +357,32 @@ exports.submitRequestInspection = async (userId, requestItems) => {
                 plotNo: item.plotNo,
                 streetName: item.streetName,
                 city: item.city,
-                status: 'success'
+                status: "success",
             });
         }
 
-        // Commit transaction if all successful
         await commitTransaction(connection);
         transactionStarted = false;
 
-
         return results;
-
     } catch (error) {
         console.error("Error in submitRequestInspection:", error);
 
-        // Rollback transaction on error
         if (transactionStarted && connection) {
             try {
                 await rollbackTransaction(connection);
-
             } catch (rollbackError) {
                 console.error("Error during rollback:", rollbackError);
             }
         }
 
         throw error;
-
     } finally {
         if (connection) {
             connection.release();
-
         }
     }
 };
-
 
 exports.getRequest = async (userId) => {
     return new Promise((resolve, reject) => {

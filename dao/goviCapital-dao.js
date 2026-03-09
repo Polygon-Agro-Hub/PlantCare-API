@@ -1,7 +1,5 @@
 const db = require("../startup/database");
 
-
-
 exports.getCrops = async () => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -24,7 +22,6 @@ exports.getCrops = async () => {
     });
 };
 
-
 exports.getFarmerDetails = async (userId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -43,8 +40,6 @@ exports.getFarmerDetails = async (userId) => {
         });
     });
 };
-
-
 
 exports.createInvestmentRequest = async (requestData) => {
     return new Promise((resolve, reject) => {
@@ -84,17 +79,14 @@ exports.createInvestmentRequest = async (requestData) => {
                     let nextJobId;
 
                     if (results.length === 0 || !results[0].jobId) {
-                        nextJobId = 'GC000001';
+                        nextJobId = "GC000001";
                     } else {
                         const lastJobId = results[0].jobId;
-                        const numericPart = parseInt(lastJobId.replace('GC', ''), 10);
+                        const numericPart = parseInt(lastJobId.replace("GC", ""), 10);
                         const nextNumber = numericPart + 1;
-                        nextJobId = 'GC' + nextNumber.toString().padStart(6, '0');
+                        nextJobId = "GC" + nextNumber.toString().padStart(6, "0");
                     }
 
-
-
-                    // Insert the new investment request
                     const insertQuery = `
                         INSERT INTO investmentrequest
                         (cropId, farmerId, jobId, extentha, extentac, extentp, investment, expectedYield, startDate, nicFront, nicBack,lndPlot,lndStreet,lndCity)
@@ -115,46 +107,48 @@ exports.createInvestmentRequest = async (requestData) => {
                         requestData.nicBack,
                         requestData.plotNumber,
                         requestData.streetName,
-                        requestData.landCity
+                        requestData.landCity,
                     ];
 
-                    connection.query(insertQuery, values, (insertError, insertResults) => {
-                        if (insertError) {
-                            console.error("Error creating investment request:", insertError);
-                            return connection.rollback(() => {
-                                connection.release();
-                                reject(insertError);
-                            });
-                        }
-
-                        // Commit the transaction
-                        connection.commit((commitError) => {
-                            if (commitError) {
-                                console.error("Error committing transaction:", commitError);
+                    connection.query(
+                        insertQuery,
+                        values,
+                        (insertError, insertResults) => {
+                            if (insertError) {
+                                console.error(
+                                    "Error creating investment request:",
+                                    insertError,
+                                );
                                 return connection.rollback(() => {
                                     connection.release();
-                                    reject(commitError);
+                                    reject(insertError);
                                 });
                             }
 
-                            // Release connection back to pool
-                            connection.release();
+                            connection.commit((commitError) => {
+                                if (commitError) {
+                                    console.error("Error committing transaction:", commitError);
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        reject(commitError);
+                                    });
+                                }
 
-                            // Return success with generated jobId
-                            resolve({
-                                ...insertResults,
-                                jobId: nextJobId,
-                                insertId: insertResults.insertId
+                                connection.release();
+
+                                resolve({
+                                    ...insertResults,
+                                    jobId: nextJobId,
+                                    insertId: insertResults.insertId,
+                                });
                             });
-                        });
-                    });
+                        },
+                    );
                 });
             });
         });
     });
 };
-
-
 
 exports.getInvestmentRequests = async (userId) => {
     return new Promise((resolve, reject) => {
@@ -201,7 +195,6 @@ exports.getInvestmentRequests = async (userId) => {
     });
 };
 
-
 exports.getApprovedStatusDetails = async (invId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -245,23 +238,26 @@ exports.getApprovedStatusDetails = async (invId) => {
                 console.error("Error fetching Investment request details:", error);
                 reject(error);
             } else {
-                db.investments.query(investmentQuery, [invId], (invError, investmentResults) => {
-                    if (invError) {
-                        console.error("Error fetching Investment details:", invError);
-                        reject(invError);
-                    } else {
-                        const response = {
-                            ...requestResults[0],
-                            investments: investmentResults || []
-                        };
-                        resolve(response);
-                    }
-                });
+                db.investments.query(
+                    investmentQuery,
+                    [invId],
+                    (invError, investmentResults) => {
+                        if (invError) {
+                            console.error("Error fetching Investment details:", invError);
+                            reject(invError);
+                        } else {
+                            const response = {
+                                ...requestResults[0],
+                                investments: investmentResults || [],
+                            };
+                            resolve(response);
+                        }
+                    },
+                );
             }
         });
     });
 };
-
 
 exports.updateReviewStatus = async (invId) => {
     return new Promise((resolve, reject) => {
@@ -280,5 +276,3 @@ exports.updateReviewStatus = async (invId) => {
         });
     });
 };
-
-
