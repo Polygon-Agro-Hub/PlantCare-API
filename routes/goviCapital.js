@@ -1,6 +1,6 @@
 const express = require('express');
 const goviCapitalEp = require('../end-point/goviCapital-ep');
-const auth = require("../Middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 
 const router = express.Router();
 

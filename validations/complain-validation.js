@@ -1,7 +1,5 @@
 const Joi = require("joi");
 
-
-// Joi validation schema
 exports.createComplain = Joi.object({
     language: Joi.string().required().messages({
         "string.empty": "Language is required.",

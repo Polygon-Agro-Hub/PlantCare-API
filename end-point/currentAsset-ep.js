@@ -2,39 +2,145 @@ const currentAssetsDao = require("../dao/currentAsset-dao");
 const asyncHandler = require("express-async-handler");
 const {
   getAllCurrentAssetsSchema,
-} = require("../validations/currentAsset-validation");
-
-const {
+  addCurrectAssetSchema,
   getAssetsByCategorySchema,
+  deleteAssetSchema,
+  deleteAssetParamsSchema,
 } = require("../validations/currentAsset-validation");
+const currentAssetDao = require("../dao/currentAsset-dao");
 
-const { deleteAssetSchema, deleteAssetParamsSchema } = require('../validations/currentAsset-validation');
-const { addFixedAssetSchema } = require('../validations/currentAsset-validation');
-const fixedAssetDao = require('../dao/currentAsset-dao');
-
-exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
+exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
   try {
-    await getAllCurrentAssetsSchema.validateAsync({ userId: req.user.id });
+    const userId = req.user.ownerId;
+    const staffId = req.user.id;
+    const userFarmId = req.user.farmId;
 
-    const userId = req.user.id;
+    const {
+      category,
+      asset,
+      farmId: bodyFarmId,
+      brand,
+      batchNum,
+      volume,
+      unit,
+      numberOfUnits,
+      unitPrice,
+      totalPrice,
+      purchaseDate,
+      expireDate,
+      warranty,
+      status,
+    } = await addCurrectAssetSchema.validateAsync(req.body);
 
-    const results = await currentAssetsDao.getAllCurrentAssets(userId);
-
-    if (results.length === 0) {
-      return res.status(404).json({
+    const effectiveFarmId = bodyFarmId || userFarmId;
+    if (!effectiveFarmId) {
+      return res.status(400).json({
         status: "error",
-        message: "No assets found for the user",
+        message: "Farm ID is required.",
       });
     }
 
-    return res.status(200).json({
-      status: "success",
-      currentAssetsByCategory: results,
-    });
+    const volumeInt = parseInt(volume, 10);
+    if (isNaN(volumeInt)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Volume must be a valid number.",
+      });
+    }
+
+    const formattedPurchaseDate = new Date(purchaseDate)
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
+
+    const formattedExpireDate = new Date(expireDate)
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
+
+    const userResults = await currentAssetDao.checkUserExists(userId);
+    if (userResults.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: `User with ID ${userId} does not exist in users table. Cannot create asset.`,
+      });
+    }
+
+    const staffResults = await currentAssetDao.checkStaffExists(
+      staffId,
+      effectiveFarmId,
+    );
+    const staffExists = staffResults.length > 0;
+
+    const payload = {
+      userId,
+      staffId,
+      staffExists,
+      farmId: effectiveFarmId,
+      category,
+      asset,
+      brand,
+      batchNum,
+      volumeInt,
+      unit,
+      numberOfUnits,
+      unitPrice,
+      totalPrice,
+      formattedPurchaseDate,
+      formattedExpireDate,
+      warranty,
+      status,
+    };
+
+    const existingAssets = await currentAssetDao.checkExistingAsset(
+      userId,
+      category,
+      asset,
+      brand,
+      batchNum,
+      effectiveFarmId,
+    );
+
+    if (existingAssets.length > 0) {
+      const existingAsset = existingAssets[0];
+
+      await currentAssetDao.updateAsset(existingAsset, payload);
+      await currentAssetDao.insertAssetRecord(
+        existingAsset.id,
+        numberOfUnits,
+        totalPrice,
+      );
+
+      return res.status(200).json({
+        status: "success",
+        message: "Asset updated successfully",
+      });
+    } else {
+      const insertResult = await currentAssetDao.insertAsset(payload);
+      await currentAssetDao.insertAssetRecord(
+        insertResult.insertId,
+        numberOfUnits,
+        totalPrice,
+      );
+
+      return res.status(201).json({
+        status: "success",
+        message: "New asset created successfully",
+      });
+    }
   } catch (err) {
-    res.status(500).json({
+    console.error("Error handling fixed asset:", err);
+
+    if (err.isJoi) {
+      return res.status(400).json({
+        status: "error",
+        message: err.details[0].message,
+      });
+    }
+
+    return res.status(500).json({
       status: "error",
-      message: `An error occurred: ${err.message}`,
+      message: "Server error, please try again later.",
     });
   }
 });
@@ -43,7 +149,7 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
     const { category } = await getAssetsByCategorySchema.validateAsync(
-      req.query
+      req.query,
     );
     const assets = await currentAssetsDao.getAssetsByCategory(userId, category);
 
@@ -73,131 +179,143 @@ exports.getAssetsByCategory = asyncHandler(async (req, res) => {
   }
 });
 
-
-exports.deleteAsset = asyncHandler(async (req, res) => {
+exports.getAllCurrentAssets = asyncHandler(async (req, res) => {
   try {
+    await getAllCurrentAssetsSchema.validateAsync({ userId: req.user.id });
+
     const userId = req.user.id;
-    const { category, assetId } = req.params;
 
-    await deleteAssetParamsSchema.validateAsync(req.params);
+    const results = await currentAssetsDao.getAllCurrentAssets(userId);
 
-    const { numberOfUnits, totalPrice } = await deleteAssetSchema.validateAsync(req.body);
-
-    const assets = await currentAssetsDao.getCurrentAsset(userId, category, assetId);
-    if (assets.length === 0) {
-      return res.status(404).json({ message: 'Asset not found for this user.' });
-    }
-
-    const currentAsset = assets[0];
-    const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
-    const newTotal = currentAsset.total - totalPrice;
-
-    if (newNumOfUnit < 0 || newTotal < 0) {
-      return res.status(400).json({ message: 'Invalid operation: insufficient units to deduct.' });
-    }
-
-    const recordData = {
-      currentAssetId: currentAsset.id,
-      numOfPlusUnit: 0,
-      numOfMinUnit: numberOfUnits,
-      totalPrice: totalPrice,
-    };
-
-    if (newNumOfUnit === 0 && newTotal === 0) {
-      await currentAssetsDao.deleteAsset(userId, category, assetId);
-      await currentAssetsDao.insertRecord(recordData.currentAssetId, recordData.numOfPlusUnit, recordData.numOfMinUnit, recordData.totalPrice);
-      return res.status(200).json({ message: 'Asset removed successfully.' });
-    } else {
-      await currentAssetsDao.updateAsset(userId, category, assetId, newNumOfUnit, newTotal);
-      await currentAssetsDao.insertRecord(currentAsset.id, 0, numberOfUnits, totalPrice);
-      return res.status(200).json({ message: 'Asset updated successfully.' });
-    }
-  } catch (err) {
-    console.error('Error deleting asset:', err);
-    if (err.isJoi) {
-      return res.status(400).json({
-        status: 'error',
-        message: err.details[0].message,
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "No assets found for the user",
       });
     }
 
+    return res.status(200).json({
+      status: "success",
+      currentAssetsByCategory: results,
+    });
+  } catch (err) {
     res.status(500).json({
-      status: 'error',
-      message: 'Server error, please try again later.',
+      status: "error",
+      message: `An error occurred: ${err.message}`,
     });
   }
 });
 
-
-
-exports.handleAddFixedAsset = async (req, res) => {
-  const userId = req.user.id;
-  const { category, asset, brand, batchNum, volume, unit, numberOfUnits, unitPrice, totalPrice, purchaseDate, expireDate, status } = req.body;
-
+exports.deleteAsset = asyncHandler(async (req, res) => {
   try {
-    await addFixedAssetSchema.validateAsync(req.body);
+    const userId = req.user.id;
 
-    const volumeFloat = parseFloat(volume);
+    const { category, assetId } = await deleteAssetParamsSchema.validateAsync(
+      req.params,
+    );
 
-    const formattedPurchaseDate = new Date(purchaseDate).toISOString().slice(0, 19).replace('T', ' ');
-    const formattedExpireDate = new Date(expireDate).toISOString().slice(0, 19).replace('T', ' ');
+    const { numberOfUnits, totalPrice } = await deleteAssetSchema.validateAsync(
+      req.body,
+    );
 
-    const existingAssets = await fixedAssetDao.checkAssetExists(userId, category, asset);
+    const results = await currentAssetDao.getAssetById(
+      userId,
+      category,
+      assetId,
+    );
 
-    if (existingAssets.length > 0) {
-      const existingAsset = existingAssets[0];
-      const updatedNumOfUnits = existingAsset.numOfUnit + numberOfUnits;
-      const updatedTotalPrice = existingAsset.total + totalPrice;
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Asset not found.",
+      });
+    }
 
-      const updatedValues = [updatedNumOfUnits, updatedTotalPrice, volumeFloat, unitPrice, formattedPurchaseDate, formattedExpireDate, status];
+    const currentAsset = results[0];
+    const newNumOfUnit = currentAsset.numOfUnit - numberOfUnits;
+    const newTotal = currentAsset.total - totalPrice;
 
-      await fixedAssetDao.updateAsset(updatedValues, existingAsset.id);
+    if (numberOfUnits > currentAsset.numOfUnit) {
+      return res.status(400).json({
+        status: "error",
+        message: "Cannot remove more units than available.",
+      });
+    }
 
-      await fixedAssetDao.insertAssetRecord([existingAsset.id, numberOfUnits, totalPrice]);
+    if (totalPrice > currentAsset.total) {
+      return res.status(400).json({
+        status: "error",
+        message: "Cannot remove more value than available.",
+      });
+    }
+
+    if (newNumOfUnit < 0 || newTotal < 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid operation: insufficient units or value.",
+      });
+    }
+
+    await currentAssetDao.insertMinusAssetRecord(
+      currentAsset.id,
+      numberOfUnits,
+      totalPrice,
+    );
+
+    if (newNumOfUnit === 0 && newTotal === 0) {
+      await currentAssetDao.deleteAsset(userId, category, assetId);
 
       return res.status(200).json({
-        status: 'success',
-        message: 'Asset updated successfully',
+        status: "success",
+        message: "Asset removed successfully.",
       });
     } else {
-      const insertValues = [userId, category, asset, brand, batchNum, unit, volumeFloat, numberOfUnits, unitPrice, totalPrice, formattedPurchaseDate, formattedExpireDate, status];
-
-      const newAssetId = await fixedAssetDao.insertAsset(insertValues);
-
-      await fixedAssetDao.insertAssetRecord([newAssetId, numberOfUnits, totalPrice]);
+      await currentAssetDao.updateAssetAfterRemoval(
+        newNumOfUnit,
+        newTotal,
+        userId,
+        category,
+        assetId,
+      );
 
       return res.status(200).json({
-        status: 'success',
-        message: 'Asset added successfully',
+        status: "success",
+        message: "Asset updated successfully.",
       });
     }
   } catch (err) {
-    console.error('Error in handleAddFixedAsset:', err);
+    console.error("Error deleting asset:", err);
+
     if (err.isJoi) {
       return res.status(400).json({
-        status: 'error',
+        status: "error",
         message: err.details[0].message,
       });
     }
-    res.status(500).json({ status: 'error', message: 'An error occurred while processing the request.' });
+
+    return res.status(500).json({
+      status: "error",
+      message: "Server error, please try again later.",
+    });
   }
-};
+});
 
 exports.getCurrectAssetAlredayHaveByUser = asyncHandler(async (req, res) => {
-    try {
-        const userId = req.user.id; 
+  try {
+    const userId = req.user.id;
 
-        const results = await fixedAssetDao.getCurrectAssetAlredayHaveByUser(userId);
+    const results =
+      await currentAssetDao.getCurrectAssetAlredayHaveByUser(userId);
 
-        return res.status(200).json({
-            status: "success",
-            currentAssetsByCategory: results.length === 0 ? [] : results,
-        });
-    } catch (err) {
-        console.error("Error in getCurrectAssetAlredayHaveByUser:", err);
-        res.status(500).json({
-            status: "error",
-            message: `An error occurred: ${err.message}`,
-        });
-    }
+    return res.status(200).json({
+      status: "success",
+      currentAssetsByCategory: results.length === 0 ? [] : results,
+    });
+  } catch (err) {
+    console.error("Error in getCurrectAssetAlredayHaveByUser:", err);
+    res.status(500).json({
+      status: "error",
+      message: `An error occurred: ${err.message}`,
+    });
+  }
 });

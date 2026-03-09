@@ -3,7 +3,6 @@ const requestInspectionDao = require("../dao/requestInspection-dao");
 
 exports.getOfficerservices = asyncHandler(async (req, res) => {
     try {
-
         const requestInspection = await requestInspectionDao.getOfficerservices();
 
         if (!requestInspection || requestInspection.length === 0) {
@@ -34,10 +33,8 @@ exports.getFarms = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.getFramCrop = asyncHandler(async (req, res) => {
     try {
-
         const farmId = req.params.farmId;
         const farms = await requestInspectionDao.getFramCrop(farmId);
 
@@ -57,72 +54,79 @@ exports.submitRequestInspection = asyncHandler(async (req, res) => {
         const userId = req.user.id;
         const { requestItems } = req.body;
 
-        // Validate input
-        if (!requestItems || !Array.isArray(requestItems) || requestItems.length === 0) {
+        if (
+            !requestItems ||
+            !Array.isArray(requestItems) ||
+            requestItems.length === 0
+        ) {
             return res.status(400).json({
                 status: "error",
-                message: "Invalid request data. Please provide request items."
+                message: "Invalid request data. Please provide request items.",
             });
         }
 
-        // Validate each request item
         for (const item of requestItems) {
-            if (!item.serviceId || !item.farmId || !item.scheduleDate || !item.amount) {
+            if (
+                !item.serviceId ||
+                !item.farmId ||
+                !item.scheduleDate ||
+                !item.amount
+            ) {
                 return res.status(400).json({
                     status: "error",
-                    message: "Missing required fields in request items"
+                    message: "Missing required fields in request items",
                 });
             }
 
             if (!item.crops || item.crops.length === 0) {
                 return res.status(400).json({
                     status: "error",
-                    message: "At least one crop must be selected for each request"
+                    message: "At least one crop must be selected for each request",
                 });
             }
 
-            // Validate farm details if provided
-            if (item.plotNo && typeof item.plotNo !== 'string') {
+            if (item.plotNo && typeof item.plotNo !== "string") {
                 return res.status(400).json({
                     status: "error",
-                    message: "Invalid plot number format"
+                    message: "Invalid plot number format",
                 });
             }
 
-            if (item.streetName && typeof item.streetName !== 'string') {
+            if (item.streetName && typeof item.streetName !== "string") {
                 return res.status(400).json({
                     status: "error",
-                    message: "Invalid street name format"
+                    message: "Invalid street name format",
                 });
             }
 
-            if (item.city && typeof item.city !== 'string') {
+            if (item.city && typeof item.city !== "string") {
                 return res.status(400).json({
                     status: "error",
-                    message: "Invalid city format"
+                    message: "Invalid city format",
                 });
             }
         }
 
-        // Process all requests with transaction
-        const results = await requestInspectionDao.submitRequestInspection(userId, requestItems);
+        const results = await requestInspectionDao.submitRequestInspection(
+            userId,
+            requestItems,
+        );
 
         res.status(201).json({
             status: "success",
             message: "Request inspection submitted successfully",
-            data: results
+            data: results,
         });
-
     } catch (err) {
         console.error("Error submitting request inspection:", err);
 
         let statusCode = 500;
         let errorMessage = "Internal Server Error";
 
-        if (err.message.includes('Failed to process request item')) {
+        if (err.message.includes("Failed to process request item")) {
             statusCode = 400;
             errorMessage = err.message;
-        } else if (err.message.includes('Farm not found')) {
+        } else if (err.message.includes("Farm not found")) {
             statusCode = 404;
             errorMessage = "Farm not found";
         }
@@ -130,12 +134,10 @@ exports.submitRequestInspection = asyncHandler(async (req, res) => {
         res.status(statusCode).json({
             status: "error",
             message: errorMessage,
-            error: err.message
+            error: err.message,
         });
     }
 });
-
-
 
 exports.getRequest = asyncHandler(async (req, res) => {
     try {

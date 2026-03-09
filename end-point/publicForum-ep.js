@@ -1,15 +1,14 @@
 const asyncHandler = require("express-async-handler");
-
 const {
   getPostsSchema,
   getRepliesSchema,
   createReplySchema,
   createPostSchema,
-  updatepostschema
+  updatepostschema,
 } = require("../validations/publicForum-validation");
 const postsDao = require("../dao/publicForum-dao");
-const uploadFileToS3 = require('../Middlewares/s3upload')
-const delectfilesOnS3 = require('../Middlewares/s3delete');
+const uploadFileToS3 = require("../middleware/s3upload");
+const delectfilesOnS3 = require("../middleware/s3delete");
 
 exports.getPosts = asyncHandler(async (req, res) => {
   try {
@@ -62,17 +61,17 @@ exports.getReplies = asyncHandler(async (req, res) => {
 exports.createReply = asyncHandler(async (req, res) => {
   try {
     const { chatId, replyMessage } = await createReplySchema.validateAsync(
-      req.body
+      req.body,
     );
     const replyId = req.user.ownerId;
     const userId = req.user.id;
-    const role = req.user.role
+    const role = req.user.role;
     const newReplyId = await postsDao.createReply(
       chatId,
       replyId,
       replyMessage,
       userId,
-      role
+      role,
     );
 
     res.status(201).json({ message: "Reply created", replyId: newReplyId });
@@ -95,14 +94,18 @@ exports.createPost = asyncHandler(async (req, res) => {
     const { heading, message } = await createPostSchema.validateAsync(req.body);
     const userId = req.user.id;
     const ownerId = req.user.ownerId;
-    const role = req.user.role
+    const role = req.user.role;
 
     let postimage = null;
 
     if (req.file) {
       const fileName = req.file.originalname;
-      const imageBuffer = req.file.buffer
-      const image = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/user${userId}`);
+      const imageBuffer = req.file.buffer;
+      const image = await uploadFileToS3(
+        imageBuffer,
+        fileName,
+        `plantcareuser/owner${ownerId}/user${userId}`,
+      );
       postimage = image;
     } else {
     }
@@ -113,7 +116,7 @@ exports.createPost = asyncHandler(async (req, res) => {
       message,
       postimage,
       ownerId,
-      role
+      role,
     );
 
     res.status(201).json({ message: "Post created", postId: newPostId });
@@ -131,22 +134,16 @@ exports.createPost = asyncHandler(async (req, res) => {
   }
 });
 
-
-
-
 exports.deletePost = asyncHandler(async (req, res) => {
-
   try {
     const { postId } = req.params;
     await postsDao.deletePost(postId);
-
 
     if (req.body.postImage) {
       await delectfilesOnS3(req.body.postImage);
     }
 
     res.status(200).json({ message: "Post deleted successfully" });
-
   } catch (err) {
     console.error("Error deleting post:", err);
 
@@ -165,18 +162,15 @@ exports.getPostbyId = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   try {
     const result = await postsDao.getPostbyId(postId);
-    res.status(200).json(result)
-  } catch {
-
-  }
-})
+    res.status(200).json(result);
+  } catch { }
+});
 
 exports.updatepost = asyncHandler(async (req, res) => {
-
-
   const { postId } = req.params;
 
-  const { heading, message, prepostimage } = await updatepostschema.validateAsync(req.body);
+  const { heading, message, prepostimage } =
+    await updatepostschema.validateAsync(req.body);
   const userId = req.user.id;
   const ownerId = req.user.ownerId;
 
@@ -187,54 +181,49 @@ exports.updatepost = asyncHandler(async (req, res) => {
   }
   if (req.file) {
     const fileName = req.file.originalname;
-    const imageBuffer = req.file.buffer
-    const image = await uploadFileToS3(imageBuffer, fileName, `plantcareuser/owner${ownerId}/user${userId}`);
+    const imageBuffer = req.file.buffer;
+    const image = await uploadFileToS3(
+      imageBuffer,
+      fileName,
+      `plantcareuser/owner${ownerId}/user${userId}`,
+    );
     postimage = image;
   } else {
   }
 
-  const update = await postsDao.updatePost(
-    postId,
-    heading,
-    message,
-    postimage
-  );
+  const update = await postsDao.updatePost(postId, heading, message, postimage);
 
   res.status(200).json({ message: "Post update succuess" });
-})
-
-
-
+});
 
 exports.EditReply = asyncHandler(async (req, res) => {
   try {
     const { editingCommentId } = req.params;
     const { replyMessage } = req.body;
 
-
     if (!replyMessage || !editingCommentId) {
       return res.status(400).json({
         status: "error",
-        message: "Reply message and comment ID are required"
+        message: "Reply message and comment ID are required",
       });
     }
 
-
-
-    // Update the reply
-    const updatedReply = await postsDao.editReply(editingCommentId, replyMessage);
+    const updatedReply = await postsDao.editReply(
+      editingCommentId,
+      replyMessage,
+    );
 
     if (!updatedReply) {
       return res.status(404).json({
         status: "error",
-        message: "Reply not found"
+        message: "Reply not found",
       });
     }
 
     res.status(200).json({
       status: "success",
       message: "Reply updated successfully",
-      data: updatedReply
+      data: updatedReply,
     });
   } catch (err) {
     console.error("Error editing reply:", err);
@@ -248,37 +237,33 @@ exports.EditReply = asyncHandler(async (req, res) => {
 
     res.status(500).json({
       status: "error",
-      error: "Internal Server Error"
+      error: "Internal Server Error",
     });
   }
 });
 
 exports.deleteReply = asyncHandler(async (req, res) => {
   try {
-    const { commentId } = req.params; // Get commentId from URL params
+    const { commentId } = req.params;
 
-
-
-    // Delete the reply
     const isDeleted = await postsDao.deleteReply(commentId);
 
     if (!isDeleted) {
       return res.status(404).json({
         status: "error",
-        message: "Reply not found or already deleted"
+        message: "Reply not found or already deleted",
       });
     }
 
     res.status(200).json({
       status: "success",
-      message: "Reply deleted successfully"
+      message: "Reply deleted successfully",
     });
-
   } catch (err) {
     console.error("Error deleting reply:", err);
     res.status(500).json({
       status: "error",
-      error: "Internal Server Error"
+      error: "Internal Server Error",
     });
   }
 });

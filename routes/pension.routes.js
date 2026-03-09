@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../Middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 const pensionRequestController = require("../end-point/pension-ep");
-const upload = require("../Middlewares/multer.middleware");
+const upload = require("../middleware/multer.middleware");
 
 // Check Pension Request Status
 router.get(
