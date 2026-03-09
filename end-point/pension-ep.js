@@ -1,6 +1,6 @@
 const pensionRequestDao = require("../dao/pension-dao");
 const asyncHandler = require("express-async-handler");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 
 exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
   try {

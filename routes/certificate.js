@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../Middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 const certificateEp = require("../end-point/certificate-ep");
 const { upload } = require("../end-point/cropCalendarimages-ep");
 
@@ -58,10 +58,18 @@ router.post(
 );
 
 //Fetch Crop Name
-router.get("/get-cropName/:cropId", auth, certificateEp.getCropNames);
+router.get(
+    "/get-cropName/:cropId", 
+    auth, 
+    certificateEp.getCropNames
+);
 
 //Fetch Farm Name
-router.get("/get-farmname/:farmId", auth, certificateEp.getFarmName);
+router.get(
+    "/get-farmname/:farmId", 
+    auth, 
+    certificateEp.getFarmName
+);
 
 router.get(
     "/get-farmcertificate-crop/:farmId",
@@ -87,6 +95,10 @@ router.delete(
     certificateEp.removeQuestionnaireItem,
 );
 
-router.get("/get-farms/:farmId", auth, certificateEp.getFarms);
+router.get(
+    "/get-farms/:farmId", 
+    auth, 
+    certificateEp.getFarms
+);
 
 module.exports = router;

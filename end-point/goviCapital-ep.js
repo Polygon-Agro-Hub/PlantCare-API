@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const goviCapitalDao = require("../dao/goviCapital-dao");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 const multer = require("multer");
 const {
     createInvestmentRequestSchema,

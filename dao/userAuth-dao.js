@@ -2,7 +2,7 @@ const db = require("../startup/database");
 const QRCode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 
 exports.loginUser = (phonenumber) => {
     return new Promise((resolve, reject) => {

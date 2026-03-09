@@ -9,7 +9,7 @@ const {
     nicChecker,
     enrollSchema,
 } = require("../validations/farm-validation");
-const delectfloders3 = require("../Middlewares/s3folderdelete");
+const delectfloders3 = require("../middleware/s3folderdelete");
 const db = require("../startup/database");
 const {
     getAssetsByCategorySchema,

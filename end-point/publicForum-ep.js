@@ -7,8 +7,8 @@ const {
   updatepostschema,
 } = require("../validations/publicForum-validation");
 const postsDao = require("../dao/publicForum-dao");
-const uploadFileToS3 = require("../Middlewares/s3upload");
-const delectfilesOnS3 = require("../Middlewares/s3delete");
+const uploadFileToS3 = require("../middleware/s3upload");
+const delectfilesOnS3 = require("../middleware/s3delete");
 
 exports.getPosts = asyncHandler(async (req, res) => {
   try {

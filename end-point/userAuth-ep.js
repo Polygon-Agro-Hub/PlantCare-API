@@ -5,8 +5,8 @@ const userAuthDao = require("../dao/userAuth-dao");
 const userProfileDao = require("../dao/userAuth-dao");
 const signupDao = require("../dao/userAuth-dao");
 const ValidationSchema = require("../validations/userAuth-validation");
-const uploadFileToS3 = require("../Middlewares/s3upload");
-const delectfilesOnS3 = require("../Middlewares/s3delete");
+const uploadFileToS3 = require("../middleware/s3upload");
+const delectfilesOnS3 = require("../middleware/s3delete");
 
 exports.loginUser = async (req, res) => {
     try {

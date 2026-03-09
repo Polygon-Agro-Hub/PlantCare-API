@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const certificateDao = require("../dao/certificate-dao");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 const multer = require("multer");
 
 exports.getFarmsCertificate = asyncHandler(async (req, res) => {

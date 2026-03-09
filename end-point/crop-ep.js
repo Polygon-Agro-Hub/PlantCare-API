@@ -1,8 +1,6 @@
 const asyncHandler = require("express-async-handler");
-const delectfilesOnS3 = require("../Middlewares/s3delete");
-
+const delectfilesOnS3 = require("../middleware/s3delete");
 const cropDao = require("../dao/crop-dao");
-
 const {
     getCropByCategorySchema,
     getCropByIdSchema,

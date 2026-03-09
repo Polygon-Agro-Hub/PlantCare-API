@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const staffEp = require("../end-point/staff-ep");
-const auth = require('../Middlewares/auth.middleware');
+const auth = require('../middleware/auth.middleware');
 
 
 router.get('/get-supervisor&Laboror/:id', auth, staffEp.getFarmById);

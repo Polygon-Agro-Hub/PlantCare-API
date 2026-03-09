@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const transactionEp = require("../end-point/report-ep");
-const authMiddleware = require("../Middlewares/auth.middleware");
+const authMiddleware = require("../middleware/auth.middleware");
 
 router.get("/history", authMiddleware, transactionEp.getTransactionHistory);
 

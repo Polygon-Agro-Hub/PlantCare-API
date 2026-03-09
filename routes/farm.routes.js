@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../Middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 const farmEp = require("../end-point/farm-ep");
 
 router.post("/add-farm", auth, farmEp.CreateFarm);
@@ -17,9 +17,9 @@ router.get("/get-cropCount/:farmId", auth, farmEp.getCropCountByFarmId);
 
 //cultivation
 router.get(
-    "/get-user-ongoing-cul/:farmId",
-    auth,
-    farmEp.OngoingCultivaionGetById,
+  "/get-user-ongoing-cul/:farmId",
+  auth,
+  farmEp.OngoingCultivaionGetById,
 );
 
 router.post("/enroll-crop/:farmId", auth, farmEp.enroll);
@@ -32,23 +32,23 @@ router.post("/members-nic-checker", farmEp.nicChecker);
 router.put("/update-farm", auth, farmEp.UpdateFarm);
 
 router.post(
-    "/create-new-staffmember/:farmId",
-    auth,
-    farmEp.CreateNewStaffMember,
+  "/create-new-staffmember/:farmId",
+  auth,
+  farmEp.CreateNewStaffMember,
 );
 
 router.get("/get-staffMmber-byId/:staffMemberId", auth, farmEp.getStaffMember);
 
 router.put(
-    "/update-staffmember/:staffMemberId",
-    auth,
-    farmEp.updateStaffMember,
+  "/update-staffmember/:staffMemberId",
+  auth,
+  farmEp.updateStaffMember,
 );
 
 router.delete(
-    "/delete-staffmember/:staffMemberId/:farmId",
-    auth,
-    farmEp.deleteStaffMember,
+  "/delete-staffmember/:staffMemberId/:farmId",
+  auth,
+  farmEp.deleteStaffMember,
 );
 
 router.get("/get-renew", auth, farmEp.getrenew);
@@ -73,9 +73,9 @@ router.delete("/removeAsset/:category/:assetId", auth, farmEp.deleteAsset);
 ///fixAsset
 
 router.get(
-    "/fixed-assets/:category/:farmId",
-    auth,
-    farmEp.getFixedAssetsByCategory,
+  "/fixed-assets/:category/:farmId",
+  auth,
+  farmEp.getFixedAssetsByCategory,
 );
 
 ///fetch farmId
@@ -88,9 +88,9 @@ router.get("/get-farm-extend/:farmId", auth, farmEp.getFarmExtend);
 
 //get alreday add currect asset
 router.get(
-    "/get-currectasset-alreadyHave/:farmId",
-    auth,
-    farmEp.getCurrectAssetAlredayHave,
+  "/get-currectasset-alreadyHave/:farmId",
+  auth,
+  farmEp.getCurrectAssetAlredayHave,
 );
 
 module.exports = router;

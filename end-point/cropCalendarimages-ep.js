@@ -1,7 +1,7 @@
 const multer = require("multer");
 const imageupDao = require("../dao/cropCalendarimages-dao");
 const asyncHandler = require("express-async-handler");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 
 const storage = multer.memoryStorage();
 exports.upload = multer({

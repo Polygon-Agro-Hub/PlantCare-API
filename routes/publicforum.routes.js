@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../Middlewares/auth.middleware");
-const upload = require("../Middlewares/multer.middleware");
+const auth = require("../middleware/auth.middleware");
+const upload = require("../middleware/multer.middleware");
 const postsEp = require("../end-point/publicForum-ep");
 
 router.get("/get", postsEp.getPosts);

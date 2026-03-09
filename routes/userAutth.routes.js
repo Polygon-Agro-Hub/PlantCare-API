@@ -1,8 +1,8 @@
 const express = require("express");
-const auth = require("../Middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 const userAuthEp = require("../end-point/userAuth-ep");
 const router = express.Router();
-const upload = require("../Middlewares/multer.middleware");
+const upload = require("../middleware/multer.middleware");
 
 router.post("/user-register", userAuthEp.SignupUser);
 
