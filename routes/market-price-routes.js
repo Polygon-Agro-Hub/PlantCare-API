@@ -1,8 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const marketPrice = require("../end-point/marketPrice-ep");
-const auth = require("../middleware/auth.middleware");
+const marketPrice = require("../end-point/market-price-ep");
+const authenticate = require("../middleware/auth.middleware");
 
-router.get("/get-all-market",auth, marketPrice.getAllMarket);
+router.get(
+    "/get-all-market",
+    authenticate, 
+    marketPrice.getAllMarket
+);
 
 module.exports = router;

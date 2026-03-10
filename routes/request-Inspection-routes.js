@@ -1,17 +1,36 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middleware/auth.middleware');
-const requestInspectionEp = require("../end-point/requestInspection-ep");
+const authenticate = require("../middleware/auth.middleware");
+const requestInspectionEp = require("../end-point/request-Inspection-ep");
 
-router.get('/get-officerservices', auth, requestInspectionEp.getOfficerservices);
+router.get(
+    "/get-officerservices",
+    authenticate,
+    requestInspectionEp.getOfficerservices,
+);
 
-router.get('/get-farms', auth, requestInspectionEp.getFarms);
+router.get(
+    "/get-farms", 
+    authenticate, 
+    requestInspectionEp.getFarms
+);
 
-router.get('/get-farm-crops/:farmId', auth, requestInspectionEp.getFramCrop);
+router.get(
+    "/get-farm-crops/:farmId",
+    authenticate,
+    requestInspectionEp.getFramCrop,
+);
 
-router.post('/submit-request', auth, requestInspectionEp.submitRequestInspection);
+router.post(
+    "/submit-request",
+    authenticate,
+    requestInspectionEp.submitRequestInspection,
+);
 
-router.get('/get-request', auth, requestInspectionEp.getRequest);
-
+router.get(
+    "/get-request", 
+    authenticate, 
+    requestInspectionEp.getRequest
+);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 const express = require("express");
-const auth = require("../middleware/auth.middleware");
+const authenticate = require("../middleware/auth.middleware");
 const router = express.Router();
 const userCrop = require("../end-point/crop-ep");
 
@@ -15,7 +15,7 @@ router.get(
 
 router.get(
   "/crop-feed/:cropid", 
-  auth, 
+  authenticate, 
   userCrop.CropCalanderFeed
 );
 
@@ -31,13 +31,13 @@ router.get(
 
 router.post(
   "/enroll-crop", 
-  auth, 
+  authenticate, 
   userCrop.enroll
 );
 
 router.get(
   "/get-user-ongoing-cul", 
-  auth, 
+  authenticate, 
   userCrop.OngoingCultivaionGetById
 );
 
@@ -48,31 +48,31 @@ router.get(
 
 router.post(
   "/update-ongoingcultivation",
-  auth,
+  authenticate,
   userCrop.UpdateOngoingCultivationScrops,
 );
 
 router.get(
   "/slave-crop-calendar/:cropCalendarId/:farmId",
-  auth,
+  authenticate,
   userCrop.getSlaveCropCalendarDaysByUserAndCrop,
 );
 
 router.get(
   "/slave-crop-calendar-progress/:cropCalendarId/:farmId",
-  auth,
+  authenticate,
   userCrop.getSlaveCropCalendarPrgress,
 );
 
 router.get(
   "/get-uploaded-images-count/:cropId",
-  auth,
+  authenticate,
   userCrop.getUploadedImagesCount,
 );
 
 router.post(
   "/update-slave", 
-  auth, 
+  authenticate, 
   userCrop.updateCropCalendarStatus
 );
 
@@ -83,7 +83,7 @@ router.post(
 
 router.get(
   "/get-task-image/:slaveId", 
-  auth, 
+  authenticate, 
   userCrop.getTaskImage
 );
 

@@ -1,17 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/auth.middleware");
+const authenticate = require("../middleware/auth.middleware");
 const complainEp = require("../end-point/complain-ep");
 
 router.post(
     "/add-complain", 
-    auth, 
+    authenticate, 
     complainEp.createComplain
 );
 
 router.get(
     "/get-complains", 
-    auth, 
+    authenticate, 
     complainEp.getComplains
 );
 

@@ -1,36 +1,36 @@
 const express = require("express");
 const router = express.Router();
-const authMiddleware = require("../middleware/auth.middleware");
-const currentAssetsEp = require("../end-point/currentAsset-ep");
+const authenticate = require("../middleware/auth.middleware");
+const currentAssetsEp = require("../end-point/current-assets-ep");
 
 router.post(
-  "/currentAsset",
-  authMiddleware,
-  currentAssetsEp.handleAddCurrectAsset,
+    "/currentAsset",
+    authenticate,
+    currentAssetsEp.handleAddCurrectAsset,
 );
 
 router.get(
     "/assets", 
-    authMiddleware, 
+    authenticate, 
     currentAssetsEp.getAssetsByCategory
 );
 
 router.get(
-  "/currentAsset",
-  authMiddleware,
-  currentAssetsEp.getAllCurrentAssets,
+    "/currentAsset",
+    authenticate,
+    currentAssetsEp.getAllCurrentAssets,
 );
 
 router.delete(
-  "/removeAsset/:category/:assetId",
-  authMiddleware,
-  currentAssetsEp.deleteAsset,
+    "/removeAsset/:category/:assetId",
+    authenticate,
+    currentAssetsEp.deleteAsset,
 );
 
 router.get(
-  "/get-currentasset-alreadyHave-byuser",
-  authMiddleware,
-  currentAssetsEp.getCurrectAssetAlredayHaveByUser,
+    "/get-currentasset-alreadyHave-byuser",
+    authenticate,
+    currentAssetsEp.getCurrectAssetAlredayHaveByUser,
 );
 
 module.exports = router;

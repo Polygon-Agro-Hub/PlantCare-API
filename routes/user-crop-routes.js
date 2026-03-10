@@ -1,12 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth.middleware');
-const cropEp = require('../end-point/userCrop-ep');
+const authenticate = require('../middleware/auth.middleware');
+const cropEp = require('../end-point/user-crop-ep');
 
-router.post('/crops-add', authenticateToken, cropEp.createCrop);
+router.post(
+    '/crops-add', 
+    authenticate, 
+    cropEp.createCrop
+);
 
-router.get('/crops-view', authenticateToken, cropEp.viewCrops);
+router.get(
+    '/crops-view', 
+    authenticate, 
+    cropEp.viewCrops
+);
 
-router.delete('/crops-delete/:cropId', authenticateToken, cropEp.deleteCrop);
+router.delete(
+    '/crops-delete/:cropId', 
+    authenticate, 
+    cropEp.deleteCrop
+);
 
 module.exports = router;

@@ -1,32 +1,64 @@
 const express = require("express");
-const auth = require("../middleware/auth.middleware");
-const userAuthEp = require("../end-point/userAuth-ep");
+const authenticate = require("../middleware/auth.middleware");
+const userAuthEp = require("../end-point/user-auth-ep");
 const router = express.Router();
 const upload = require("../middleware/multer.middleware");
 
-router.post("/user-register", userAuthEp.SignupUser);
+router.post(
+    "/user-register", 
+    userAuthEp.SignupUser
+);
 
-router.post("/user-login", userAuthEp.loginUser);
+router.post(
+    "/user-login", 
+    userAuthEp.loginUser
+);
 
-router.get("/user-profile", auth, userAuthEp.getProfileDetails);
+router.get(
+    "/user-profile", 
+    authenticate, 
+    userAuthEp.getProfileDetails
+);
 
-router.put("/user-updatePhone", auth, userAuthEp.updatePhoneNumber);
+router.put(
+    "/user-updatePhone", 
+    authenticate, 
+    userAuthEp.updatePhoneNumber
+);
 
-router.post("/user-register-checker", userAuthEp.signupChecker);
+router.post(
+    "/user-register-checker", 
+    userAuthEp.signupChecker
+);
 
-router.put("/user-update-names", auth, userAuthEp.updateFirstLastName);
+router.put(
+    "/user-update-names", 
+    authenticate, 
+    userAuthEp.updateFirstLastName
+);
 
-router.post("/registerBankDetails", auth, userAuthEp.registerBankDetails);
+router.post(
+    "/registerBankDetails", 
+    authenticate, 
+    userAuthEp.registerBankDetails
+);
 
 router.post(
     "/upload-profile-image",
-    auth,
+    authenticate,
     upload.single("profileImage"),
     userAuthEp.uploadProfileImage,
 );
 
-router.delete("/user-delete", auth, userAuthEp.deleteUser);
+router.delete(
+    "/user-delete", 
+    authenticate, 
+    userAuthEp.deleteUser
+);
 
-router.get("/user-feedback-options", userAuthEp.getFeedbackOptions);
+router.get(
+    "/user-feedback-options", 
+    userAuthEp.getFeedbackOptions
+);
 
 module.exports = router;

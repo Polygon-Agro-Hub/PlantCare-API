@@ -3,15 +3,15 @@ const {
   uploadImage,
   upload,
   getRequiredImagesEndpoint,
-} = require("../end-point/cropCalendarimages-ep");
-const auth = require("../middleware/auth.middleware");
+} = require("../end-point/crop-calendar-images-ep");
+const authenticate = require("../middleware/auth.middleware");
 const router = express.Router();
 
 router.post(
-  "/calendar-tasks/upload-image",
-  auth,
-  upload.single("image"),
-  uploadImage,
+    "/calendar-tasks/upload-image",
+    authenticate,
+    upload.single("image"),
+    uploadImage,
 );
 
 router.get(

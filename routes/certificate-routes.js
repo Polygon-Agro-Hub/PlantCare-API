@@ -1,62 +1,62 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/auth.middleware");
+const authenticate = require("../middleware/auth.middleware");
 const certificateEp = require("../end-point/certificate-ep");
-const { upload } = require("../end-point/cropCalendarimages-ep");
+const { upload } = require("../end-point/crop-calendar-images-ep");
 
 // Get Farm certificate
 router.get(
     "/get-farms-certificate/:farmId",
-    auth,
+    authenticate,
     certificateEp.getFarmsCertificate,
 );
 
 // Create Farm certificate payment
 router.post(
     "/certificate-payment/:farmId",
-    auth,
+    authenticate,
     certificateEp.createCertificatePayment,
 );
 
 // Crop Certificate
 router.get(
     "/get-crop-certificate/:farmId/:cropId",
-    auth,
+    authenticate,
     certificateEp.getCropsCertificate,
 );
 
 // Create Crop Payment
 router.post(
     "/certificate-crop-payment/:cropId",
-    auth,
+    authenticate,
     certificateEp.createCropCertificatePayment,
 );
 
 // Get Crop have certificate
 router.get(
     "/get-crophave-certificate/:cropId",
-    auth,
+    authenticate,
     certificateEp.getCropHvaeCertificate,
 );
 
 // Get Crop certificate by id
 router.get(
     "/get-crop-certificate-byId/:cropId",
-    auth,
+    authenticate,
     certificateEp.getCropCertificateByid,
 );
 
 // Update questionnaire item by id
 router.put(
     "/update-questionnaire-item/:itemId",
-    auth,
+    authenticate,
     certificateEp.updateQuestionItemByid,
 );
 
 // Photo Proof upload
 router.post(
     "/questionnaire-item/upload-image/:itemId",
-    auth,
+    authenticate,
     upload.single("image"),
     certificateEp.uploadQuestionnaireImage,
 );
@@ -64,44 +64,44 @@ router.post(
 //Fetch Crop Name
 router.get(
     "/get-cropName/:cropId", 
-    auth, 
+    authenticate, 
     certificateEp.getCropNames
 );
 
 //Fetch Farm Name
 router.get(
     "/get-farmname/:farmId", 
-    auth, 
+    authenticate, 
     certificateEp.getFarmName
 );
 
 router.get(
     "/get-farmcertificate-crop/:farmId",
-    auth,
+    authenticate,
     certificateEp.getFarmcertificateCrop,
 );
 
 router.get(
     "/get-farm-certificate/:farmId",
-    auth,
+    authenticate,
     certificateEp.getFarmCertificate,
 );
 
 router.get(
     "/get-farmcertificatetask/:farmId",
-    auth,
+    authenticate,
     certificateEp.getFarmCertificateTask,
 );
 
 router.delete(
     "/questionnaire-item/remove/:itemId",
-    auth,
+    authenticate,
     certificateEp.removeQuestionnaireItem,
 );
 
 router.get(
     "/get-farms/:farmId", 
-    auth, 
+    authenticate, 
     certificateEp.getFarms
 );
 

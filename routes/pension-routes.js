@@ -1,20 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/auth.middleware");
+const authenticate = require("../middleware/auth.middleware");
 const pensionRequestController = require("../end-point/pension-ep");
 const upload = require("../middleware/multer.middleware");
 
 // Check Pension Request Status
 router.get(
   "/pension-request/check-status",
-  auth,
+  authenticate,
   pensionRequestController.checkPensionRequestStatus,
 );
 
 // Submit Pension Request
 router.post(
   "/pension-request/submit",
-  auth,
+  authenticate,
   upload.fields([
     { name: "nicFront", maxCount: 1 },
     { name: "nicBack", maxCount: 1 },
@@ -26,6 +26,10 @@ router.post(
   pensionRequestController.submitPensionRequest,
 );
 
-router.put('/pension-request/update-first-time', auth, pensionRequestController.updateFirstTimeStatus);
+router.put(
+  "/pension-request/update-first-time",
+  authenticate,
+  pensionRequestController.updateFirstTimeStatus,
+);
 
 module.exports = router;
