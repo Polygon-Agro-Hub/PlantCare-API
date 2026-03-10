@@ -10,15 +10,14 @@ const r2Client = new S3Client({
   forcePathStyle: true,
 });
 
-
-const deleteFromR2 = async (imageUrl) => {;
+const deleteFromR2 = async (imageUrl) => {
   const extractFolderAndFileName = (url) => {
-    const path = new URL(url).pathname; 
-    const pathSegments = path.split('/');
+    const path = new URL(url).pathname;
+    const pathSegments = path.split("/");
 
-    const folder = pathSegments.slice(1, -1).join('/');
+    const folder = pathSegments.slice(1, -1).join("/");
 
-    const fileName = pathSegments[pathSegments.length - 1]; 
+    const fileName = pathSegments[pathSegments.length - 1];
 
     return { folder, fileName };
   };
@@ -27,7 +26,7 @@ const deleteFromR2 = async (imageUrl) => {;
 
   const deleteParams = {
     Bucket: process.env.R2_BUCKET_NAME,
-    Key: `${folder}/${fileName}`
+    Key: `${folder}/${fileName}`,
   };
 
   try {
@@ -40,4 +39,3 @@ const deleteFromR2 = async (imageUrl) => {;
 };
 
 module.exports = deleteFromR2;
-

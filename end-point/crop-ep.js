@@ -9,7 +9,7 @@ const {
     enrollSchema,
     getSlaveCropCalendarDaysSchema,
     updateCropCalendarStatusSchema,
-} = require("../validations/userCrop-validation");
+} = require("../validations/user-crop-validation");
 
 exports.getCropByCategory = asyncHandler(async (req, res) => {
     try {

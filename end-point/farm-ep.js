@@ -13,7 +13,7 @@ const delectfloders3 = require("../middleware/s3folderdelete");
 const db = require("../startup/database");
 const {
     getAssetsByCategorySchema,
-} = require("../validations/currentAsset-validation");
+} = require("../validations/current-assets-validation");
 
 exports.CreateFarm = asyncHandler(async (req, res) => {
     try {

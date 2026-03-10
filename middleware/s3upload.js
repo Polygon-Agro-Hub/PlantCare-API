@@ -11,29 +11,27 @@ const r2Client = new S3Client({
   forcePathStyle: true,
 });
 
-
 const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
   try {
     const fileExtension = fileName.split(".").pop();
     const uniqueFileName = `${uuidv4()}.${fileExtension}`;
     const key = `${keyPrefix}/${uniqueFileName}`;
 
-
     const getContentType = (ext) => {
       const mimeTypes = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'svg': 'image/svg+xml',
-        'pdf': 'application/pdf',
-        'txt': 'text/plain',
-        'json': 'application/json',
-        'mp4': 'video/mp4',
-        'mp3': 'audio/mpeg'
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+        pdf: "application/pdf",
+        txt: "text/plain",
+        json: "application/json",
+        mp4: "video/mp4",
+        mp3: "audio/mpeg",
       };
-      return mimeTypes[ext.toLowerCase()] || 'application/octet-stream';
+      return mimeTypes[ext.toLowerCase()] || "application/octet-stream";
     };
 
     const putObjectParams = {
@@ -45,7 +43,7 @@ const uploadFileToS3 = async (fileBuffer, fileName, keyPrefix) => {
     const command = new PutObjectCommand(putObjectParams);
     await r2Client.send(command);
 
-    const domain = process.env.R2_ENDPOINT.replace('https://', '');
+    const domain = process.env.R2_ENDPOINT.replace("https://", "");
     const fileUrl = `https://${domain}/${key}`;
 
     return fileUrl;
