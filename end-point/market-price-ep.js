@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const { getAllMarketData } = require("../dao/marketPrice-dao");
+const { getAllMarketData } = require("../dao/market-price-dao");
 
 exports.getAllMarket = asyncHandler(async (req, res) => {
   try {

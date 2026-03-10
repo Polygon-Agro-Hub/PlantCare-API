@@ -1,4 +1,4 @@
-const currentAssetsDao = require("../dao/currentAsset-dao");
+const currentAssetsDao = require("../dao/current-assets-dao");
 const asyncHandler = require("express-async-handler");
 const {
   getAllCurrentAssetsSchema,
@@ -7,7 +7,6 @@ const {
   deleteAssetSchema,
   deleteAssetParamsSchema,
 } = require("../validations/current-assets-validation");
-const currentAssetDao = require("../dao/currentAsset-dao");
 
 exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
   try {
@@ -58,7 +57,7 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
       .slice(0, 19)
       .replace("T", " ");
 
-    const userResults = await currentAssetDao.checkUserExists(userId);
+    const userResults = await currentAssetsDao.checkUserExists(userId);
     if (userResults.length === 0) {
       return res.status(400).json({
         status: "error",
@@ -66,7 +65,7 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
       });
     }
 
-    const staffResults = await currentAssetDao.checkStaffExists(
+    const staffResults = await currentAssetsDao.checkStaffExists(
       staffId,
       effectiveFarmId,
     );
@@ -92,7 +91,7 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
       status,
     };
 
-    const existingAssets = await currentAssetDao.checkExistingAsset(
+    const existingAssets = await currentAssetsDao.checkExistingAsset(
       userId,
       category,
       asset,
@@ -104,8 +103,8 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
     if (existingAssets.length > 0) {
       const existingAsset = existingAssets[0];
 
-      await currentAssetDao.updateAsset(existingAsset, payload);
-      await currentAssetDao.insertAssetRecord(
+      await currentAssetsDao.updateAsset(existingAsset, payload);
+      await currentAssetsDao.insertAssetRecord(
         existingAsset.id,
         numberOfUnits,
         totalPrice,
@@ -116,8 +115,8 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
         message: "Asset updated successfully",
       });
     } else {
-      const insertResult = await currentAssetDao.insertAsset(payload);
-      await currentAssetDao.insertAssetRecord(
+      const insertResult = await currentAssetsDao.insertAsset(payload);
+      await currentAssetsDao.insertAssetRecord(
         insertResult.insertId,
         numberOfUnits,
         totalPrice,
@@ -218,7 +217,7 @@ exports.deleteAsset = asyncHandler(async (req, res) => {
       req.body,
     );
 
-    const results = await currentAssetDao.getAssetById(
+    const results = await currentAssetsDao.getAssetById(
       userId,
       category,
       assetId,
@@ -256,21 +255,21 @@ exports.deleteAsset = asyncHandler(async (req, res) => {
       });
     }
 
-    await currentAssetDao.insertMinusAssetRecord(
+    await currentAssetsDao.insertMinusAssetRecord(
       currentAsset.id,
       numberOfUnits,
       totalPrice,
     );
 
     if (newNumOfUnit === 0 && newTotal === 0) {
-      await currentAssetDao.deleteAsset(userId, category, assetId);
+      await currentAssetsDao.deleteAsset(userId, category, assetId);
 
       return res.status(200).json({
         status: "success",
         message: "Asset removed successfully.",
       });
     } else {
-      await currentAssetDao.updateAssetAfterRemoval(
+      await currentAssetsDao.updateAssetAfterRemoval(
         newNumOfUnit,
         newTotal,
         userId,
@@ -305,7 +304,7 @@ exports.getCurrectAssetAlredayHaveByUser = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
     const results =
-      await currentAssetDao.getCurrectAssetAlredayHaveByUser(userId);
+      await currentAssetsDao.getCurrectAssetAlredayHaveByUser(userId);
 
     return res.status(200).json({
       status: "success",

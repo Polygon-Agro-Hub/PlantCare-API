@@ -6,7 +6,7 @@ const {
   createPostSchema,
   updatepostschema,
 } = require("../validations/public-forum-validation");
-const postsDao = require("../dao/publicForum-dao");
+const postsDao = require("../dao/public-forum-dao");
 const uploadFileToS3 = require("../middleware/s3upload");
 const delectfilesOnS3 = require("../middleware/s3delete");
 

@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const requestInspectionDao = require("../dao/requestInspection-dao");
+const requestInspectionDao = require("../dao/request-Inspection-dao");
 
 exports.getOfficerservices = asyncHandler(async (req, res) => {
     try {

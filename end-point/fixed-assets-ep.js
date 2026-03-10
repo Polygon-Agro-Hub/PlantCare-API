@@ -2,7 +2,7 @@ const asyncHandler = require("express-async-handler");
 const {
   addFixedAssetSchema,
 } = require("../validations/fixed-assest-validation");
-const fixedAssetDao = require("../dao/fixedAsset-dao");
+const fixedAssetDao = require("../dao/fixed-assets-dao");
 
 const formatDate = (dateString) => {
   if (!dateString) return null;

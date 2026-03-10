@@ -1,9 +1,7 @@
 const jwt = require("jsonwebtoken");
 const db = require("../startup/database");
 const asyncHandler = require("express-async-handler");
-const userAuthDao = require("../dao/userAuth-dao");
-const userProfileDao = require("../dao/userAuth-dao");
-const signupDao = require("../dao/userAuth-dao");
+const userAuthDao = require("../dao/user-auth-dao");
 const ValidationSchema = require("../validations/user-auth-validation");
 const uploadFileToS3 = require("../middleware/s3upload");
 const delectfilesOnS3 = require("../middleware/s3delete");
@@ -139,7 +137,7 @@ exports.getProfileDetails = asyncHandler(async (req, res) => {
         const ownerId = req.user.ownerId;
         const userrole = req.user.role;
 
-        const user = await userProfileDao.getUserProfileById(
+        const user = await userAuthDao.getUserProfileById(
             userId,
             ownerId,
             userrole,
@@ -209,7 +207,7 @@ exports.signupChecker = asyncHandler(async (req, res) => {
         const { phoneNumber, NICnumber } =
             await ValidationSchema.signupCheckerSchema.validateAsync(req.body);
 
-        const results = await signupDao.checkSignupDetails(phoneNumber, NICnumber);
+        const results = await userAuthDao.checkSignupDetails(phoneNumber, NICnumber);
 
         let phoneNumberExists = false;
         let NICnumberExists = false;
