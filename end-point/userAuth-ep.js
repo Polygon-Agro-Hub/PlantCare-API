@@ -4,7 +4,7 @@ const asyncHandler = require("express-async-handler");
 const userAuthDao = require("../dao/userAuth-dao");
 const userProfileDao = require("../dao/userAuth-dao");
 const signupDao = require("../dao/userAuth-dao");
-const ValidationSchema = require("../validations/userAuth-validation");
+const ValidationSchema = require("../validations/user-auth-validation");
 const uploadFileToS3 = require("../middleware/s3upload");
 const delectfilesOnS3 = require("../middleware/s3delete");
 

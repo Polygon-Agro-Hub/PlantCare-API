@@ -4,7 +4,7 @@ const uploadFileToS3 = require("../middleware/s3upload");
 const multer = require("multer");
 const {
     createInvestmentRequestSchema,
-} = require("../validations/goviCapital-validation");
+} = require("../validations/govi-capital-validation");
 
 const storage = multer.memoryStorage();
 exports.uploadMultiple = multer({

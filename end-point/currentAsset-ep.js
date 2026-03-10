@@ -6,7 +6,7 @@ const {
   getAssetsByCategorySchema,
   deleteAssetSchema,
   deleteAssetParamsSchema,
-} = require("../validations/currentAsset-validation");
+} = require("../validations/current-assets-validation");
 const currentAssetDao = require("../dao/currentAsset-dao");
 
 exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {

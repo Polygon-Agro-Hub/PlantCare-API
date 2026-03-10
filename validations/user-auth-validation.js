@@ -64,7 +64,7 @@ exports.updateFirstLastNameSchema = Joi.object({
     .max(50)
     .allow(null, "")
     .optional()
-    .label("Street Name"), 
+    .label("Street Name"),
   city: Joi.string().max(50).allow(null, "").optional().label("City Name"),
   district: Joi.string()
     .max(50)
@@ -75,7 +75,7 @@ exports.updateFirstLastNameSchema = Joi.object({
     .max(50)
     .allow(null, "")
     .optional()
-    .label("Building Name"), 
+    .label("Building Name"),
 });
 
 exports.updateAddressSchema = Joi.object({

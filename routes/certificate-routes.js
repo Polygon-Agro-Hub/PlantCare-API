@@ -4,45 +4,49 @@ const auth = require("../middleware/auth.middleware");
 const certificateEp = require("../end-point/certificate-ep");
 const { upload } = require("../end-point/cropCalendarimages-ep");
 
-//Fram certificate
+// Get Farm certificate
 router.get(
     "/get-farms-certificate/:farmId",
     auth,
     certificateEp.getFarmsCertificate,
 );
+
+// Create Farm certificate payment
 router.post(
     "/certificate-payment/:farmId",
     auth,
     certificateEp.createCertificatePayment,
 );
 
-//Crop Certificate
+// Crop Certificate
 router.get(
     "/get-crop-certificate/:farmId/:cropId",
     auth,
     certificateEp.getCropsCertificate,
 );
 
-//Create Crop Payment
+// Create Crop Payment
 router.post(
     "/certificate-crop-payment/:cropId",
     auth,
     certificateEp.createCropCertificatePayment,
 );
 
+// Get Crop have certificate
 router.get(
     "/get-crophave-certificate/:cropId",
     auth,
     certificateEp.getCropHvaeCertificate,
 );
 
+// Get Crop certificate by id
 router.get(
     "/get-crop-certificate-byId/:cropId",
     auth,
     certificateEp.getCropCertificateByid,
 );
 
-// Tick Off update
+// Update questionnaire item by id
 router.put(
     "/update-questionnaire-item/:itemId",
     auth,
