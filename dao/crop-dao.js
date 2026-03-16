@@ -606,3 +606,30 @@ exports.getTaskImage = (slaveId) => {
         });
     });
 };
+
+
+exports.getAllCropGroups = () => {
+    return new Promise((resolve, reject) => {
+        const sql = `SELECT 
+            id, 
+            cropNameEnglish, 
+            cropNameSinhala, 
+            cropNameTamil, 
+            image,
+            costFeild, 
+            incomeFeild, 
+            seedRate, 
+            rowSpace, 
+            plantSpace, 
+            AvgYield 
+        FROM cropgroup`;
+        db.plantcare.query(sql, (err, results) => {
+            if (err) {
+                console.error("Error executing query:", err);
+                reject(err);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};

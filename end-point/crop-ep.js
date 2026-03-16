@@ -607,3 +607,20 @@ exports.getTaskImage = asyncHandler(async (req, res) => {
         });
     }
 });
+
+exports.getAllCropGroups = asyncHandler(async (req, res) => {
+    try {
+        const cropGroups = await cropDao.getAllCropGroups();
+
+        res.status(200).json({
+            status: "success",
+            data: cropGroups,
+        });
+    } catch (err) {
+        console.error("Error fetching crop groups:", err);
+        res.status(500).json({
+            status: "error",
+            message: "An error occurred while fetching crop groups.",
+        });
+    }
+});

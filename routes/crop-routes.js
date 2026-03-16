@@ -87,4 +87,6 @@ router.get(
   userCrop.getTaskImage
 );
 
+router.get("/get-all-cropgroups", userCrop.getAllCropGroups);
+
 module.exports = router;
