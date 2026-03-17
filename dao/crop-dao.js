@@ -621,7 +621,10 @@ exports.getAllCropGroups = () => {
             seedRate, 
             rowSpace, 
             plantSpace, 
-            AvgYield 
+            AvgYield,
+            nitrogen,
+            phosphorus,
+            potassium
         FROM cropgroup`;
         db.plantcare.query(sql, (err, results) => {
             if (err) {
