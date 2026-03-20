@@ -7,6 +7,7 @@ exports.checkPensionRequestByUserId = (userId) => {
                 pr.id, 
                 pr.reqStatus, 
                 pr.defaultPension,
+                pr.approveTime,
                 pr.createdAt as requestCreatedAt,
                 pr.isFirstTime,
                 u.created_at as userCreatedAt
@@ -90,6 +91,52 @@ exports.updateFirstTimeStatus = (userId) => {
                         updatedRows: results.affectedRows,
                     });
                 }
+            }
+        });
+    });
+};
+
+
+exports.checkEligibility = (userId) => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT 
+                -- Step 1: Check ongoing cultivation
+                EXISTS (
+                    SELECT 1 FROM ongoingcultivations oc
+                    WHERE oc.userId = ?
+                ) AS hasOngoingCultivation,
+
+                -- Step 2: Check enrolled crop
+                EXISTS (
+                    SELECT 1 FROM ongoingcultivationscrops occ
+                    INNER JOIN ongoingcultivations oc ON oc.id = occ.ongoingCultivationId
+                    WHERE oc.userId = ?
+                ) AS hasEnrolledCrop,
+
+                -- Step 3: Check at least one fully completed crop calendar
+                EXISTS (
+                    SELECT 1 FROM ongoingcultivationscrops occ
+                    INNER JOIN ongoingcultivations oc ON oc.id = occ.ongoingCultivationId
+                    WHERE oc.userId = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM slavecropcalendardays scd
+                        WHERE scd.onCulscropID = occ.id
+                        AND scd.status != 'completed'
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM slavecropcalendardays scd
+                        WHERE scd.onCulscropID = occ.id
+                    )
+                ) AS hasCompletedCropCalendar
+        `;
+
+        db.plantcare.query(sql, [userId, userId, userId], (err, results) => {
+            if (err) {
+                console.error("Error executing eligibility query:", err);
+                reject(err);
+            } else {
+                resolve(results[0]);
             }
         });
     });

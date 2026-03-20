@@ -32,4 +32,10 @@ router.put(
   pensionRequestController.updateFirstTimeStatus,
 );
 
+router.get(
+  "/check-eligibility",
+  authenticate,
+  pensionRequestController.checkEligibility,
+);
+
 module.exports = router;

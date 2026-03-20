@@ -20,6 +20,7 @@ exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
       status: true,
       reqStatus: pensionStatus.reqStatus,
       requestId: pensionStatus.id,
+      approveTime: pensionStatus.approveTime,
       defaultPension: parseFloat(pensionStatus.defaultPension),
       userCreatedAt: pensionStatus.userCreatedAt,
       isFirstTime: pensionStatus.isFirstTime,
@@ -185,6 +186,53 @@ exports.updateFirstTimeStatus = asyncHandler(async (req, res) => {
     res.status(500).json({
       status: "error",
       message: "An error occurred while updating first time status.",
+    });
+  }
+});
+
+exports.checkEligibility = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const eligibility = await pensionRequestDao.checkEligibility(userId);
+
+    if (!eligibility.hasOngoingCultivation) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_ONGOING_CULTIVATION",
+        message: "You do not have any ongoing cultivation.",
+      });
+    }
+
+    if (!eligibility.hasEnrolledCrop) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_ENROLLED_CROP",
+        message: "You have no enrolled crops in your cultivation.",
+      });
+    }
+
+    if (!eligibility.hasCompletedCropCalendar) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_COMPLETED_CROP_CALENDAR",
+        message:
+          "You must complete at least one full crop calendar to be eligible.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "eligible",
+      eligible: true,
+      message: "You are eligible to apply for a pension request.",
+    });
+  } catch (err) {
+    console.error("Error checking pension eligibility:", err);
+    res.status(500).json({
+      status: "error",
+      message: "An error occurred while checking eligibility.",
     });
   }
 });
