@@ -6,7 +6,7 @@ const {
     signupCheckerSchema,
     updateFarm,
     createStaffMember,
-    nicChecker,
+    nicSchema,
     enrollSchema,
 } = require("../validations/farm-validation");
 const delectfloders3 = require("../middleware/s3folderdelete");
@@ -361,7 +361,7 @@ exports.phoneNumberChecker = asyncHandler(async (req, res) => {
 
 exports.nicChecker = asyncHandler(async (req, res) => {
     try {
-        const { nic } = await nicChecker.validateAsync(req.body);
+        const { nic } = await nicSchema.validateAsync(req.body);
         const results = await farmDao.nicChecker(nic);
 
         let nicExists = false;

@@ -55,11 +55,6 @@ router.post(
   farmEp.nicChecker
 );
 
-router.post(
-  "/members-nic-checker", 
-  farmEp.nicChecker
-);
-
 router.put(
   "/update-farm", 
   authenticate, 
