@@ -101,18 +101,10 @@ exports.handleAddCurrectAsset = asyncHandler(async (req, res) => {
     );
 
     if (existingAssets.length > 0) {
-      const existingAsset = existingAssets[0];
-
-      await currentAssetsDao.updateAsset(existingAsset, payload);
-      await currentAssetsDao.insertAssetRecord(
-        existingAsset.id,
-        numberOfUnits,
-        totalPrice,
-      );
-
-      return res.status(200).json({
-        status: "success",
-        message: "Asset updated successfully",
+      return res.status(409).json({
+        status: "error",
+        message:
+          "A record with the same Farm, Category, Asset, Brand, and Batch Number already exists. Please use a different batch number or update the existing record.",
       });
     } else {
       const insertResult = await currentAssetsDao.insertAsset(payload);
