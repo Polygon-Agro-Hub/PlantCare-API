@@ -62,7 +62,33 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
       landownership,
       assetname,
       toolbrand,
+      landName,
+      buildingName,
     } = value;
+
+    if (category === "Land") {
+      const existing = await fixedAssetDao.checkDuplicateLandName(
+        userId,
+        landName,
+      );
+      if (existing.length > 0) {
+        return res.status(409).json({
+          message: `A land asset with the name "${landName}" already exists.`,
+        });
+      }
+    }
+
+    if (category === "Building and Infrastructures") {
+      const existing = await fixedAssetDao.checkDuplicateBuildingName(
+        userId,
+        buildingName,
+      );
+      if (existing.length > 0) {
+        return res.status(409).json({
+          message: `A building asset with the name "${buildingName}" already exists.`,
+        });
+      }
+    }
 
     const formattedIssuedDate = formatDate(issuedDate);
     const formattedPurchaseDate = formatDate(purchaseDate);
@@ -93,6 +119,7 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
         ownership,
         generalCondition,
         farmResult[0].district,
+        buildingName,
       );
       const buildingAssetId = buildingResult.insertId;
 
@@ -101,7 +128,6 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           await fixedAssetDao.insertOwnershipOwner(
             "buildingAssetId",
             buildingAssetId,
-
             estimateValue,
           );
           break;
@@ -131,14 +157,18 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           );
           break;
         default:
-          return res.status(400).json({
-            message: "Invalid ownership type provided for building asset.",
-          });
+          return res
+            .status(400)
+            .json({
+              message: "Invalid ownership type provided for building asset.",
+            });
       }
 
-      return res.status(201).json({
-        message: "Building fixed asset with ownership created successfully.",
-      });
+      return res
+        .status(201)
+        .json({
+          message: "Building fixed asset with ownership created successfully.",
+        });
     } else if (category === "Land") {
       const farmResult = await fixedAssetDao.getFarmDistrict(farmId);
       if (!farmResult || farmResult.length === 0) {
@@ -156,6 +186,7 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
         farmResult[0].district,
         landFenced,
         perennialCrop,
+        landName,
       );
       const landAssetId = landResult.insertId;
 
@@ -164,7 +195,6 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           await fixedAssetDao.insertOwnershipOwner(
             "landAssetId",
             landAssetId,
-
             estimateValue,
           );
           break;
@@ -194,14 +224,18 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           );
           break;
         default:
-          return res.status(400).json({
-            message: "Invalid ownership type provided for land asset.",
-          });
+          return res
+            .status(400)
+            .json({
+              message: "Invalid ownership type provided for land asset.",
+            });
       }
 
-      return res.status(201).json({
-        message: "Land fixed asset with ownership created successfully.",
-      });
+      return res
+        .status(201)
+        .json({
+          message: "Land fixed asset with ownership created successfully.",
+        });
     } else if (category === "Machine and Vehicles" || category === "Tools") {
       const assetLabel = category === "Tools" ? assetname : asset;
       const brandLabel = category === "Tools" ? toolbrand : brand;
@@ -226,16 +260,20 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           formattedExpireDate,
           warranty,
         );
-        return res.status(201).json({
-          message:
-            "Machine and tools fixed asset with warranty created successfully.",
-        });
+        return res
+          .status(201)
+          .json({
+            message:
+              "Machine and tools fixed asset with warranty created successfully.",
+          });
       }
 
-      return res.status(201).json({
-        message:
-          "Machine and tools fixed asset created successfully without warranty.",
-      });
+      return res
+        .status(201)
+        .json({
+          message:
+            "Machine and tools fixed asset created successfully without warranty.",
+        });
     } else {
       return res.status(400).json({ message: "Invalid category provided." });
     }
@@ -316,6 +354,32 @@ exports.updateFixedAsset = asyncHandler(async (req, res) => {
     const ownershipDetails = assetData.ownershipDetails || {};
     const { ownership, oldOwnership } = assetData;
     const ownershipChanged = ownership !== oldOwnership;
+
+    if (category === "Land" && assetData.landName) {
+      const existing = await fixedAssetDao.checkDuplicateLandNameOnUpdate(
+        userId,
+        assetData.landName,
+        assetData.faId,
+      );
+      if (existing.length > 0) {
+        return res.status(409).json({
+          message: `A land asset with the name "${assetData.landName}" already exists.`,
+        });
+      }
+    }
+
+    if (category === "Building and Infrastructures" && assetData.buildingName) {
+      const existing = await fixedAssetDao.checkDuplicateBuildingNameOnUpdate(
+        userId,
+        assetData.buildingName,
+        assetData.faId,
+      );
+      if (existing.length > 0) {
+        return res.status(409).json({
+          message: `A building asset with the name "${assetData.buildingName}" already exists.`,
+        });
+      }
+    }
 
     if (category === "Land") {
       await fixedAssetDao.updateLandAsset(assetData, userId);
