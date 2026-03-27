@@ -236,16 +236,17 @@ exports.updateMachToolsWarranty = (
   );
 };
 
-exports.insertOwnershipOwner = (
-  idField,
-  idValue,
-  issuedDate,
-  estimateValue,
-) => {
-  return query(
-    `INSERT INTO ownershipownerfixedasset (${idField}, issuedDate, estimateValue) VALUES (?, COALESCE(NULLIF(?, ''), NULL), COALESCE(NULLIF(?, ''), NULL))`,
-    [idValue, issuedDate, estimateValue],
-  );
+exports.insertOwnershipOwner = (idField, idValue, estimateValue) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+            INSERT INTO ownershipownerfixedasset (${idField}, estimateValue)
+            VALUES (?, ?)
+        `;
+    db.plantcare.query(query, [idValue, estimateValue], (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
 };
 
 exports.insertOwnershipLease = (
@@ -281,16 +282,18 @@ exports.insertOwnershipShared = (idField, idValue, paymentAnnually) => {
   );
 };
 
-exports.updateOwnershipOwner = (
-  idField,
-  idValue,
-  issuedDate,
-  estimateValue,
-) => {
-  return query(
-    `UPDATE ownershipownerfixedasset SET issuedDate = COALESCE(NULLIF(?, ''), issuedDate), estimateValue = COALESCE(NULLIF(?, ''), estimateValue) WHERE ${idField} = ?`,
-    [issuedDate, estimateValue, idValue],
-  );
+exports.updateOwnershipOwner = (idField, idValue, estimateValue) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+            UPDATE ownershipownerfixedasset
+            SET estimateValue = ?
+            WHERE ${idField} = ?
+        `;
+    db.plantcare.query(query, [estimateValue, idValue], (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
 };
 
 exports.updateOwnershipLease = (

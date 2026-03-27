@@ -101,7 +101,7 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           await fixedAssetDao.insertOwnershipOwner(
             "buildingAssetId",
             buildingAssetId,
-            formattedIssuedDate,
+
             estimateValue,
           );
           break;
@@ -164,7 +164,7 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           await fixedAssetDao.insertOwnershipOwner(
             "landAssetId",
             landAssetId,
-            formattedIssuedDate,
+
             estimateValue,
           );
           break;
@@ -477,7 +477,7 @@ async function _insertOwnershipByType(
         fixedAssetDao.insertOwnershipOwner(
           idField,
           idValue,
-          d.issuedDate || null,
+
           d.estimateValue || null,
         ),
       "Leased Building": () =>
@@ -508,7 +508,7 @@ async function _insertOwnershipByType(
         fixedAssetDao.insertOwnershipOwner(
           idField,
           idValue,
-          fmt(d.issuedDate) || null,
+
           d.estimateValue || null,
         ),
       Lease: () =>
@@ -556,7 +556,7 @@ async function _updateOwnershipByType(
         fixedAssetDao.updateOwnershipOwner(
           idField,
           assetId,
-          fmt(d.issuedDate) || null,
+
           d.estimateValue || null,
         ),
       "Leased Building": () =>
@@ -587,7 +587,7 @@ async function _updateOwnershipByType(
         fixedAssetDao.updateOwnershipOwner(
           idField,
           assetId,
-          fmt(d.issuedDate) || null,
+
           d.estimateValue || null,
         ),
       Lease: () =>
