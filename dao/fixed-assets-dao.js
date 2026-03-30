@@ -77,10 +77,19 @@ exports.insertBuildingAsset = (
   ownership,
   generalCondition,
   district,
+  buildingName,
 ) => {
   return query(
-    `INSERT INTO buildingfixedasset (fixedAssetId, type, floorArea, ownership, generalCondition, district) VALUES (?, ?, ?, ?, ?, ?)`,
-    [fixedAssetId, type, floorArea, ownership, generalCondition, district],
+    `INSERT INTO buildingfixedasset (fixedAssetId, type,buildingName, floorArea, ownership, generalCondition, district) VALUES (?, ?, ?,?, ?, ?, ?)`,
+    [
+      fixedAssetId,
+      type,
+      buildingName,
+      floorArea,
+      ownership,
+      generalCondition,
+      district,
+    ],
   );
 };
 
@@ -89,6 +98,7 @@ exports.updateBuildingAsset = (assetData, userId) => {
     `UPDATE buildingfixedasset bfa
      JOIN fixedasset fa ON fa.id = bfa.fixedAssetId
      SET bfa.type = COALESCE(NULLIF(?, ''), bfa.type),
+     bfa.buildingName = COALESCE(NULLIF(?, ''), bfa.buildingName),
          bfa.floorArea = COALESCE(NULLIF(?, ''), bfa.floorArea),
          bfa.ownership = COALESCE(NULLIF(?, ''), bfa.ownership),
          bfa.generalCondition = COALESCE(NULLIF(?, ''), bfa.generalCondition),
@@ -96,6 +106,7 @@ exports.updateBuildingAsset = (assetData, userId) => {
      WHERE fa.userId = ? AND fa.id = ?`,
     [
       assetData.type,
+      assetData.buildingName,
       assetData.floorArea,
       assetData.ownership,
       assetData.generalCondition,
@@ -115,11 +126,13 @@ exports.insertLandAsset = (
   district,
   landFenced,
   perennialCrop,
+  landName,
 ) => {
   return query(
-    `INSERT INTO landfixedasset (fixedAssetId, extentha, extentac, extentp, ownership, district, landFenced, perennialCrop) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO landfixedasset (fixedAssetId,landName, extentha, extentac, extentp, ownership, district, landFenced, perennialCrop) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?)`,
     [
       fixedAssetId,
+      landName,
       extentha,
       extentac,
       extentp,
@@ -140,6 +153,7 @@ exports.updateLandAsset = (assetData, userId) => {
          lfa.extentac = COALESCE(NULLIF(?, ''), lfa.extentac),
          lfa.extentp = COALESCE(NULLIF(?, ''), lfa.extentp),
          lfa.ownership = COALESCE(NULLIF(?, ''), lfa.ownership),
+          lfa.landName = COALESCE(NULLIF(?, ''), lfa.landName),
          lfa.landFenced = COALESCE(NULLIF(?, ''), lfa.landFenced),
          lfa.perennialCrop = COALESCE(NULLIF(?, ''), lfa.perennialCrop)
      WHERE fa.userId = ? AND fa.id = ?`,
@@ -149,6 +163,7 @@ exports.updateLandAsset = (assetData, userId) => {
       assetData.extentac,
       assetData.extentp,
       assetData.ownership,
+      assetData.landName,
       assetData.landFenced,
       assetData.perennialCrop,
       userId,
@@ -347,14 +362,14 @@ exports.deleteOwnershipExcept = (idField, idValue, keepTable) => {
 exports.getAssetsByCategory = (userId, category) => {
   const categoryQueries = {
     Land: `
-      SELECT fa.id, fa.category, fa.farmId, f.farmName, lfa.district
+      SELECT fa.id, fa.category, fa.farmId, f.farmName, lfa.district ,lfa.landName
       FROM fixedasset fa
       JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
       LEFT JOIN farms f ON fa.farmId = f.id
       WHERE fa.userId = ? AND fa.category = 'Land' ORDER BY fa.id ASC`,
 
     "Building and Infrastructures": `
-      SELECT fa.id, fa.category, fa.farmId, f.farmName, bfa.type, bfa.district
+      SELECT fa.id, fa.category, fa.farmId, f.farmName, bfa.type, bfa.district ,bfa.buildingName
       FROM fixedasset fa
       JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
       LEFT JOIN farms f ON fa.farmId = f.id
@@ -383,12 +398,12 @@ exports.getAssetsByCategory = (userId, category) => {
 exports.getAssetDetailById = (userId, assetId, category) => {
   const categoryQueries = {
     Land: `
-      SELECT fa.id AS faId, fa.category, lfa.district, lfa.extentha, lfa.extentac, lfa.extentp, lfa.ownership, lfa.landFenced, lfa.perennialCrop, lfa.id
+      SELECT fa.id AS faId, fa.category,lfa.landName, lfa.district, lfa.extentha, lfa.extentac, lfa.extentp, lfa.ownership, lfa.landFenced, lfa.perennialCrop, lfa.id
       FROM fixedasset fa JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
       WHERE fa.userId = ? AND fa.id = ?`,
 
     "Building and Infrastructures": `
-      SELECT fa.id AS faId, fa.category, bfa.type, bfa.floorArea, bfa.ownership, bfa.generalCondition, bfa.district, bfa.id
+      SELECT fa.id AS faId, fa.category, bfa.buildingName, bfa.type, bfa.floorArea, bfa.ownership, bfa.generalCondition, bfa.district, bfa.id
       FROM fixedasset fa JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
       WHERE fa.userId = ? AND fa.id = ?`,
 
@@ -411,13 +426,13 @@ exports.getAssetDetailById = (userId, assetId, category) => {
 exports.getOwnershipDetails = (category, ownershipType, assetId) => {
   const ownershipQueries = {
     "Building and Infrastructures": {
-      "Own Building (with title ownership)": `SELECT oof.issuedDate, oof.estimateValue FROM ownershipownerfixedasset oof WHERE oof.buildingAssetId = ?`,
+      "Own Building (with title ownership)": `SELECT  oof.estimateValue FROM ownershipownerfixedasset oof WHERE oof.buildingAssetId = ?`,
       "Leased Building": `SELECT olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths FROM ownershipleastfixedasset olf WHERE olf.buildingAssetId = ?`,
       "Permitted Building": `SELECT opf.issuedDate, opf.permitFeeAnnually FROM ownershippermitfixedasset opf WHERE opf.buildingAssetId = ?`,
       "Shared / No Ownership": `SELECT osf.paymentAnnually FROM ownershipsharedfixedasset osf WHERE osf.buildingAssetId = ?`,
     },
     Land: {
-      Own: `SELECT oof.issuedDate, oof.estimateValue FROM ownershipownerfixedasset oof WHERE oof.landAssetId = ?`,
+      Own: `SELECT  oof.estimateValue FROM ownershipownerfixedasset oof WHERE oof.landAssetId = ?`,
       Lease: `SELECT olf.startDate, olf.durationYears, olf.leastAmountAnnually, olf.durationMonths FROM ownershipleastfixedasset olf WHERE olf.landAssetId = ?`,
       Permitted: `SELECT opf.issuedDate, opf.permitFeeAnnually FROM ownershippermitfixedasset opf WHERE opf.landAssetId = ?`,
       Shared: `SELECT osf.paymentAnnually FROM ownershipsharedfixedasset osf WHERE osf.landAssetId = ?`,
@@ -519,4 +534,44 @@ exports.deleteFixedAssetWithOwnership = async (userId, assetId, category) => {
     connection.release();
     throw err;
   }
+};
+
+exports.checkDuplicateLandName = (userId, landName) => {
+  return query(
+    `SELECT fa.id FROM fixedasset fa
+     JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
+     WHERE fa.userId = ? AND LOWER(lfa.landName) = LOWER(?) LIMIT 1`,
+    [userId, landName],
+  );
+};
+
+exports.checkDuplicateBuildingName = (userId, buildingName) => {
+  return query(
+    `SELECT fa.id FROM fixedasset fa
+     JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
+     WHERE fa.userId = ? AND LOWER(bfa.buildingName) = LOWER(?) LIMIT 1`,
+    [userId, buildingName],
+  );
+};
+
+exports.checkDuplicateLandNameOnUpdate = (userId, landName, excludeAssetId) => {
+  return query(
+    `SELECT fa.id FROM fixedasset fa
+     JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
+     WHERE fa.userId = ? AND LOWER(lfa.landName) = LOWER(?) AND fa.id != ? LIMIT 1`,
+    [userId, landName, excludeAssetId],
+  );
+};
+
+exports.checkDuplicateBuildingNameOnUpdate = (
+  userId,
+  buildingName,
+  excludeAssetId,
+) => {
+  return query(
+    `SELECT fa.id FROM fixedasset fa
+     JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
+     WHERE fa.userId = ? AND LOWER(bfa.buildingName) = LOWER(?) AND fa.id != ? LIMIT 1`,
+    [userId, buildingName, excludeAssetId],
+  );
 };

@@ -20,6 +20,8 @@ exports.addFixedAssetSchema = Joi.object({
   assetType: Joi.string().allow("").label("Asset Type"),
   assetname: Joi.string().allow("").label("Asset Name"),
   brand: Joi.string().allow("").label("Brand"),
+  landName: Joi.string().allow("").label("landName"),
+  buildingName: Joi.string().allow("").label("buildingName"),
   category: Joi.string()
     .valid(
       "Building and Infrastructures",

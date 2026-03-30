@@ -1358,11 +1358,11 @@ exports.getFixedAssetsByCategory = (userId, category, farmId) => {
         let queryParams = [userId, farmId];
 
         if (category === "Land") {
-            sqlQuery = `SELECT fa.id, fa.category, lfa.district FROM fixedasset fa
+            sqlQuery = `SELECT fa.id, fa.category, lfa.district,lfa.landName FROM fixedasset fa
                 JOIN landfixedasset lfa ON fa.id = lfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Land'`;
         } else if (category === "Building and Infrastructures") {
-            sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district FROM fixedasset fa
+            sqlQuery = `SELECT fa.id, fa.category, bfa.type , bfa.district, bfa.buildingName FROM fixedasset fa
                 JOIN buildingfixedasset bfa ON fa.id = bfa.fixedAssetId
                 WHERE fa.userId = ? AND fa.farmId = ? AND fa.category = 'Building and Infrastructures'`;
         } else if (category === "Machine and Vehicles") {
