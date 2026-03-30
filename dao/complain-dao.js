@@ -1,19 +1,31 @@
 const db = require("../startup/database");
 
-
-exports.createComplain = (farmerId, language, complain, category, status, referenceNumber) => {
+exports.createComplain = (
+    farmerId,
+    language,
+    complain,
+    category,
+    status,
+    referenceNumber,
+) => {
     return new Promise((resolve, reject) => {
-        const checkCategorySql = "SELECT id FROM agro_world_admin.complaincategory WHERE id = ?";
+        const checkCategorySql =
+            "SELECT id FROM agro_world_admin.complaincategory WHERE id = ?";
 
         db.collectionofficer.query(checkCategorySql, [category], (err, rows) => {
             if (err) {
-                return reject(new Error("Database error while checking complain category: " + err.message));
+                return reject(
+                    new Error(
+                        "Database error while checking complain category: " + err.message,
+                    ),
+                );
             }
 
             if (rows.length === 0) {
-                return reject(new Error("Invalid complain category: The category does not exist"));
+                return reject(
+                    new Error("Invalid complain category: The category does not exist"),
+                );
             }
-
 
             const insertSql = `
                 INSERT INTO farmercomplains 
@@ -21,23 +33,26 @@ exports.createComplain = (farmerId, language, complain, category, status, refere
                 VALUES (?, ?, ?, ?, ?, ?, 'Assigned')
             `;
 
-            db.collectionofficer.query(insertSql,
+            db.collectionofficer.query(
+                insertSql,
                 [farmerId, language, complain, category, status, referenceNumber],
                 (err, result) => {
                     if (err) {
-                        return reject(new Error("Database error while inserting complain: " + err.message));
+                        return reject(
+                            new Error(
+                                "Database error while inserting complain: " + err.message,
+                            ),
+                        );
                     }
                     resolve(result.insertId);
-                }
+                },
             );
         });
     });
 };
 
-
 exports.countComplaintsByDate = async (date) => {
-    const formattedDate = date.toISOString().split('T')[0]; // Convert date to YYYY-MM-DD
-
+    const formattedDate = date.toISOString().split("T")[0];
 
     return new Promise((resolve, reject) => {
         const query = `SELECT COUNT(*) AS count FROM farmercomplains WHERE DATE(createdAt) = ?`;
@@ -51,7 +66,6 @@ exports.countComplaintsByDate = async (date) => {
         });
     });
 };
-
 
 exports.getAllComplaintsByUserId = async (userId) => {
     return new Promise((resolve, reject) => {
@@ -78,7 +92,7 @@ exports.getComplainCategories = async () => {
                             SELECT cc.id, cc.roleId, cc.appId, cc.categoryEnglish, cc.categorySinhala, cc.categoryTamil, ssa.appName
                 FROM complaincategory cc
                 JOIN systemapplications ssa ON cc.appId = ssa.id
-                WHERE ssa.appName = 'PlantCare'
+                WHERE ssa.appName = 'GoviCare'
       `;
         db.admin.query(query, (error, results) => {
             if (error) {
@@ -86,7 +100,6 @@ exports.getComplainCategories = async () => {
                 reject(error);
             } else {
                 resolve(results);
-                console.log(results)
             }
         });
     });

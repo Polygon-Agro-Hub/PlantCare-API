@@ -1,0 +1,421 @@
+const db = require("../startup/database");
+
+exports.getOfficerservices = async () => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT * FROM officerservices 
+            ORDER BY englishName ASC, sinhalaName ASC, tamilName ASC, srvFee ASC 
+            LIMIT 1000
+        `;
+
+        db.plantcare.query(query, [], (error, results) => {
+            if (error) {
+                console.error("Error fetching officerservices:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+exports.getAllFarmByUserId = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT * FROM farms 
+            WHERE userId = ?
+        `;
+
+        db.plantcare.query(query, [userId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farms:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+exports.getFramCrop = async (farmId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                f.*,
+                cc.id as cropCalendarId,
+                cv.id as cropVarietyId,
+              
+                cg.id as cropGroupId,
+                cg.cropNameEnglish,
+                cg.cropNameSinhala,
+                cg.cropNameTamil,
+                occ.ongoingCultivationId,
+                occ.cropCalendar as cropCalendarId,
+                occ.farmId
+            FROM farms f
+            LEFT JOIN ongoingcultivationscrops occ ON f.id = occ.farmId
+            LEFT JOIN cropcalender cc ON occ.cropCalendar = cc.id
+            LEFT JOIN cropvariety cv ON cc.cropVarietyId = cv.id
+            LEFT JOIN cropgroup cg ON cv.cropGroupId = cg.id
+            WHERE f.id = ?
+            ORDER BY occ.ongoingCultivationId ASC, occ.cropCalendar ASC, occ.farmId
+        `;
+
+        db.plantcare.query(query, [farmId], (error, results) => {
+            if (error) {
+                console.error("Error fetching farms with crops:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+const generateJobId = async (connection) => {
+    return new Promise((resolve, reject) => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const date = String(now.getDate()).padStart(2, "0");
+        const prefix = `SR${year}${month}${date}`;
+
+        const query = `
+            SELECT jobId FROM govilinkjobs 
+            WHERE jobId LIKE ? 
+            ORDER BY jobId DESC 
+            LIMIT 1
+        `;
+
+        connection.query(query, [`${prefix}%`], (error, results) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+
+            let sequence = 1;
+            if (results && results.length > 0) {
+                const lastJobId = results[0].jobId;
+                const lastSequence = parseInt(lastJobId.substring(prefix.length));
+                if (!isNaN(lastSequence)) {
+                    sequence = lastSequence + 1;
+                }
+            }
+
+            const newJobId = `${prefix}${String(sequence).padStart(3, "0")}`;
+            resolve(newJobId);
+        });
+    });
+};
+
+const generateTransactionId = async (connection) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT transactionId 
+            FROM govijobpayment 
+            ORDER BY id DESC 
+            LIMIT 1
+        `;
+
+        connection.query(query, (error, results) => {
+            if (error) {
+                console.error("Error fetching last transaction ID:", error);
+                return reject(error);
+            }
+
+            let newTransactionId;
+
+            if (results.length === 0 || !results[0].transactionId) {
+                newTransactionId = "GTID0000001";
+            } else {
+                const lastTransactionId = results[0].transactionId;
+
+                const match = lastTransactionId.match(/(\d+)$/);
+
+                if (match) {
+                    const lastNumber = parseInt(match[1]);
+                    const newNumber = lastNumber + 1;
+                    const paddedNumber = newNumber.toString().padStart(7, "0");
+                    newTransactionId = `GTID${paddedNumber}`;
+                } else {
+                    newTransactionId = "GTID0000001";
+                }
+            }
+
+            resolve(newTransactionId);
+        });
+    });
+};
+
+const getConnection = () => {
+    return new Promise((resolve, reject) => {
+        db.plantcare.getConnection((error, connection) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(connection);
+            }
+        });
+    });
+};
+
+const beginTransaction = (connection) => {
+    return new Promise((resolve, reject) => {
+        connection.beginTransaction((error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+const commitTransaction = (connection) => {
+    return new Promise((resolve, reject) => {
+        connection.commit((error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+const rollbackTransaction = (connection) => {
+    return new Promise((resolve, reject) => {
+        connection.rollback((error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+const insertJob = (connection, jobId, userId, item, cropCount) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            INSERT INTO govilinkjobs
+            (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops,status, createdAt) 
+            VALUES (?, ?, ?, ?, ?, ?, ?,NOW())
+        `;
+
+        connection.query(
+            query,
+            [
+                jobId,
+                userId,
+                item.serviceId,
+                item.farmId,
+                item.scheduleDate,
+                cropCount,
+                "Pending",
+            ],
+            (error, results) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve({
+                        insertId: results.insertId,
+                        jobId: jobId,
+                    });
+                }
+            },
+        );
+    });
+};
+
+const insertCrops = (connection, insertedId, crops) => {
+    return new Promise((resolve, reject) => {
+        if (!crops || crops.length === 0) {
+            resolve([]);
+            return;
+        }
+
+        const values = [];
+        const placeholders = [];
+
+        crops.forEach((crop) => {
+            placeholders.push("(?, ?, NOW())");
+            values.push(insertedId, crop.cropGroupId || crop.id);
+        });
+
+        const query = `
+            INSERT INTO jobrequestcrops 
+            (jobId, cropId, createdAt) 
+            VALUES ${placeholders.join(", ")}
+        `;
+
+        connection.query(query, values, (error, results) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};
+
+const insertPayment = (connection, insertedId, amount, transactionId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            INSERT INTO govijobpayment 
+            (jobId, amount, transactionId, createdAt) 
+            VALUES (?, ?, ?, NOW())
+        `;
+
+        connection.query(
+            query,
+            [insertedId, amount, transactionId],
+            (error, results) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results);
+                }
+            },
+        );
+    });
+};
+
+const updateFarmDetails = (connection, farmId, plotNo, streetName, city) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            UPDATE farms 
+            SET plotNo = ?, street = ?, city = ?
+            WHERE id = ?
+        `;
+
+        connection.query(
+            query,
+            [plotNo, streetName, city, farmId],
+            (error, results) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results);
+                }
+            },
+        );
+    });
+};
+
+exports.submitRequestInspection = async (userId, requestItems) => {
+    let connection = null;
+    let transactionStarted = false;
+
+    try {
+        connection = await getConnection();
+
+        await beginTransaction(connection);
+        transactionStarted = true;
+
+        const results = [];
+
+        for (const item of requestItems) {
+            const jobId = await generateJobId(connection);
+
+            const transactionId = await generateTransactionId(connection);
+
+            const cropCount = item.crops ? item.crops.length : 0;
+
+            if (item.plotNo || item.streetName || item.city) {
+                await updateFarmDetails(
+                    connection,
+                    item.farmId,
+                    item.plotNo,
+                    item.streetName,
+                    item.city,
+                );
+            }
+
+            const jobResult = await insertJob(
+                connection,
+                jobId,
+                userId,
+                item,
+                cropCount,
+            );
+            const insertedId = jobResult.insertId;
+
+            await insertCrops(connection, insertedId, item.crops);
+
+            await insertPayment(connection, insertedId, item.amount, transactionId);
+
+            results.push({
+                id: insertedId,
+                jobId: jobId,
+                transactionId: transactionId,
+                serviceId: item.serviceId,
+                farmId: item.farmId,
+                scheduleDate: item.scheduleDate,
+                amount: item.amount,
+                cropCount: cropCount,
+                plotNo: item.plotNo,
+                streetName: item.streetName,
+                city: item.city,
+                status: "success",
+            });
+        }
+
+        await commitTransaction(connection);
+        transactionStarted = false;
+
+        return results;
+    } catch (error) {
+        console.error("Error in submitRequestInspection:", error);
+
+        if (transactionStarted && connection) {
+            try {
+                await rollbackTransaction(connection);
+            } catch (rollbackError) {
+                console.error("Error during rollback:", rollbackError);
+            }
+        }
+
+        throw error;
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+exports.getRequest = async (userId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                gj.id,
+                gj.farmerId,
+                gj.serviceId,
+                gj.farmId,
+                gj.jobId, 
+                gj.sheduleDate,
+                gj.isAllCrops,
+                gj.createdAt,
+                gj.status,
+                gj.doneDate,
+                os.id as serviceId,
+                os.englishName,
+                os.sinhalaName,
+                os.tamilName,
+                os.srvFee
+            FROM plant_care.govilinkjobs gj
+            INNER JOIN plant_care.officerservices os ON gj.serviceId = os.id
+            WHERE gj.farmerId = ?
+          
+        `;
+
+        db.plantcare.query(query, [userId], (error, results) => {
+            if (error) {
+                console.error("Error fetching officer services:", error);
+                reject(error);
+            } else {
+                resolve(results);
+            }
+        });
+    });
+};

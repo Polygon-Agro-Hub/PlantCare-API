@@ -1,22 +1,18 @@
 const asyncHandler = require("express-async-handler");
 const complainDao = require("../dao/complain-dao");
-const {
-    createComplain
-} = require('../validations/complain-validation');
-const { Console } = require("winston/lib/winston/transports");
+const { createComplain } = require("../validations/complain-validation");
 
 exports.createComplain = asyncHandler(async (req, res) => {
-
     try {
         const farmerId = req.user.id;
         const input = { ...req.body, farmerId };
         const today = new Date();
-        const YYMMDD = today.toISOString().slice(2, 10).replace(/-/g, '');
+        const YYMMDD = today.toISOString().slice(2, 10).replace(/-/g, "");
         const datePrefix = `GC${YYMMDD}`;
 
-        const { value, error } = createComplain.validate(input);
+        const { value } = createComplain.validate(input);
         const complaintsOnDate = await complainDao.countComplaintsByDate(today);
-        const referenceNumber = `${datePrefix}${String(complaintsOnDate + 1).padStart(4, '0')}`;
+        const referenceNumber = `${datePrefix}${String(complaintsOnDate + 1).padStart(4, "0")}`;
 
         const { language, complain, category } = value;
         const status = "Opened";
@@ -27,7 +23,7 @@ exports.createComplain = asyncHandler(async (req, res) => {
             complain,
             category,
             status,
-            referenceNumber
+            referenceNumber,
         );
 
         res.status(201).json({

@@ -1,5 +1,5 @@
-const mysql = require('mysql2');
-require('dotenv').config();
+const mysql = require("mysql2");
+require("dotenv").config();
 
 // Create a MySQL connection pool
 const createPool = (database) => {
@@ -9,7 +9,7 @@ const createPool = (database) => {
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
     database: database,
-    charset: 'utf8mb4',
+    charset: "utf8mb4",
     waitForConnections: true,
     connectionLimit: 10,
     maxIdle: 6,
@@ -18,7 +18,6 @@ const createPool = (database) => {
     keepAliveInitialDelay: 0,
   });
 };
-
 
 const plantcare = createPool(process.env.DB_NAME_PC);
 const collectionofficer = createPool(process.env.DB_NAME_CO);

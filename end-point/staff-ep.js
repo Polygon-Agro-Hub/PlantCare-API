@@ -1,7 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const staffDao = require("../dao/staff-dao");
-const { createStaffMember } = require('../validations/farm-validation');
-
+const { createStaffMember } = require("../validations/farm-validation");
 
 exports.getFarmById = asyncHandler(async (req, res) => {
     try {
@@ -21,22 +20,17 @@ exports.getFarmById = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
-    console.log('Staff member creation request:', req.body);
     try {
         const userId = req.user.ownerId;
-        const { farmId } = req.params; // Get farmId from URL params
-        console.log('User ID:', userId, 'Farm ID:', farmId);
+        const { farmId } = req.params;
 
-        // Create input object for validation
         const input = {
             ...req.body,
-            farmId // Include farmId in input for validation
+            farmId,
         };
 
-        // Validate input (you'll need to create/update your validation schema)
-        const { value, error } = createStaffMember.validate(input); // Note: changed from createFarm
+        const { value, error } = createStaffMember.validate(input);
         if (error) {
             return res.status(400).json({
                 status: "error",
@@ -44,18 +38,8 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             });
         }
 
-        console.log("Validated input:", value);
+        const { firstName, lastName, phoneNumber, countryCode, role, nic } = value;
 
-        const {
-            firstName,
-            lastName,
-            phoneNumber,
-            countryCode,
-            role,
-            nic
-        } = value;
-
-        // Create staff member
         const result = await staffDao.CreateStaffMember({
             userId,
             farmId,
@@ -64,24 +48,21 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             phoneNumber,
             countryCode,
             role,
-            nic
+            nic,
         });
-
-        console.log("Staff member creation result:", result);
 
         res.status(201).json({
             status: "success",
             message: "Staff member created successfully.",
             staffId: result.staffId,
-            data: result.data
+            data: result.data,
         });
-
     } catch (err) {
         console.error("Error creating staff member:", err);
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });

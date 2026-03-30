@@ -1,8 +1,7 @@
 const pensionRequestDao = require("../dao/pension-dao");
 const asyncHandler = require("express-async-handler");
-const uploadFileToS3 = require("../Middlewares/s3upload");
+const uploadFileToS3 = require("../middleware/s3upload");
 
-// Check Pension Request Status
 exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
@@ -21,8 +20,10 @@ exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
       status: true,
       reqStatus: pensionStatus.reqStatus,
       requestId: pensionStatus.id,
+      approveTime: pensionStatus.approveTime,
       defaultPension: parseFloat(pensionStatus.defaultPension),
       userCreatedAt: pensionStatus.userCreatedAt,
+      isFirstTime: pensionStatus.isFirstTime,
       requestCreatedAt: pensionStatus.requestCreatedAt,
     });
   } catch (err) {
@@ -34,12 +35,10 @@ exports.checkPensionRequestStatus = asyncHandler(async (req, res) => {
   }
 });
 
-// Submit Pension Request
 exports.submitPensionRequest = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check if user already has a pension request
     const existingRequest =
       await pensionRequestDao.checkPensionRequestByUserId(userId);
     if (existingRequest) {
@@ -49,11 +48,7 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Validate required fields
     const { fullName, nic, dob, sucFullName, sucType, sucdob } = req.body;
-
-    console.log("Received pension request data:", req.body);
-    console.log("Received files:", req.files);
 
     if (!fullName || !nic || !dob || !sucFullName || !sucType || !sucdob) {
       return res.status(400).json({
@@ -62,7 +57,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Validate required files
     if (!req.files || !req.files.nicFront || !req.files.nicBack) {
       return res.status(400).json({
         status: false,
@@ -70,7 +64,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       });
     }
 
-    // Upload applicant NIC images to Cloudflare R2
     const nicFrontUrl = await uploadFileToS3(
       req.files.nicFront[0].buffer,
       req.files.nicFront[0].originalname,
@@ -83,13 +76,11 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       `pension-requests/${userId}/applicant`,
     );
 
-    // Upload successor NIC images if provided
     let sucNicFrontUrl = null;
     let sucNicBackUrl = null;
     let birthCrtFrontUrl = null;
     let birthCrtBackUrl = null;
 
-    // Check if successor is over 18 (based on date)
     const sucDob = new Date(sucdob);
     const today = new Date();
     const age = today.getFullYear() - sucDob.getFullYear();
@@ -97,7 +88,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
     const isOver18 = age > 18 || (age === 18 && monthDiff >= 0);
 
     if (isOver18) {
-      // Successor is over 18, require NIC
       if (!req.files.sucNicFront || !req.files.sucNicBack) {
         return res.status(400).json({
           status: false,
@@ -118,7 +108,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
         `pension-requests/${userId}/successor`,
       );
     } else {
-      // Successor is under 18, require birth certificate
       if (!req.files.birthCrtFront || !req.files.birthCrtBack) {
         return res.status(400).json({
           status: false,
@@ -140,7 +129,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       );
     }
 
-    // Prepare pension data
     const pensionData = {
       userId,
       fullName,
@@ -158,7 +146,6 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
       sucdob,
     };
 
-    // Create pension request
     const requestId =
       await pensionRequestDao.submitPensionRequestDAO(pensionData);
 
@@ -172,6 +159,80 @@ exports.submitPensionRequest = asyncHandler(async (req, res) => {
     res.status(500).json({
       status: false,
       message: "An error occurred while submitting pension request.",
+    });
+  }
+});
+
+exports.updateFirstTimeStatus = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pensionRequestDao.updateFirstTimeStatus(userId);
+
+    if (!result) {
+      return res.status(404).json({
+        status: "error",
+        message: "No pension request found for this user.",
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "First time status updated successfully.",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Error updating first time status:", err);
+    res.status(500).json({
+      status: "error",
+      message: "An error occurred while updating first time status.",
+    });
+  }
+});
+
+exports.checkEligibility = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const eligibility = await pensionRequestDao.checkEligibility(userId);
+
+    if (!eligibility.hasOngoingCultivation) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_ONGOING_CULTIVATION",
+        message: "You do not have any ongoing cultivation.",
+      });
+    }
+
+    if (!eligibility.hasEnrolledCrop) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_ENROLLED_CROP",
+        message: "You have no enrolled crops in your cultivation.",
+      });
+    }
+
+    if (!eligibility.hasCompletedCropCalendar) {
+      return res.status(200).json({
+        status: "ineligible",
+        eligible: false,
+        reason: "NO_COMPLETED_CROP_CALENDAR",
+        message:
+          "You must complete at least one full crop calendar to be eligible.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "eligible",
+      eligible: true,
+      message: "You are eligible to apply for a pension request.",
+    });
+  } catch (err) {
+    console.error("Error checking pension eligibility:", err);
+    res.status(500).json({
+      status: "error",
+      message: "An error occurred while checking eligibility.",
     });
   }
 });
