@@ -157,18 +157,14 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           );
           break;
         default:
-          return res
-            .status(400)
-            .json({
-              message: "Invalid ownership type provided for building asset.",
-            });
+          return res.status(400).json({
+            message: "Invalid ownership type provided for building asset.",
+          });
       }
 
-      return res
-        .status(201)
-        .json({
-          message: "Building fixed asset with ownership created successfully.",
-        });
+      return res.status(201).json({
+        message: "Building fixed asset with ownership created successfully.",
+      });
     } else if (category === "Land") {
       const farmResult = await fixedAssetDao.getFarmDistrict(farmId);
       if (!farmResult || farmResult.length === 0) {
@@ -224,18 +220,14 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           );
           break;
         default:
-          return res
-            .status(400)
-            .json({
-              message: "Invalid ownership type provided for land asset.",
-            });
+          return res.status(400).json({
+            message: "Invalid ownership type provided for land asset.",
+          });
       }
 
-      return res
-        .status(201)
-        .json({
-          message: "Land fixed asset with ownership created successfully.",
-        });
+      return res.status(201).json({
+        message: "Land fixed asset with ownership created successfully.",
+      });
     } else if (category === "Machine and Vehicles" || category === "Tools") {
       const assetLabel = category === "Tools" ? assetname : asset;
       const brandLabel = category === "Tools" ? toolbrand : brand;
@@ -260,20 +252,16 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
           formattedExpireDate,
           warranty,
         );
-        return res
-          .status(201)
-          .json({
-            message:
-              "Machine and tools fixed asset with warranty created successfully.",
-          });
+        return res.status(201).json({
+          message:
+            "Machine and tools fixed asset with warranty created successfully.",
+        });
       }
 
-      return res
-        .status(201)
-        .json({
-          message:
-            "Machine and tools fixed asset created successfully without warranty.",
-        });
+      return res.status(201).json({
+        message:
+          "Machine and tools fixed asset created successfully without warranty.",
+      });
     } else {
       return res.status(400).json({ message: "Invalid category provided." });
     }
@@ -287,7 +275,7 @@ exports.addFixedAsset = asyncHandler(async (req, res) => {
 
 exports.getFixedAssetsByCategory = asyncHandler(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.ownerId;
     const { category } = req.params;
 
     const results = await fixedAssetDao.getAssetsByCategory(userId, category);
