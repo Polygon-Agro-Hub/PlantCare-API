@@ -11,6 +11,7 @@ const {
   marketPlace,
   admin,
   investments,
+  govishop,
 } = require("./startup/database");
 
 // Import routes
@@ -32,6 +33,7 @@ const publicforumRoutes = require("./routes/public-forum-routes");
 const calendartaskImages = require("./routes/crop-calendar-images-routes");
 const reportRoutes = require("./routes/report-routes");
 const pentionRoutes = require("./routes/pension-routes");
+const goviShopRoutes = require("./routes/govi-shop-routes");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -98,6 +100,7 @@ const registerRoutes = () => {
   app.use("/api/certificate", certificateRoutes);
   app.use("/api/goviCapital", goviCapitalRoutes);
   app.use("/api/pension", pentionRoutes);
+  app.use("/api/govi-shop", goviShopRoutes);
   app.use("", heathRoutes); // Health check routes
 
   // Protected routes (with AUTHOR prefix)
@@ -173,6 +176,7 @@ const initializeServer = () => {
     testDatabaseConnection(marketPlace, "MarketPlace");
     testDatabaseConnection(admin, "Admin");
     testDatabaseConnection(investments, "Investment");
+    testDatabaseConnection(govishop, "Govishop");
 
     // Start server
     app.listen(port, () => {
