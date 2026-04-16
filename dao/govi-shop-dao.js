@@ -1,37 +1,31 @@
 const db = require("../startup/database");
 
-exports.getShops = (search) => {
+exports.getShops = (search = "") => {
   return new Promise((resolve, reject) => {
     let query = `
       SELECT 
         gs.id,
         gs.shopName,
         gs.logo,
+        gs.approvedStatus,
         COUNT(sp.id) AS productCount
       FROM govishops gs
-      LEFT JOIN shopcategories sc ON sc.shopId = gs.id
-      LEFT JOIN shopproducts sp ON sp.categoryId = sc.id
-      WHERE gs.isActive = 1
-        AND gs.approvedStatus = 'Approved'
-    `;
-
-    const params = [];
-
-    // 🔍 Search condition (shop name OR product name)
-    if (search) {
-      query += `
+      INNER JOIN shopcategories sc ON sc.shopId = gs.id
+      INNER JOIN shopproducts sp   ON sp.categoryId = sc.id
+      WHERE gs.approvedStatus = ?
         AND (
-          gs.shopName LIKE ? 
-          OR sp.prodName LIKE ?
+          gs.shopName  LIKE ? OR
+          sp.prodName  LIKE ? OR
+          sp.keyWords  LIKE ?
         )
-      `;
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    query += `
-      GROUP BY gs.id
-      ORDER BY gs.createdAt DESC
+      GROUP BY 
+        gs.id,
+        gs.shopName,
+        gs.logo,
+        gs.approvedStatus
     `;
+    const searchTerm = `%${search}%`;
+    const params = ["Approved", searchTerm, searchTerm, searchTerm];
 
     db.govishop.query(query, params, (error, results) => {
       if (error) {
