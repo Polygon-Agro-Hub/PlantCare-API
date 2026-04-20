@@ -9,5 +9,8 @@ router.get(
   goviShopEp.getShops
 );
 
+router.get("/branches/:branchId/categories", authenticate, goviShopEp.getBranchCategories);
+router.get("/branches/:branchId/products", authenticate, goviShopEp.getBranchProducts);
+
 
 module.exports = router;
