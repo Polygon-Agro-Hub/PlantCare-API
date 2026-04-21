@@ -1,5 +1,4 @@
-Create .github/workflows/deploy.yml:
-name: Deploy to Vercel
+name: Deploy to Vercel GoviCare api
 
 on:
   push:
