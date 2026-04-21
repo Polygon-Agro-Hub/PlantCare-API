@@ -44,3 +44,19 @@ exports.getBranchProducts = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Failed to fetch products" });
   }
 });
+
+exports.getProductVariants = asyncHandler(async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const variants = await goviShopDao.getProductVariants(productId);
+
+    if (!variants || variants.length === 0) {
+      return res.status(404).json({ message: "No variants found" });
+    }
+
+    res.status(200).json(variants);
+  } catch (error) {
+    console.error("Error fetching product variants:", error);
+    res.status(500).json({ message: "Failed to fetch variants" });
+  }
+});
