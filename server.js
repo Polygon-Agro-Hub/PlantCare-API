@@ -89,7 +89,7 @@ const configureMiddleware = () => {
 const registerRoutes = () => {
   const authorBasePath = process.env.AUTHOR || "/api";
 
-  // Public routes (no auth required)
+  // Public routes
   app.use("/api/news", newsRoutes);
   app.use("/api/crop", cropRoutes);
   app.use("/api/market-price", MarketPriceRoutes);
