@@ -48,7 +48,13 @@ exports.getBranchProducts = asyncHandler(async (req, res) => {
 exports.getProductVariants = asyncHandler(async (req, res) => {
   try {
     const { productId } = req.params;
-    const variants = await goviShopDao.getProductVariants(productId);
+    const { branchId } = req.query;
+
+    if (!branchId) {
+      return res.status(400).json({ message: "branchId is required" });
+    }
+
+    const variants = await goviShopDao.getProductVariants(productId, branchId);
 
     if (!variants || variants.length === 0) {
       return res.status(404).json({ message: "No variants found" });
