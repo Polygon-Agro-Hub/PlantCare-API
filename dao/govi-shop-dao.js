@@ -115,210 +115,257 @@ exports.getProductVariants = (productId, branchId) => {
 
       const { baseUom, isMRP } = uomResult[0];
 
+      // ─────────────────────────────────────────────
+      // EQUIPMENT
+      // ─────────────────────────────────────────────
       if (baseUom === "Equipment") {
         const query = `
           SELECT
-            ec.id                                    AS variantId,
-            NULL                                     AS qty,
-            NULL                                     AS uom,
-            ec.color                                 AS color,
-            COALESCE(SUM(si.purchQty), 0)            AS availableQty,
-            (SELECT s2.salePrice FROM stockin s2
-              INNER JOIN equipmentcolors ec2 ON s2.equipColorId = ec2.id
-              WHERE ec2.id = ec.id AND s2.branchId = ?
-                AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-              ORDER BY s2.createdAt DESC LIMIT 1)    AS latestSalePrice,
-            (SELECT s2.originalPrice FROM stockin s2
-              INNER JOIN equipmentcolors ec2 ON s2.equipColorId = ec2.id
-              WHERE ec2.id = ec.id AND s2.branchId = ?
-                AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-              ORDER BY s2.createdAt DESC LIMIT 1)    AS latestOriginalPrice,
-            (SELECT s3.salePrice FROM stockin s3
-              INNER JOIN equipmentcolors ec3 ON s3.equipColorId = ec3.id
-              WHERE ec3.id = ec.id AND s3.branchId = ?
-                AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-              ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestSalePrice,
-            (SELECT s3.originalPrice FROM stockin s3
-              INNER JOIN equipmentcolors ec3 ON s3.equipColorId = ec3.id
-              WHERE ec3.id = ec.id AND s3.branchId = ?
-                AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-              ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestOriginalPrice,
-            (SELECT s4.salePrice FROM stockin s4
-              INNER JOIN equipmentcolors ec4 ON s4.equipColorId = ec4.id
-              WHERE ec4.id = ec.id AND s4.branchId = ?
-                AND (s4.expiryDate IS NULL OR s4.expiryDate > NOW())
-              ORDER BY s4.createdAt ASC LIMIT 1 OFFSET 1) AS nextBatchSalePrice
+            ec.id        AS variantId,
+            NULL         AS qty,
+            NULL         AS uom,
+            ec.color     AS color,
+            NULL         AS width,
+            NULL         AS height,
+            si.purchQty  AS batchQty,
+            si.salePrice AS salePrice,
+            si.originalPrice AS originalPrice,
+            si.createdAt AS createdAt
           FROM equipmentcolors ec
           INNER JOIN stockin si
             ON si.equipColorId = ec.id
             AND si.branchId = ?
             AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+            AND si.purchQty > 0
           WHERE ec.productId = ?
-          GROUP BY ec.id
-          HAVING availableQty > 0
+          ORDER BY ec.id ASC, si.createdAt ASC
         `;
+
         return db.govishop.query(
           query,
-          [
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            productId,
-          ],
+          [branchId, productId],
           (err, rows) => {
             if (err) return reject(err);
-            resolve(
-              (rows || [])
-                .map((r) => resolveStockPrice(r, isMRP))
-                .filter(Boolean),
-            );
-          },
+            const grouped = groupAndResolve(rows, isMRP);
+            resolve(grouped);
+          }
         );
       }
 
+      // ─────────────────────────────────────────────
+      // PIECES  (has color chips per sub-product)
+      // ─────────────────────────────────────────────
       if (baseUom === "Pieces") {
         const subQuery = `
           SELECT
-            sp.id                                    AS variantId,
-            sp.qty                                   AS qty,
-            sp.unit                                  AS uom,
-            COALESCE(SUM(si.purchQty), 0)            AS availableQty,
-            (SELECT s2.salePrice FROM stockin s2
-              WHERE s2.subProdId = sp.id AND s2.branchId = ?
-                AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-              ORDER BY s2.createdAt DESC LIMIT 1)    AS latestSalePrice,
-            (SELECT s2.originalPrice FROM stockin s2
-              WHERE s2.subProdId = sp.id AND s2.branchId = ?
-                AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-              ORDER BY s2.createdAt DESC LIMIT 1)    AS latestOriginalPrice,
-            (SELECT s3.salePrice FROM stockin s3
-              WHERE s3.subProdId = sp.id AND s3.branchId = ?
-                AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-              ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestSalePrice,
-            (SELECT s3.originalPrice FROM stockin s3
-              WHERE s3.subProdId = sp.id AND s3.branchId = ?
-                AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-              ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestOriginalPrice,
-            (SELECT s4.salePrice FROM stockin s4
-              WHERE s4.subProdId = sp.id AND s4.branchId = ?
-                AND (s4.expiryDate IS NULL OR s4.expiryDate > NOW())
-              ORDER BY s4.createdAt ASC LIMIT 1 OFFSET 1) AS nextBatchSalePrice
+            sp.id        AS variantId,
+            sp.qty       AS qty,
+            sp.unit      AS uom,
+            NULL         AS color,
+            NULL         AS width,
+            NULL         AS height,
+            si.purchQty  AS batchQty,
+            si.salePrice AS salePrice,
+            si.originalPrice AS originalPrice,
+            si.createdAt AS createdAt
           FROM subproducts sp
           INNER JOIN stockin si
             ON si.subProdId = sp.id
             AND si.branchId = ?
             AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+            AND si.purchQty > 0
           WHERE sp.productId = ? AND sp.isAvailable = 1
-          GROUP BY sp.id
+          ORDER BY sp.id ASC, si.createdAt ASC
         `;
 
         db.govishop.query(
           subQuery,
-          [
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            branchId,
-            productId,
-          ],
+          [branchId, productId],
           (subErr, subRows) => {
             if (subErr) return reject(subErr);
             if (!subRows || subRows.length === 0) return resolve([]);
 
-            const subIds = subRows.map((r) => r.variantId);
+            const resolved = groupAndResolve(subRows, isMRP);
+            if (resolved.length === 0) return resolve([]);
+
+            const subIds = resolved.map((r) => r.variantId);
             const colorQuery = `
               SELECT subProdId, color
               FROM subproductcolors
               WHERE subProdId IN (?)
               ORDER BY subProdId ASC, color ASC
             `;
-            db.govishop.query(colorQuery, [subIds], (colorErr, colorRows) => {
-              if (colorErr) return reject(colorErr);
 
-              const colorMap = {};
-              (colorRows || []).forEach((c) => {
-                if (!colorMap[c.subProdId]) colorMap[c.subProdId] = [];
-                colorMap[c.subProdId].push(c.color);
-              });
+            db.govishop.query(
+              colorQuery,
+              [subIds],
+              (colorErr, colorRows) => {
+                if (colorErr) return reject(colorErr);
 
-              resolve(
-                subRows
-                  .map((sp) => {
-                    const resolved = resolveStockPrice(sp, isMRP);
-                    if (!resolved) return null;
-                    return {
-                      ...resolved,
-                      colors: colorMap[sp.variantId] ?? [],
-                    };
-                  })
-                  .filter(Boolean),
-              );
-            });
-          },
+                const colorMap = {};
+                (colorRows || []).forEach((c) => {
+                  if (!colorMap[c.subProdId]) colorMap[c.subProdId] = [];
+                  colorMap[c.subProdId].push(c.color);
+                });
+
+                resolve(
+                  resolved.map((v) => ({
+                    ...v,
+                    colors: colorMap[v.variantId] ?? [],
+                  }))
+                );
+              }
+            );
+          }
         );
         return;
       }
 
+      // ─────────────────────────────────────────────
+      // DEFAULT  (Loose / Roll / any other baseUom)
+      // ─────────────────────────────────────────────
       const query = `
         SELECT
-          sp.id                                    AS variantId,
-          sp.qty                                   AS qty,
-          sp.unit                                  AS uom,
-          sp.width                                 AS width,
-          sp.height                                AS height,
-          COALESCE(SUM(si.purchQty), 0)            AS availableQty,
-          (SELECT s2.salePrice FROM stockin s2
-            WHERE s2.subProdId = sp.id AND s2.branchId = ?
-              AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-            ORDER BY s2.createdAt DESC LIMIT 1)    AS latestSalePrice,
-          (SELECT s2.originalPrice FROM stockin s2
-            WHERE s2.subProdId = sp.id AND s2.branchId = ?
-              AND (s2.expiryDate IS NULL OR s2.expiryDate > NOW())
-            ORDER BY s2.createdAt DESC LIMIT 1)    AS latestOriginalPrice,
-          (SELECT s3.salePrice FROM stockin s3
-            WHERE s3.subProdId = sp.id AND s3.branchId = ?
-              AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-            ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestSalePrice,
-          (SELECT s3.originalPrice FROM stockin s3
-            WHERE s3.subProdId = sp.id AND s3.branchId = ?
-              AND (s3.expiryDate IS NULL OR s3.expiryDate > NOW())
-            ORDER BY s3.createdAt ASC LIMIT 1)     AS oldestOriginalPrice,
-          (SELECT s4.salePrice FROM stockin s4
-            WHERE s4.subProdId = sp.id AND s4.branchId = ?
-              AND (s4.expiryDate IS NULL OR s4.expiryDate > NOW())
-            ORDER BY s4.createdAt ASC LIMIT 1 OFFSET 1) AS nextBatchSalePrice
+          sp.id        AS variantId,
+          sp.qty       AS qty,
+          sp.unit      AS uom,
+          NULL         AS color,
+          sp.width     AS width,
+          sp.height    AS height,
+          si.purchQty  AS batchQty,
+          si.salePrice AS salePrice,
+          si.originalPrice AS originalPrice,
+          si.createdAt AS createdAt
         FROM subproducts sp
         INNER JOIN stockin si
           ON si.subProdId = sp.id
           AND si.branchId = ?
           AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+          AND si.purchQty > 0
         WHERE sp.productId = ? AND sp.isAvailable = 1
-        GROUP BY sp.id
-        HAVING availableQty > 0
-        ORDER BY sp.qty ASC, sp.unit ASC
+        ORDER BY sp.qty ASC, sp.unit ASC, si.createdAt ASC
       `;
 
       db.govishop.query(
         query,
-        [branchId, branchId, branchId, branchId, branchId, branchId, productId],
+        [branchId, productId],
         (err, rows) => {
           if (err) return reject(err);
-          resolve(
-            (rows || [])
-              .map((r) => resolveStockPrice(r, isMRP))
-              .filter(Boolean),
-          );
-        },
+          const grouped = groupAndResolve(rows, isMRP);
+          resolve(grouped);
+        }
       );
     });
   });
 };
 
+// ─────────────────────────────────────────────────────────────
+// groupAndResolve
+//
+// Groups raw per-batch rows by variantId, merges consecutive
+// batches that have the same salePrice, then resolves pricing.
+//
+// isMRP = 1  → FIFO: display price = oldest batch price
+//              availableQty = total across all batches
+//              batches[] returned in createdAt ASC order
+//
+// isMRP = 0  → display price = latest batch price
+//              availableQty = total across all batches
+//              batches[] still returned (single merged entry)
+// ─────────────────────────────────────────────────────────────
+function groupAndResolve(rows, isMRP) {
+  if (!rows || rows.length === 0) return [];
+
+  // Step 1: group rows by variantId, preserving order
+  const variantMap = new Map();
+  for (const r of rows) {
+    const key = r.variantId;
+    if (!variantMap.has(key)) {
+      variantMap.set(key, { meta: r, batchRows: [] });
+    }
+    variantMap.get(key).batchRows.push(r);
+  }
+
+  const result = [];
+
+  for (const [, { meta, batchRows }] of variantMap) {
+    // Step 2: build raw batch list (filter zero qty rows just in case)
+    const rawBatches = batchRows
+      .filter((r) => Number(r.batchQty) > 0)
+      .map((r) => ({
+        qty: Number(r.batchQty),
+        salePrice: Number(r.salePrice ?? 0),
+        originalPrice: r.originalPrice ? Number(r.originalPrice) : null,
+      }));
+
+    if (rawBatches.length === 0) continue;
+
+    // Step 3: merge consecutive batches with identical salePrice
+    // e.g. [5@1200, 3@1200, 4@1205] → [8@1200, 4@1205]
+    const mergedBatches = [];
+    for (const b of rawBatches) {
+      const last = mergedBatches[mergedBatches.length - 1];
+      if (last && last.salePrice === b.salePrice) {
+        last.qty += b.qty;
+        // keep originalPrice from first batch in the group
+      } else {
+        mergedBatches.push({ ...b });
+      }
+    }
+
+    // Step 4: total qty across all merged batches
+    const totalQty = mergedBatches.reduce((sum, b) => sum + b.qty, 0);
+
+    // Step 5: resolve display price
+    // isMRP=1 → show oldest (first) batch price on the card
+    // isMRP=0 → show latest (last) batch price on the card
+    const displayBatch = isMRP
+      ? mergedBatches[0]
+      : mergedBatches[mergedBatches.length - 1];
+
+    const salePrice = displayBatch.salePrice;
+    const originalPrice = displayBatch.originalPrice;
+
+    const discountPrice =
+      originalPrice && salePrice < originalPrice ? salePrice : null;
+    const normalPrice = discountPrice ? originalPrice : salePrice;
+
+    if (normalPrice === 0 && !discountPrice) continue;
+
+    result.push({
+      variantId: meta.variantId,
+      qty: meta.qty ?? null,
+      uom: meta.uom ?? null,
+      color: meta.color ?? null,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+      normalPrice,
+      discountPrice,
+      availableQty: totalQty,      // always total across all batches
+      isMRP: isMRP ? 1 : 0,
+      // batches array — frontend uses this for boundary detection & modal
+      // isMRP=0: still send batches so frontend can display if needed
+      batches: mergedBatches.map((b) => ({
+        qty: b.qty,
+        salePrice: b.salePrice,
+        originalPrice: b.originalPrice ?? null,
+      })),
+    });
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// resolveStockPrice
+//
+// isMRP = 1  →  oldest batch pricing (FIFO stock consumption)
+//               availableQty = oldest batch qty only  ← KEY CHANGE
+//               nextBatchQty = second batch qty
+//
+// isMRP = 0  →  latest batch pricing
+//               availableQty = total across all batches
+// ─────────────────────────────────────────────────────────────
 function resolveStockPrice(row, isMRP) {
   const rawSale = isMRP ? row.oldestSalePrice : row.latestSalePrice;
   const rawOriginal = isMRP ? row.oldestOriginalPrice : row.latestOriginalPrice;
@@ -337,6 +384,20 @@ function resolveStockPrice(row, isMRP) {
       ? Number(row.nextBatchSalePrice)
       : null;
 
+  // isMRP: show only the oldest batch qty as "available"
+  // so the + button triggers the modal exactly when that batch runs out.
+  // Non-isMRP: show total across all batches.
+  const availableQty =
+    isMRP && row.oldestBatchQty != null
+      ? Number(row.oldestBatchQty)
+      : Number(row.availableQty ?? 0);
+
+  // Qty in the second-oldest batch (shown in modal as "remaining X bottles")
+  const nextBatchQty =
+    isMRP && row.nextBatchQty != null
+      ? Number(row.nextBatchQty)
+      : null;
+
   return {
     variantId: row.variantId,
     qty: row.qty ?? null,
@@ -346,8 +407,9 @@ function resolveStockPrice(row, isMRP) {
     height: row.height ?? null,
     normalPrice,
     discountPrice,
-    availableQty: Number(row.availableQty ?? 0),
+    availableQty,   // oldest-batch qty for isMRP, total for non-isMRP
     isMRP: isMRP ? 1 : 0,
-    nextBatchPrice,
+    nextBatchPrice, // price of the second batch (null if only one batch)
+    nextBatchQty,   // qty  of the second batch (null if only one batch)
   };
 }
