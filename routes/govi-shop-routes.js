@@ -14,5 +14,10 @@ router.get("/branches/:branchId/products", authenticate, goviShopEp.getBranchPro
 
 router.get("/products/:productId/variants", authenticate, goviShopEp.getProductVariants);
 
+router.post("/cart/item", authenticate, goviShopEp.upsertCartItem);
+router.delete("/cart/item", authenticate, goviShopEp.removeCartItem);
+
+router.get("/cart", authenticate, goviShopEp.getCart);
+
 
 module.exports = router;

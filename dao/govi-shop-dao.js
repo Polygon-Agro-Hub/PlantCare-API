@@ -115,9 +115,6 @@ exports.getProductVariants = (productId, branchId) => {
 
       const { baseUom, isMRP } = uomResult[0];
 
-      // ─────────────────────────────────────────────
-      // EQUIPMENT
-      // ─────────────────────────────────────────────
       if (baseUom === "Equipment") {
         const query = `
           SELECT
@@ -141,20 +138,13 @@ exports.getProductVariants = (productId, branchId) => {
           ORDER BY ec.id ASC, si.createdAt ASC
         `;
 
-        return db.govishop.query(
-          query,
-          [branchId, productId],
-          (err, rows) => {
-            if (err) return reject(err);
-            const grouped = groupAndResolve(rows, isMRP);
-            resolve(grouped);
-          }
-        );
+        return db.govishop.query(query, [branchId, productId], (err, rows) => {
+          if (err) return reject(err);
+          const grouped = groupAndResolve(rows, isMRP);
+          resolve(grouped);
+        });
       }
 
-      // ─────────────────────────────────────────────
-      // PIECES  (has color chips per sub-product)
-      // ─────────────────────────────────────────────
       if (baseUom === "Pieces") {
         const subQuery = `
           SELECT
@@ -196,34 +186,27 @@ exports.getProductVariants = (productId, branchId) => {
               ORDER BY subProdId ASC, color ASC
             `;
 
-            db.govishop.query(
-              colorQuery,
-              [subIds],
-              (colorErr, colorRows) => {
-                if (colorErr) return reject(colorErr);
+            db.govishop.query(colorQuery, [subIds], (colorErr, colorRows) => {
+              if (colorErr) return reject(colorErr);
 
-                const colorMap = {};
-                (colorRows || []).forEach((c) => {
-                  if (!colorMap[c.subProdId]) colorMap[c.subProdId] = [];
-                  colorMap[c.subProdId].push(c.color);
-                });
+              const colorMap = {};
+              (colorRows || []).forEach((c) => {
+                if (!colorMap[c.subProdId]) colorMap[c.subProdId] = [];
+                colorMap[c.subProdId].push(c.color);
+              });
 
-                resolve(
-                  resolved.map((v) => ({
-                    ...v,
-                    colors: colorMap[v.variantId] ?? [],
-                  }))
-                );
-              }
-            );
-          }
+              resolve(
+                resolved.map((v) => ({
+                  ...v,
+                  colors: colorMap[v.variantId] ?? [],
+                })),
+              );
+            });
+          },
         );
         return;
       }
 
-      // ─────────────────────────────────────────────
-      // DEFAULT  (Loose / Roll / any other baseUom)
-      // ─────────────────────────────────────────────
       const query = `
         SELECT
           sp.id        AS variantId,
@@ -246,37 +229,18 @@ exports.getProductVariants = (productId, branchId) => {
         ORDER BY sp.qty ASC, sp.unit ASC, si.createdAt ASC
       `;
 
-      db.govishop.query(
-        query,
-        [branchId, productId],
-        (err, rows) => {
-          if (err) return reject(err);
-          const grouped = groupAndResolve(rows, isMRP);
-          resolve(grouped);
-        }
-      );
+      db.govishop.query(query, [branchId, productId], (err, rows) => {
+        if (err) return reject(err);
+        const grouped = groupAndResolve(rows, isMRP);
+        resolve(grouped);
+      });
     });
   });
 };
 
-// ─────────────────────────────────────────────────────────────
-// groupAndResolve
-//
-// Groups raw per-batch rows by variantId, merges consecutive
-// batches that have the same salePrice, then resolves pricing.
-//
-// isMRP = 1  → FIFO: display price = oldest batch price
-//              availableQty = total across all batches
-//              batches[] returned in createdAt ASC order
-//
-// isMRP = 0  → display price = latest batch price
-//              availableQty = total across all batches
-//              batches[] still returned (single merged entry)
-// ─────────────────────────────────────────────────────────────
 function groupAndResolve(rows, isMRP) {
   if (!rows || rows.length === 0) return [];
 
-  // Step 1: group rows by variantId, preserving order
   const variantMap = new Map();
   for (const r of rows) {
     const key = r.variantId;
@@ -289,7 +253,6 @@ function groupAndResolve(rows, isMRP) {
   const result = [];
 
   for (const [, { meta, batchRows }] of variantMap) {
-    // Step 2: build raw batch list (filter zero qty rows just in case)
     const rawBatches = batchRows
       .filter((r) => Number(r.batchQty) > 0)
       .map((r) => ({
@@ -300,25 +263,18 @@ function groupAndResolve(rows, isMRP) {
 
     if (rawBatches.length === 0) continue;
 
-    // Step 3: merge consecutive batches with identical salePrice
-    // e.g. [5@1200, 3@1200, 4@1205] → [8@1200, 4@1205]
     const mergedBatches = [];
     for (const b of rawBatches) {
       const last = mergedBatches[mergedBatches.length - 1];
       if (last && last.salePrice === b.salePrice) {
         last.qty += b.qty;
-        // keep originalPrice from first batch in the group
       } else {
         mergedBatches.push({ ...b });
       }
     }
 
-    // Step 4: total qty across all merged batches
     const totalQty = mergedBatches.reduce((sum, b) => sum + b.qty, 0);
 
-    // Step 5: resolve display price
-    // isMRP=1 → show oldest (first) batch price on the card
-    // isMRP=0 → show latest (last) batch price on the card
     const displayBatch = isMRP
       ? mergedBatches[0]
       : mergedBatches[mergedBatches.length - 1];
@@ -341,10 +297,9 @@ function groupAndResolve(rows, isMRP) {
       height: meta.height ?? null,
       normalPrice,
       discountPrice,
-      availableQty: totalQty,      // always total across all batches
+      availableQty: totalQty,
       isMRP: isMRP ? 1 : 0,
-      // batches array — frontend uses this for boundary detection & modal
-      // isMRP=0: still send batches so frontend can display if needed
+
       batches: mergedBatches.map((b) => ({
         qty: b.qty,
         salePrice: b.salePrice,
@@ -356,16 +311,6 @@ function groupAndResolve(rows, isMRP) {
   return result;
 }
 
-// ─────────────────────────────────────────────────────────────
-// resolveStockPrice
-//
-// isMRP = 1  →  oldest batch pricing (FIFO stock consumption)
-//               availableQty = oldest batch qty only  ← KEY CHANGE
-//               nextBatchQty = second batch qty
-//
-// isMRP = 0  →  latest batch pricing
-//               availableQty = total across all batches
-// ─────────────────────────────────────────────────────────────
 function resolveStockPrice(row, isMRP) {
   const rawSale = isMRP ? row.oldestSalePrice : row.latestSalePrice;
   const rawOriginal = isMRP ? row.oldestOriginalPrice : row.latestOriginalPrice;
@@ -384,19 +329,13 @@ function resolveStockPrice(row, isMRP) {
       ? Number(row.nextBatchSalePrice)
       : null;
 
-  // isMRP: show only the oldest batch qty as "available"
-  // so the + button triggers the modal exactly when that batch runs out.
-  // Non-isMRP: show total across all batches.
   const availableQty =
     isMRP && row.oldestBatchQty != null
       ? Number(row.oldestBatchQty)
       : Number(row.availableQty ?? 0);
 
-  // Qty in the second-oldest batch (shown in modal as "remaining X bottles")
   const nextBatchQty =
-    isMRP && row.nextBatchQty != null
-      ? Number(row.nextBatchQty)
-      : null;
+    isMRP && row.nextBatchQty != null ? Number(row.nextBatchQty) : null;
 
   return {
     variantId: row.variantId,
@@ -407,9 +346,244 @@ function resolveStockPrice(row, isMRP) {
     height: row.height ?? null,
     normalPrice,
     discountPrice,
-    availableQty,   // oldest-batch qty for isMRP, total for non-isMRP
+    availableQty,
     isMRP: isMRP ? 1 : 0,
-    nextBatchPrice, // price of the second batch (null if only one batch)
-    nextBatchQty,   // qty  of the second batch (null if only one batch)
+    nextBatchPrice,
+    nextBatchQty,
   };
+}
+
+exports.upsertCartItem = async ({
+  farmerId,
+  branchId,
+  productId,
+  subProdId,
+  subProdColorId,
+  equipColorId,
+  qty,
+}) => {
+  if (qty === 0) {
+    await exports.removeCartItem({
+      farmerId,
+      productId,
+      subProdId,
+      subProdColorId,
+      equipColorId,
+    });
+    return { message: "Item removed from cart" };
+  }
+
+  const cartId = await getOrCreateCart(farmerId);
+
+  const productRows = await dbQuery(
+    `SELECT isMRP FROM shopproducts WHERE id = ? AND isActive = 1 LIMIT 1`,
+    [productId],
+  );
+  if (!productRows.length) throw new Error("Product not found");
+  const isMRP = productRows[0].isMRP === 1;
+
+  const existing = await findCartItem(
+    cartId,
+    productId,
+    subProdId,
+    subProdColorId,
+    equipColorId,
+  );
+
+  let cartItemId;
+
+  if (existing) {
+    await dbQuery(`UPDATE cartitems SET qty = ? WHERE id = ?`, [
+      qty,
+      existing.id,
+    ]);
+    cartItemId = existing.id;
+  } else {
+    const insert = await dbQuery(
+      `INSERT INTO cartitems
+         (cartId, productId, subProdId, subProdColorId, equipColorId, qty)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        cartId,
+        productId,
+        subProdId ?? null,
+        subProdColorId ?? null,
+        equipColorId ?? null,
+        qty,
+      ],
+    );
+    cartItemId = insert.insertId;
+  }
+
+  if (isMRP) {
+    const batches = await fetchBatches(subProdId, equipColorId, branchId);
+    const allocation = allocateFIFO(batches, qty);
+    await replaceCartItemStock(cartItemId, allocation);
+  } else {
+    await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [
+      cartItemId,
+    ]);
+  }
+
+  return {
+    cartId,
+    cartItemId,
+    qty,
+    message: existing ? "Cart item updated" : "Item added to cart",
+  };
+};
+
+exports.removeCartItem = async ({
+  farmerId,
+  productId,
+  subProdId,
+  subProdColorId,
+  equipColorId,
+}) => {
+  const cartRows = await dbQuery(
+    `SELECT id FROM cart WHERE farmerId = ? LIMIT 1`,
+    [farmerId],
+  );
+  if (!cartRows.length) return;
+
+  const cartId = cartRows[0].id;
+  const item = await findCartItem(
+    cartId,
+    productId,
+    subProdId,
+    subProdColorId,
+    equipColorId,
+  );
+  if (!item) return;
+
+  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [item.id]);
+  await dbQuery(`DELETE FROM cartitems WHERE id = ?`, [item.id]);
+};
+
+exports.getCart = async (farmerId) => {
+  const cartRows = await dbQuery(
+    `SELECT id FROM cart WHERE farmerId = ? LIMIT 1`,
+    [farmerId],
+  );
+  if (!cartRows.length) return { cartId: null, items: [] };
+
+  const cartId = cartRows[0].id;
+
+  const items = await dbQuery(
+    `SELECT
+       ci.id            AS cartItemId,
+       ci.productId,
+       sp.prodName      AS productName,
+       sp.thumbnail     AS productImage,
+       sp.baseUom,
+       ci.subProdId,
+       ci.subProdColorId,
+       ci.equipColorId,
+       ci.qty,
+       ci.createdAt
+     FROM cartitems ci
+     INNER JOIN shopproducts sp ON sp.id = ci.productId
+     WHERE ci.cartId = ?
+     ORDER BY ci.createdAt ASC`,
+    [cartId],
+  );
+
+  return { cartId, items };
+};
+
+function dbQuery(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.govishop.query(sql, params, (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+}
+
+async function getOrCreateCart(farmerId) {
+  const rows = await dbQuery(`SELECT id FROM cart WHERE farmerId = ? LIMIT 1`, [
+    farmerId,
+  ]);
+  if (rows.length > 0) return rows[0].id;
+
+  const insert = await dbQuery(`INSERT INTO cart (farmerId) VALUES (?)`, [
+    farmerId,
+  ]);
+  return insert.insertId;
+}
+
+async function findCartItem(
+  cartId,
+  productId,
+  subProdId,
+  subProdColorId,
+  equipColorId,
+) {
+  const rows = await dbQuery(
+    `SELECT id, qty FROM cartitems
+     WHERE cartId         = ?
+       AND productId      = ?
+       AND (subProdId      <=> ?)
+       AND (subProdColorId <=> ?)
+       AND (equipColorId   <=> ?)
+     LIMIT 1`,
+    [cartId, productId, subProdId, subProdColorId, equipColorId],
+  );
+  return rows[0] ?? null;
+}
+
+async function fetchBatches(subProdId, equipColorId, branchId) {
+  if (equipColorId) {
+    return dbQuery(
+      `SELECT id AS stockInId, purchQty AS availableQty, salePrice
+       FROM stockin
+       WHERE equipColorId = ?
+         AND branchId     = ?
+         AND purchQty     > 0
+         AND (expiryDate IS NULL OR expiryDate > NOW())
+       ORDER BY createdAt ASC`,
+      [equipColorId, branchId],
+    );
+  }
+  return dbQuery(
+    `SELECT id AS stockInId, purchQty AS availableQty, salePrice
+     FROM stockin
+     WHERE subProdId = ?
+       AND branchId  = ?
+       AND purchQty  > 0
+       AND (expiryDate IS NULL OR expiryDate > NOW())
+     ORDER BY createdAt ASC`,
+    [subProdId, branchId],
+  );
+}
+
+function allocateFIFO(batches, totalQty) {
+  const allocation = [];
+  let remaining = totalQty;
+
+  for (const batch of batches) {
+    if (remaining <= 0) break;
+    const take = Math.min(batch.availableQty, remaining);
+    allocation.push({ stockInId: batch.stockInId, outQty: take });
+    remaining -= take;
+  }
+
+  if (remaining > 0) {
+    throw new Error(
+      `Insufficient stock. Only ${totalQty - remaining} available.`,
+    );
+  }
+  return allocation;
+}
+
+async function replaceCartItemStock(cartItemId, allocation) {
+  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [cartItemId]);
+
+  if (allocation.length === 0) return;
+
+  const values = allocation.map((a) => [cartItemId, a.stockInId, a.outQty]);
+  await dbQuery(
+    `INSERT INTO cartitemstock (cartItemId, stockInId, outQty) VALUES ?`,
+    [values],
+  );
 }
