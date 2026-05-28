@@ -1,6 +1,6 @@
 const db = require("../startup/database");
 
-exports.getShops = (search = "") => {
+exports.getShops = (search = "", userDistrict = "") => {
   return new Promise((resolve, reject) => {
     let query = `
       SELECT 
@@ -16,24 +16,76 @@ exports.getShops = (search = "") => {
         b.isActive
       FROM govishops gs
       INNER JOIN branches b ON b.shopId = gs.id
-      WHERE (
-          gs.shopName  LIKE ? OR
-          b.branchName LIKE ? OR
-          b.district   LIKE ? OR
-          b.province   LIKE ?
+      WHERE b.district = ?
+      AND (
+
+        -- ✅ PATH 1: Branch name / location match
+        --    (branch-level fields only — safe, no cross-branch bleed)
+        (
+          (
+            b.branchName LIKE ? OR
+            b.district   LIKE ? OR
+            b.province   LIKE ?
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM branchproducts bp2
+            INNER JOIN shopproducts sp2 ON sp2.id = bp2.productId
+            WHERE bp2.branchId = b.id
+              AND sp2.isActive = 1
+          )
         )
+
+        OR
+
+        -- ✅ PATH 2: Shop name OR product name/keyword match
+        --    Tied to EXISTS so only branches that HAVE the matching product show
+        EXISTS (
+          SELECT 1
+          FROM branchproducts bp
+          INNER JOIN shopproducts sp ON sp.id = bp.productId
+          WHERE bp.branchId = b.id
+            AND sp.isActive = 1
+            AND (
+              sp.prodName      LIKE ? OR
+              sp.searchKeyWord LIKE ? OR
+              gs.shopName      LIKE ?    -- ✅ shop name checked here, scoped per branch
+            )
+        )
+
+      )
       ORDER BY gs.shopName, b.branchName
     `;
 
     const searchTerm = `%${search}%`;
-    const params = [searchTerm, searchTerm, searchTerm, searchTerm];
+    const params = [
+      userDistrict,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+    ];
 
     db.govishop.query(query, params, (error, results) => {
       if (error) {
-        console.error("Error fetching shops:", error);
         reject(error);
       } else {
         resolve(results);
+      }
+    });
+  });
+};
+
+exports.getUserDistrict = (userId) => {
+  return new Promise((resolve, reject) => {
+    const query = `SELECT district FROM users WHERE id = ? LIMIT 1`;
+    db.plantcare.query(query, [userId], (error, results) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results[0]?.district || null);
       }
     });
   });
@@ -63,7 +115,7 @@ exports.getBranchCategories = (branchId) => {
   });
 };
 
-exports.getBranchProducts = (branchId, categoryId = null) => {
+exports.getBranchProducts = (branchId, categoryId = null, search = "") => {
   return new Promise((resolve, reject) => {
     let query = `
       SELECT 
@@ -84,7 +136,6 @@ exports.getBranchProducts = (branchId, categoryId = null) => {
         AND sp.isActive = 1
         AND sc.isActive = 1
     `;
-
     const params = [branchId];
 
     if (categoryId) {
@@ -92,7 +143,16 @@ exports.getBranchProducts = (branchId, categoryId = null) => {
       params.push(categoryId);
     }
 
-    query += ` ORDER BY sc.catName, sp.prodName`;
+    if (search && search.trim().length > 0) {
+      const keyword = `%${search.trim()}%`;
+      query += ` AND (
+        sp.prodName LIKE ?
+        OR sp.searchKeyWord LIKE ?
+      )`;
+      params.push(keyword, keyword);
+    }
+
+    query += ` ORDER BY sp.prodName ASC`;
 
     db.govishop.query(query, params, (error, results) => {
       if (error) reject(error);
@@ -147,63 +207,155 @@ exports.getProductVariants = (productId, branchId) => {
 
       if (baseUom === "Pieces") {
         const subQuery = `
-          SELECT
-            sp.id        AS variantId,
-            sp.qty       AS qty,
-            sp.unit      AS uom,
-            NULL         AS color,
-            NULL         AS width,
-            NULL         AS height,
-            si.purchQty  AS batchQty,
-            si.salePrice AS salePrice,
-            si.originalPrice AS originalPrice,
-            si.createdAt AS createdAt
-          FROM subproducts sp
-          INNER JOIN stockin si
-            ON si.subProdId = sp.id
-            AND si.branchId = ?
-            AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
-            AND si.purchQty > 0
-          WHERE sp.productId = ? AND sp.isAvailable = 1
-          ORDER BY sp.id ASC, si.createdAt ASC
-        `;
+    SELECT
+      sp.id        AS variantId,
+      sp.qty       AS qty,
+      sp.unit      AS uom
+    FROM subproducts sp
+    WHERE sp.productId = ? AND sp.isAvailable = 1
+    ORDER BY sp.qty ASC
+  `;
 
-        db.govishop.query(
-          subQuery,
-          [branchId, productId],
-          (subErr, subRows) => {
-            if (subErr) return reject(subErr);
-            if (!subRows || subRows.length === 0) return resolve([]);
+        db.govishop.query(subQuery, [productId], (subErr, subRows) => {
+          if (subErr) return reject(subErr);
+          if (!subRows || subRows.length === 0) return resolve([]);
 
-            const resolved = groupAndResolve(subRows, isMRP);
-            if (resolved.length === 0) return resolve([]);
+          const subIds = subRows.map((r) => r.variantId);
 
-            const subIds = resolved.map((r) => r.variantId);
-            const colorQuery = `
-              SELECT subProdId, color
-              FROM subproductcolors
-              WHERE subProdId IN (?)
-              ORDER BY subProdId ASC, color ASC
-            `;
+          const colorStockQuery = `
+      SELECT
+        spc.id          AS colorId,
+        spc.subProdId   AS subProdId,
+        spc.color       AS color,
+        si.purchQty     AS batchQty,
+        si.salePrice    AS salePrice,
+        si.originalPrice AS originalPrice,
+        si.createdAt    AS createdAt
+      FROM subproductcolors spc
+      INNER JOIN stockin si
+        ON  si.subProdColorId = spc.id
+        AND si.branchId       = ?
+        AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+        AND si.purchQty > 0
+      WHERE spc.subProdId IN (?)
+        AND spc.isAvailable = 1
+      ORDER BY spc.subProdId ASC, spc.id ASC, si.createdAt ASC
+    `;
 
-            db.govishop.query(colorQuery, [subIds], (colorErr, colorRows) => {
+          db.govishop.query(
+            colorStockQuery,
+            [branchId, subIds],
+            (colorErr, colorRows) => {
               if (colorErr) return reject(colorErr);
+              if (!colorRows || colorRows.length === 0) return resolve([]);
 
-              const colorMap = {};
-              (colorRows || []).forEach((c) => {
-                if (!colorMap[c.subProdId]) colorMap[c.subProdId] = [];
-                colorMap[c.subProdId].push(c.color);
-              });
+              const colorMap = new Map();
+              for (const r of colorRows) {
+                if (!colorMap.has(r.colorId)) {
+                  colorMap.set(r.colorId, { meta: r, batchRows: [] });
+                }
+                colorMap.get(r.colorId).batchRows.push(r);
+              }
 
-              resolve(
-                resolved.map((v) => ({
-                  ...v,
-                  colors: colorMap[v.variantId] ?? [],
-                })),
-              );
-            });
-          },
-        );
+              const resolvedColors = [];
+              for (const [, { meta, batchRows }] of colorMap) {
+                const rawBatches = batchRows
+                  .filter((r) => Number(r.batchQty) > 0)
+                  .map((r) => ({
+                    qty: Number(r.batchQty),
+                    salePrice: Number(r.salePrice ?? 0),
+                    originalPrice: r.originalPrice
+                      ? Number(r.originalPrice)
+                      : null,
+                  }));
+
+                if (rawBatches.length === 0) continue;
+
+                const mergedBatches = [];
+                for (const b of rawBatches) {
+                  const last = mergedBatches[mergedBatches.length - 1];
+                  if (last && last.salePrice === b.salePrice) {
+                    last.qty += b.qty;
+                  } else {
+                    mergedBatches.push({ ...b });
+                  }
+                }
+
+                const totalQty = mergedBatches.reduce((s, b) => s + b.qty, 0);
+
+                const displayBatch = isMRP
+                  ? mergedBatches[0]
+                  : mergedBatches[mergedBatches.length - 1];
+
+                const salePrice = displayBatch.salePrice;
+                const originalPrice = displayBatch.originalPrice;
+                const discountPrice =
+                  originalPrice && salePrice < originalPrice ? salePrice : null;
+                const normalPrice = discountPrice ? originalPrice : salePrice;
+
+                if (normalPrice === 0 && !discountPrice) continue;
+
+                resolvedColors.push({
+                  colorId: meta.colorId,
+                  subProdId: meta.subProdId,
+                  color: meta.color,
+                  normalPrice,
+                  discountPrice,
+                  availableQty: totalQty,
+                  isMRP: isMRP ? 1 : 0,
+                  batches: mergedBatches.map((b) => ({
+                    qty: b.qty,
+                    salePrice: b.salePrice,
+                    originalPrice: b.originalPrice ?? null,
+                  })),
+                });
+              }
+
+              if (resolvedColors.length === 0) return resolve([]);
+
+              const subMap = new Map();
+              for (const sub of subRows) {
+                subMap.set(sub.variantId, { sub, colors: [] });
+              }
+              for (const c of resolvedColors) {
+                if (subMap.has(c.subProdId)) {
+                  subMap.get(c.subProdId).colors.push(c);
+                }
+              }
+
+              const result = [];
+              for (const [, { sub, colors }] of subMap) {
+                if (colors.length === 0) continue;
+
+                const first = colors[0];
+
+                result.push({
+                  variantId: sub.variantId,
+                  qty: sub.qty,
+                  uom: sub.uom,
+                  color: null,
+                  width: null,
+                  height: null,
+                  normalPrice: first.normalPrice,
+                  discountPrice: first.discountPrice,
+                  availableQty: first.availableQty,
+                  isMRP: isMRP ? 1 : 0,
+
+                  colorDetails: colors.map((c) => ({
+                    colorId: c.colorId,
+                    color: c.color,
+                    normalPrice: c.normalPrice,
+                    discountPrice: c.discountPrice,
+                    availableQty: c.availableQty,
+                    batches: c.batches,
+                  })),
+                });
+              }
+
+              resolve(result);
+            },
+          );
+        });
         return;
       }
 

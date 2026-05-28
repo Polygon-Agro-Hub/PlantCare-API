@@ -4,13 +4,17 @@ const goviShopDao = require("../dao/govi-shop-dao");
 exports.getShops = asyncHandler(async (req, res) => {
   try {
     const { search = "" } = req.query;
-    const shops = await goviShopDao.getShops(search);
+    const userId = req.user.ownerId;
 
-    if (!shops || shops.length === 0) {
-      return res.status(404).json({ message: "No shops found" });
+    const userDistrict = await goviShopDao.getUserDistrict(userId);
+
+    if (!userDistrict) {
+      return res.status(400).json({ message: "User district not found" });
     }
 
-    res.status(200).json(shops);
+    const shops = await goviShopDao.getShops(search, userDistrict);
+
+    res.status(200).json(shops || []);
   } catch (error) {
     console.error("Error fetching shops:", error);
     res.status(500).json({ message: "Failed to fetch shops" });
@@ -31,13 +35,15 @@ exports.getBranchCategories = asyncHandler(async (req, res) => {
 exports.getBranchProducts = asyncHandler(async (req, res) => {
   try {
     const { branchId } = req.params;
-    const { categoryId = null } = req.query;
-    const products = await goviShopDao.getBranchProducts(branchId, categoryId);
-
+    const { categoryId = null, search = "" } = req.query;
+    const products = await goviShopDao.getBranchProducts(
+      branchId,
+      categoryId,
+      search,
+    );
     if (!products || products.length === 0) {
       return res.status(404).json({ message: "No products found" });
     }
-
     res.status(200).json(products);
   } catch (error) {
     console.error("Error fetching branch products:", error);
@@ -67,7 +73,6 @@ exports.getProductVariants = asyncHandler(async (req, res) => {
   }
 });
 
-
 exports.upsertCartItem = asyncHandler(async (req, res) => {
   try {
     const farmerId = req.user.id;
@@ -81,7 +86,9 @@ exports.upsertCartItem = asyncHandler(async (req, res) => {
     } = req.body;
 
     if (!branchId || !productId || qty === undefined) {
-      return res.status(400).json({ message: "branchId, productId and qty are required" });
+      return res
+        .status(400)
+        .json({ message: "branchId, productId and qty are required" });
     }
     if (qty < 0) {
       return res.status(400).json({ message: "qty cannot be negative" });
