@@ -95,8 +95,8 @@ exports.createCertificatePayment = async (paymentData) => {
     return new Promise((resolve, reject) => {
         const paymentQuery = `
             INSERT INTO certificationpayment 
-            (certificateId, userId, payType, transactionId, amount, expireDate, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            (certificateId, userId, payType, transactionId, amount, processFee, expireDate, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         `;
 
         const paymentValues = [
@@ -105,6 +105,7 @@ exports.createCertificatePayment = async (paymentData) => {
             paymentData.payType,
             paymentData.transactionId,
             paymentData.amount,
+            paymentData.processFee,
             paymentData.expireDate,
         ];
 
@@ -263,8 +264,8 @@ exports.createCropCertificatePayment = async (paymentData) => {
     return new Promise((resolve, reject) => {
         const paymentQuery = `
             INSERT INTO certificationpayment 
-            (certificateId, userId, payType, transactionId, amount, expireDate, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            (certificateId, userId, payType, transactionId, amount, processFee, expireDate, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         `;
 
         const paymentValues = [
@@ -273,6 +274,7 @@ exports.createCropCertificatePayment = async (paymentData) => {
             paymentData.payType,
             paymentData.transactionId,
             paymentData.amount,
+            paymentData.processFee,
             paymentData.expireDate,
         ];
 
