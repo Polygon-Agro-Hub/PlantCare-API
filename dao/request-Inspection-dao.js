@@ -199,9 +199,11 @@ const insertJob = (connection, jobId, userId, item, cropCount) => {
     return new Promise((resolve, reject) => {
         const query = `
             INSERT INTO govilinkjobs
-            (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops,status, createdAt) 
-            VALUES (?, ?, ?, ?, ?, ?, ?,NOW())
+            (jobId, farmerId, serviceId, farmId, sheduleDate, isAllCrops, status, processFee, createdAt) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         `;
+
+        const processFee = item.processFee !== undefined ? item.processFee : (item.amount * 0.05);
 
         connection.query(
             query,
@@ -213,6 +215,7 @@ const insertJob = (connection, jobId, userId, item, cropCount) => {
                 item.scheduleDate,
                 cropCount,
                 "Pending",
+                processFee,
             ],
             (error, results) => {
                 if (error) {

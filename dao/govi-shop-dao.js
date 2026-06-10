@@ -176,32 +176,67 @@ exports.getProductVariants = (productId, branchId) => {
       const { baseUom, isMRP } = uomResult[0];
 
       if (baseUom === "Equipment") {
-        const query = `
-          SELECT
-            ec.id        AS variantId,
-            NULL         AS qty,
-            NULL         AS uom,
-            ec.color     AS color,
-            NULL         AS width,
-            NULL         AS height,
-            si.purchQty  AS batchQty,
-            si.salePrice AS salePrice,
-            si.originalPrice AS originalPrice,
-            si.createdAt AS createdAt
-          FROM equipmentcolors ec
-          INNER JOIN stockin si
-            ON si.equipColorId = ec.id
-            AND si.branchId = ?
-            AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
-            AND si.purchQty > 0
-          WHERE ec.productId = ?
-          ORDER BY ec.id ASC, si.createdAt ASC
-        `;
+        // First try equipmentcolors (colored equipment)
+        const colorQuery = `
+    SELECT
+      ec.id        AS variantId,
+      NULL         AS qty,
+      NULL         AS uom,
+      ec.color     AS color,
+      NULL         AS width,
+      NULL         AS height,
+      si.purchQty  AS batchQty,
+      si.salePrice AS salePrice,
+      si.originalPrice AS originalPrice,
+      si.createdAt AS createdAt
+    FROM equipmentcolors ec
+    INNER JOIN stockin si
+      ON si.equipColorId = ec.id
+      AND si.branchId = ?
+      AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+      AND si.purchQty > 0
+    WHERE ec.productId = ?
+    ORDER BY ec.id ASC, si.createdAt ASC
+  `;
 
-        return db.govishop.query(query, [branchId, productId], (err, rows) => {
+        return db.govishop.query(colorQuery, [branchId, productId], (err, colorRows) => {
           if (err) return reject(err);
-          const grouped = groupAndResolve(rows, isMRP);
-          resolve(grouped);
+
+          // Has colored variants — use existing logic
+          if (colorRows && colorRows.length > 0) {
+            const grouped = groupAndResolve(colorRows, isMRP);
+            return resolve(grouped);
+          }
+
+          // No colors — check direct stockin on productId (no subProd, no equipColor)
+          const directQuery = `
+      SELECT
+        ? AS variantId,
+        NULL AS qty,
+        NULL AS uom,
+        NULL AS color,
+        NULL AS width,
+        NULL AS height,
+        si.purchQty  AS batchQty,
+        si.salePrice AS salePrice,
+        si.originalPrice AS originalPrice,
+        si.createdAt AS createdAt
+      FROM stockin si
+      WHERE si.productId = ?
+        AND si.branchId = ?
+        AND si.subProdId IS NULL
+        AND si.equipColorId IS NULL
+        AND (si.expiryDate IS NULL OR si.expiryDate > NOW())
+        AND si.purchQty > 0
+      ORDER BY si.createdAt ASC
+    `;
+
+          db.govishop.query(directQuery, [productId, productId, branchId], (err2, directRows) => {
+            if (err2) return reject(err2);
+            if (!directRows || directRows.length === 0) return resolve([]);
+            const grouped = groupAndResolve(directRows, isMRP);
+            resolve(grouped);
+          });
         });
       }
 
