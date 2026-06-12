@@ -115,18 +115,22 @@ exports.removeCartItem = asyncHandler(async (req, res) => {
   try {
     const farmerId = req.user.id;
     const {
+      branchId,
       productId,
       subProdId = null,
       subProdColorId = null,
       equipColorId = null,
     } = req.body;
 
-    if (!productId) {
-      return res.status(400).json({ message: "productId is required" });
+    if (!branchId || !productId) {
+      return res
+        .status(400)
+        .json({ message: "branchId and productId are required" });
     }
 
     await goviShopDao.removeCartItem({
       farmerId,
+      branchId,
       productId,
       subProdId,
       subProdColorId,
@@ -143,10 +147,33 @@ exports.removeCartItem = asyncHandler(async (req, res) => {
 exports.getCart = asyncHandler(async (req, res) => {
   try {
     const farmerId = req.user.id;
-    const cart = await goviShopDao.getCart(farmerId);
+    const { branchId } = req.query;
+
+    if (!branchId) {
+      return res.status(400).json({ message: "branchId is required" });
+    }
+
+    const cart = await goviShopDao.getCart(farmerId, branchId);
     res.status(200).json(cart);
   } catch (error) {
     console.error("Error fetching cart:", error);
     res.status(500).json({ message: "Failed to fetch cart" });
+  }
+});
+
+exports.placeOrder = asyncHandler(async (req, res) => {
+  try {
+    const farmerId = req.user.id;
+    const { branchId } = req.body;
+
+    if (!branchId) {
+      return res.status(400).json({ message: "branchId is required" });
+    }
+
+    const result = await goviShopDao.placeOrder(farmerId, Number(branchId));
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error placing order:", error);
+    res.status(500).json({ message: error.message || "Failed to place order" });
   }
 });
