@@ -897,7 +897,16 @@ exports.placeOrder = async (farmerId, branchId) => {
   await dbQuery(`DELETE FROM cartitems WHERE cartId = ?`, [cartId]);
   await dbQuery(`DELETE FROM cart WHERE id = ?`, [cartId]);
 
-  return { orderId, invNo, price, chargeP2, chargeP3 };
+  const branchRows = await dbQuery(
+    `SELECT branchName, district, province FROM branches WHERE id = ? LIMIT 1`,
+    [branchId],
+  );
+  const branch = branchRows[0] ?? {};
+  const shopAddress = [branch.branchName, branch.district, branch.province]
+    .filter(Boolean)
+    .join(", ");
+
+  return { orderId, invNo, price, chargeP2, chargeP3, shopAddress };
 };
 
 exports.getCart = async (farmerId, branchId) => {
@@ -1067,4 +1076,216 @@ exports.getCart = async (farmerId, branchId) => {
   );
 
   return { cartId, items: enriched };
+};
+
+exports.getOrderInvoice = async (orderId, farmerId) => {
+  const orderRows = await dbQuery(
+    `SELECT
+       o.id          AS orderId,
+       o.invNo,
+       o.price       AS subtotal,
+       o.chargeP2,
+       o.chargeP3,
+       o.createdAt   AS invoiceDate,
+       o.farmerId,
+       o.branchId,
+       b.branchName,
+       b.district,
+       b.province,
+       b.mobilePhone AS branchPhone,
+       gs.shopName,
+       gs.logo
+     FROM govishoporders o
+     INNER JOIN branches b   ON b.id = o.branchId
+     INNER JOIN govishops gs ON gs.id = b.shopId
+     WHERE o.id = ? AND o.farmerId = ?
+     LIMIT 1`,
+    [orderId, farmerId],
+  );
+
+  if (!orderRows.length) return null;
+  const order = orderRows[0];
+
+  const itemRows = await dbQuery(
+    `SELECT
+       oi.id            AS orderItemId,
+       oi.productId,
+       oi.subProdId,
+       oi.subProdColorId,
+       oi.equipColorId,
+       oi.qty,
+       sp.prodName      AS productName,
+       sp.baseUom,
+       sub.qty          AS subQty,
+       sub.unit         AS subUnit,
+       sub.width        AS subWidth,
+       sub.height       AS subHeight,
+       ec.color         AS equipColor,
+       spc.color        AS piecesColor,
+       spc.subProdId    AS piecesSubProdId,
+       psub.qty         AS piecesSubQty,
+       psub.unit        AS piecesSubUnit
+     FROM orderitems oi
+     INNER JOIN shopproducts sp      ON sp.id  = oi.productId
+     LEFT  JOIN subproducts  sub     ON sub.id = oi.subProdId
+                                     AND sp.baseUom NOT IN ('Equipment','Pieces')
+     LEFT  JOIN equipmentcolors ec   ON ec.id  = oi.equipColorId
+     LEFT  JOIN subproductcolors spc ON spc.id = oi.subProdColorId
+     LEFT  JOIN subproducts psub     ON psub.id = spc.subProdId
+     WHERE oi.orderId = ?
+     ORDER BY oi.id ASC`,
+    [orderId],
+  );
+
+  const orderItemIds = itemRows.map((r) => r.orderItemId);
+  let stockOutRows = [];
+  if (orderItemIds.length > 0) {
+    stockOutRows = await dbQuery(
+      `SELECT oso.orderItmId, oso.outQty, si.salePrice
+       FROM orderstockout oso
+       INNER JOIN stockin si ON si.id = oso.stockInId
+       WHERE oso.orderItmId IN (?)`,
+      [orderItemIds],
+    );
+  }
+
+  const priceByOrderItem = {};
+  for (const row of stockOutRows) {
+    if (!priceByOrderItem[row.orderItmId]) {
+      priceByOrderItem[row.orderItmId] = { totalQty: 0, totalValue: 0 };
+    }
+    const qty = Number(row.outQty);
+    const price = Number(row.salePrice ?? 0);
+    priceByOrderItem[row.orderItmId].totalQty += qty;
+    priceByOrderItem[row.orderItmId].totalValue += qty * price;
+  }
+
+  for (const r of itemRows) {
+    if (priceByOrderItem[r.orderItemId]) continue;
+
+    let fallbackRows = [];
+    if (r.equipColorId) {
+      fallbackRows = await dbQuery(
+        `SELECT salePrice FROM stockin
+         WHERE equipColorId = ? AND branchId = ?
+         ORDER BY createdAt DESC LIMIT 1`,
+        [r.equipColorId, order.branchId],
+      );
+    } else if (r.subProdColorId) {
+      fallbackRows = await dbQuery(
+        `SELECT salePrice FROM stockin
+         WHERE subProdColorId = ? AND branchId = ?
+         ORDER BY createdAt DESC LIMIT 1`,
+        [r.subProdColorId, order.branchId],
+      );
+    } else if (r.subProdId) {
+      fallbackRows = await dbQuery(
+        `SELECT salePrice FROM stockin
+         WHERE subProdId = ? AND branchId = ?
+         ORDER BY createdAt DESC LIMIT 1`,
+        [r.subProdId, order.branchId],
+      );
+    } else {
+      fallbackRows = await dbQuery(
+        `SELECT salePrice FROM stockin
+         WHERE productId = ? AND branchId = ?
+         ORDER BY createdAt DESC LIMIT 1`,
+        [r.productId, order.branchId],
+      );
+    }
+
+    if (fallbackRows.length > 0) {
+      const unitPrice = Number(fallbackRows[0].salePrice ?? 0);
+      const itemQty = Number(r.qty);
+      priceByOrderItem[r.orderItemId] = {
+        totalQty: itemQty,
+        totalValue: parseFloat((unitPrice * itemQty).toFixed(2)),
+      };
+    }
+  }
+
+  const items = itemRows.map((r, index) => {
+    const baseUom = r.baseUom ?? "";
+    let variantLabel = "";
+    let colorCode = null;
+
+    if (baseUom === "Equipment") {
+      colorCode = r.equipColor ?? null;
+      variantLabel = "";
+    } else if (baseUom === "Pieces") {
+      colorCode = r.piecesColor ?? null;
+      const qty = r.piecesSubQty ?? "";
+      const unit = r.piecesSubUnit ?? "";
+      variantLabel = qty && unit ? `${qty} ${unit}` : "";
+    } else if (baseUom === "ROLL") {
+      const w = r.subWidth;
+      const h = r.subHeight;
+      variantLabel =
+        w && h
+          ? `${r.subQty ?? ""} ${r.subUnit ?? ""} x ${w} m`
+          : `${r.subQty ?? ""} ${r.subUnit ?? ""}`.trim();
+    } else {
+      variantLabel = `${r.subQty ?? ""} ${r.subUnit ?? ""}`.trim();
+    }
+
+    const qty = Number(r.qty);
+    const agg = priceByOrderItem[r.orderItemId];
+    const lineTotal = agg ? agg.totalValue : 0;
+    const unitPrice = agg && agg.totalQty > 0 ? lineTotal / agg.totalQty : 0;
+
+    return {
+      no: index + 1,
+      productId: r.productId,
+      name: r.productName,
+      variantLabel,
+      colorCode,
+      qty,
+      unitPrice: parseFloat(unitPrice.toFixed(2)),
+      lineTotal: parseFloat(lineTotal.toFixed(2)),
+    };
+  });
+
+  const subtotal = Number(order.subtotal ?? 0);
+  const chargeP2 = Number(order.chargeP2 ?? 0);
+  const chargeP3 = Number(order.chargeP3 ?? 0);
+  const serviceCharge = parseFloat((chargeP2 + chargeP3).toFixed(2));
+  const grandTotal = parseFloat((subtotal + serviceCharge).toFixed(2));
+
+  const userRows = await new Promise((resolve, reject) => {
+    db.plantcare.query(
+      `SELECT firstName, lastName, phoneNumber FROM users WHERE id = ? LIMIT 1`,
+      [order.farmerId],
+      (error, results) => {
+        if (error) reject(error);
+        else resolve(results);
+      },
+    );
+  });
+  const user = userRows[0] ?? {};
+  const customerName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || "N/A";
+
+  return {
+    orderId: order.orderId,
+    invNo: order.invNo,
+    invoiceDate: order.invoiceDate,
+    shop: {
+      shopName: order.shopName,
+      logo: order.logo,
+    },
+    branch: {
+      branchName: order.branchName,
+      district: order.district,
+      province: order.province,
+      phone: order.branchPhone,
+    },
+    customer: {
+      name: customerName,
+      phone: user.phoneNumber ?? null,
+    },
+    items,
+    subtotal,
+    serviceCharge,
+    grandTotal,
+  };
 };

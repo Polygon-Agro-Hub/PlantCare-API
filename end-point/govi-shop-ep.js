@@ -177,3 +177,28 @@ exports.placeOrder = asyncHandler(async (req, res) => {
     res.status(500).json({ message: error.message || "Failed to place order" });
   }
 });
+
+exports.getOrderInvoice = asyncHandler(async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const farmerId = req.user.id;
+
+    if (!orderId || isNaN(Number(orderId))) {
+      return res.status(400).json({ message: "Invalid orderId" });
+    }
+
+    const invoice = await goviShopDao.getOrderInvoice(
+      Number(orderId),
+      farmerId,
+    );
+
+    if (!invoice) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json(invoice);
+  } catch (error) {
+    console.error("Error fetching order invoice:", error);
+    res.status(500).json({ message: "Failed to fetch invoice" });
+  }
+});

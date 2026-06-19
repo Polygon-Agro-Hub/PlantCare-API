@@ -20,4 +20,10 @@ router.get("/cart", authenticate, goviShopEp.getCart);
 
 router.post("/checkout", authenticate, goviShopEp.placeOrder);
 
+router.get(
+  "/orders/:orderId/invoice",
+  authenticate,
+  goviShopEp.getOrderInvoice,
+);
+
 module.exports = router;
