@@ -1,12 +1,61 @@
 const db = require("../startup/database");
 
-function dbQuery(sql, params = []) {
+function dbQuery(sql, params = [], conn = null) {
+  const executor = conn || db.govishop;
   return new Promise((resolve, reject) => {
-    db.govishop.query(sql, params, (err, results) => {
+    executor.query(sql, params, (err, results) => {
       if (err) reject(err);
       else resolve(results);
     });
   });
+}
+
+function getConnection(pool) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, conn) => {
+      if (err) reject(err);
+      else resolve(conn);
+    });
+  });
+}
+
+function beginTransaction(conn) {
+  return new Promise((resolve, reject) => {
+    conn.beginTransaction((err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+function commitTransaction(conn) {
+  return new Promise((resolve, reject) => {
+    conn.commit((err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+function rollbackTransaction(conn) {
+  return new Promise((resolve) => {
+    conn.rollback(() => resolve());
+  });
+}
+
+async function withTransaction(fn) {
+  const conn = await getConnection(db.govishop);
+  try {
+    await beginTransaction(conn);
+    const result = await fn(conn);
+    await commitTransaction(conn);
+    return result;
+  } catch (err) {
+    await rollbackTransaction(conn);
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 function groupAndResolve(rows, isMRP) {
@@ -78,16 +127,18 @@ function groupAndResolve(rows, isMRP) {
   return result;
 }
 
-async function getOrCreateCart(farmerId, branchId) {
+async function getOrCreateCart(farmerId, branchId, conn) {
   const rows = await dbQuery(
     `SELECT id FROM cart WHERE farmerId = ? AND branchId = ? LIMIT 1`,
     [farmerId, branchId],
+    conn,
   );
   if (rows.length > 0) return rows[0].id;
 
   const insert = await dbQuery(
     `INSERT INTO cart (farmerId, branchId) VALUES (?, ?)`,
     [farmerId, branchId],
+    conn,
   );
   return insert.insertId;
 }
@@ -98,6 +149,7 @@ async function findCartItem(
   subProdId,
   subProdColorId,
   equipColorId,
+  conn,
 ) {
   const rows = await dbQuery(
     `SELECT id, qty FROM cartitems
@@ -108,11 +160,12 @@ async function findCartItem(
        AND (equipColorId   <=> ?)
      LIMIT 1`,
     [cartId, productId, subProdId, subProdColorId, equipColorId],
+    conn,
   );
   return rows[0] ?? null;
 }
 
-async function fetchBatches(subProdId, equipColorId, branchId) {
+async function fetchBatches(subProdId, equipColorId, branchId, conn) {
   if (equipColorId) {
     return dbQuery(
       `SELECT id AS stockInId, purchQty AS availableQty, salePrice
@@ -123,6 +176,7 @@ async function fetchBatches(subProdId, equipColorId, branchId) {
          AND (expiryDate IS NULL OR expiryDate > NOW())
        ORDER BY createdAt ASC`,
       [equipColorId, branchId],
+      conn,
     );
   }
   return dbQuery(
@@ -134,6 +188,7 @@ async function fetchBatches(subProdId, equipColorId, branchId) {
        AND (expiryDate IS NULL OR expiryDate > NOW())
      ORDER BY createdAt ASC`,
     [subProdId, branchId],
+    conn,
   );
 }
 
@@ -621,60 +676,72 @@ exports.upsertCartItem = async ({
     return { message: "Item removed from cart" };
   }
 
-  const cartId = await getOrCreateCart(farmerId, branchId);
+  return withTransaction(async (conn) => {
+    const cartId = await getOrCreateCart(farmerId, branchId, conn);
 
-  const productRows = await dbQuery(
-    `SELECT isMRP FROM shopproducts WHERE id = ? AND isActive = 1 LIMIT 1`,
-    [productId],
-  );
-  if (!productRows.length) throw new Error("Product not found");
-  const isMRP = productRows[0].isMRP === 1;
-
-  const existing = await findCartItem(
-    cartId,
-    productId,
-    subProdId,
-    subProdColorId,
-    equipColorId,
-  );
-  let cartItemId;
-
-  if (existing) {
-    await dbQuery(`UPDATE cartitems SET qty = ? WHERE id = ?`, [
-      qty,
-      existing.id,
-    ]);
-    cartItemId = existing.id;
-  } else {
-    const insert = await dbQuery(
-      `INSERT INTO cartitems
-         (cartId, productId, subProdId, subProdColorId, equipColorId, qty)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [cartId, productId, subProdId, subProdColorId, equipColorId, qty],
+    const productRows = await dbQuery(
+      `SELECT isMRP FROM shopproducts WHERE id = ? AND isActive = 1 LIMIT 1`,
+      [productId],
+      conn,
     );
-    cartItemId = insert.insertId;
-  }
+    if (!productRows.length) throw new Error("Product not found");
+    const isMRP = productRows[0].isMRP === 1;
 
-  if (isMRP) {
-    let oldAllocation = [];
+    const existing = await findCartItem(
+      cartId,
+      productId,
+      subProdId,
+      subProdColorId,
+      equipColorId,
+      conn,
+    );
+    let cartItemId;
+
     if (existing) {
-      oldAllocation = await dbQuery(
-        `SELECT stockInId, outQty FROM cartitemstock WHERE cartItemId = ?`,
-        [existing.id],
+      await dbQuery(
+        `UPDATE cartitems SET qty = ? WHERE id = ?`,
+        [qty, existing.id],
+        conn,
       );
-      for (const row of oldAllocation) {
-        await dbQuery(
-          `UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`,
-          [row.outQty, row.stockInId],
-        );
-      }
-      await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [
-        existing.id,
-      ]);
+      cartItemId = existing.id;
+    } else {
+      const insert = await dbQuery(
+        `INSERT INTO cartitems
+           (cartId, productId, subProdId, subProdColorId, equipColorId, qty)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [cartId, productId, subProdId, subProdColorId, equipColorId, qty],
+        conn,
+      );
+      cartItemId = insert.insertId;
     }
 
-    try {
-      const batches = await fetchBatches(subProdId, equipColorId, branchId);
+    if (isMRP) {
+      if (existing) {
+        const oldAllocation = await dbQuery(
+          `SELECT stockInId, outQty FROM cartitemstock WHERE cartItemId = ?`,
+          [existing.id],
+          conn,
+        );
+        for (const row of oldAllocation) {
+          await dbQuery(
+            `UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`,
+            [row.outQty, row.stockInId],
+            conn,
+          );
+        }
+        await dbQuery(
+          `DELETE FROM cartitemstock WHERE cartItemId = ?`,
+          [existing.id],
+          conn,
+        );
+      }
+
+      const batches = await fetchBatches(
+        subProdId,
+        equipColorId,
+        branchId,
+        conn,
+      );
       const allocation = allocateFIFO(batches, qty);
 
       if (allocation.length > 0) {
@@ -686,54 +753,31 @@ exports.upsertCartItem = async ({
         await dbQuery(
           `INSERT INTO cartitemstock (cartItemId, stockInId, outQty) VALUES ?`,
           [values],
+          conn,
         );
         for (const a of allocation) {
           await dbQuery(
             `UPDATE stockin SET purchQty = purchQty - ? WHERE id = ?`,
             [a.outQty, a.stockInId],
+            conn,
           );
         }
       }
-    } catch (err) {
-      if (existing) {
-        await dbQuery(`UPDATE cartitems SET qty = ? WHERE id = ?`, [
-          existing.qty,
-          existing.id,
-        ]);
-        if (oldAllocation.length > 0) {
-          const values = oldAllocation.map((a) => [
-            existing.id,
-            a.stockInId,
-            a.outQty,
-          ]);
-          await dbQuery(
-            `INSERT INTO cartitemstock (cartItemId, stockInId, outQty) VALUES ?`,
-            [values],
-          );
-          for (const a of oldAllocation) {
-            await dbQuery(
-              `UPDATE stockin SET purchQty = purchQty - ? WHERE id = ?`,
-              [a.outQty, a.stockInId],
-            );
-          }
-        }
-      } else {
-        await dbQuery(`DELETE FROM cartitems WHERE id = ?`, [cartItemId]);
-      }
-      throw err;
+    } else {
+      await dbQuery(
+        `DELETE FROM cartitemstock WHERE cartItemId = ?`,
+        [cartItemId],
+        conn,
+      );
     }
-  } else {
-    await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [
-      cartItemId,
-    ]);
-  }
 
-  return {
-    cartId,
-    cartItemId,
-    qty,
-    message: existing ? "Cart item updated" : "Item added to cart",
-  };
+    return {
+      cartId,
+      cartItemId,
+      qty,
+      message: existing ? "Cart item updated" : "Item added to cart",
+    };
+  });
 };
 
 exports.removeCartItem = async ({
@@ -765,148 +809,163 @@ exports.removeCartItem = async ({
 };
 
 exports.placeOrder = async (farmerId, branchId) => {
-  const cartRows = await dbQuery(
-    `SELECT id FROM cart WHERE farmerId = ? AND branchId = ? LIMIT 1`,
-    [farmerId, branchId],
-  );
-  if (!cartRows.length) throw new Error("Cart not found");
-  const cartId = cartRows[0].id;
-
-  const items = await dbQuery(
-    `SELECT id AS cartItemId, productId, subProdId, subProdColorId, equipColorId, qty
-     FROM cartitems WHERE cartId = ?`,
-    [cartId],
-  );
-  if (!items.length) throw new Error("Cart is empty");
-
-  const cartItemIds = items.map((i) => i.cartItemId);
-  const stockRows = await dbQuery(
-    `SELECT cartItemId, stockInId, outQty
-     FROM cartitemstock WHERE cartItemId IN (?)`,
-    [cartItemIds],
-  );
-
-  const priceMap = {};
-  for (const item of items) {
-    let stockInRows = [];
-    if (item.equipColorId) {
-      stockInRows = await dbQuery(
-        `SELECT salePrice, purchQty FROM stockin
-         WHERE equipColorId = ? AND branchId = ? AND purchQty > 0
-           AND (expiryDate IS NULL OR expiryDate > NOW())
-         ORDER BY createdAt ASC`,
-        [item.equipColorId, branchId],
-      );
-    } else if (item.subProdColorId) {
-      stockInRows = await dbQuery(
-        `SELECT salePrice, purchQty FROM stockin
-         WHERE subProdColorId = ? AND branchId = ? AND purchQty > 0
-           AND (expiryDate IS NULL OR expiryDate > NOW())
-         ORDER BY createdAt ASC`,
-        [item.subProdColorId, branchId],
-      );
-    } else if (item.subProdId) {
-      stockInRows = await dbQuery(
-        `SELECT salePrice, purchQty FROM stockin
-         WHERE subProdId = ? AND branchId = ? AND purchQty > 0
-           AND (expiryDate IS NULL OR expiryDate > NOW())
-         ORDER BY createdAt ASC`,
-        [item.subProdId, branchId],
-      );
-    }
-
-    const salePrice =
-      stockInRows.length > 0
-        ? Number(stockInRows[stockInRows.length - 1].salePrice ?? 0)
-        : 0;
-    priceMap[item.cartItemId] = salePrice;
-  }
-
-  const price = items.reduce(
-    (s, i) => s + priceMap[i.cartItemId] * Number(i.qty),
-    0,
-  );
-  const chargeP2 = parseFloat((price * 0.02).toFixed(2));
-  const chargeP3 = parseFloat((price * 0.03).toFixed(2));
-
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(2);
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const datePart = `${yy}${mm}${dd}`;
-  const prefix = `GS${farmerId}${datePart}`;
-
-  const lastInvRows = await dbQuery(
-    `SELECT invNo FROM govishoporders
-     WHERE farmerId = ? AND invNo LIKE ?
-     ORDER BY invNo DESC LIMIT 1`,
-    [farmerId, `${prefix}%`],
-  );
-
-  let nextSeq = 1;
-  if (lastInvRows.length > 0) {
-    const lastInv = lastInvRows[0].invNo;
-    const lastSeqStr = lastInv.slice(prefix.length);
-    const lastSeq = parseInt(lastSeqStr, 10);
-    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-  }
-  const invNo = `${prefix}${String(nextSeq).padStart(4, "0")}`;
-
-  const orderInsert = await dbQuery(
-    `INSERT INTO govishoporders (farmerId, branchId, invNo, price, chargeP2, chargeP3)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [farmerId, branchId, invNo, price, chargeP2, chargeP3],
-  );
-  const orderId = orderInsert.insertId;
-
-  const stockMap = {};
-  for (const s of stockRows) {
-    if (!stockMap[s.cartItemId]) stockMap[s.cartItemId] = [];
-    stockMap[s.cartItemId].push(s);
-  }
-
-  for (const item of items) {
-    const itemInsert = await dbQuery(
-      `INSERT INTO orderitems
-         (orderId, productId, subProdId, subProdColorId, equipColorId, qty)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        orderId,
-        item.productId,
-        item.subProdId ?? null,
-        item.subProdColorId ?? null,
-        item.equipColorId ?? null,
-        item.qty,
-      ],
+  return withTransaction(async (conn) => {
+    const cartRows = await dbQuery(
+      `SELECT id FROM cart WHERE farmerId = ? AND branchId = ? LIMIT 1`,
+      [farmerId, branchId],
+      conn,
     );
-    const orderItemId = itemInsert.insertId;
+    if (!cartRows.length) throw new Error("Cart not found");
+    const cartId = cartRows[0].id;
 
-    const allocs = stockMap[item.cartItemId] ?? [];
-    for (const alloc of allocs) {
-      await dbQuery(
-        `INSERT INTO orderstockout (orderItmId, stockInId, outQty)
-         VALUES (?, ?, ?)`,
-        [orderItemId, alloc.stockInId, alloc.outQty],
-      );
+    const items = await dbQuery(
+      `SELECT id AS cartItemId, productId, subProdId, subProdColorId, equipColorId, qty
+       FROM cartitems WHERE cartId = ?`,
+      [cartId],
+      conn,
+    );
+    if (!items.length) throw new Error("Cart is empty");
+
+    const cartItemIds = items.map((i) => i.cartItemId);
+    const stockRows = await dbQuery(
+      `SELECT cartItemId, stockInId, outQty
+       FROM cartitemstock WHERE cartItemId IN (?)`,
+      [cartItemIds],
+      conn,
+    );
+
+    const priceMap = {};
+    for (const item of items) {
+      let stockInRows = [];
+      if (item.equipColorId) {
+        stockInRows = await dbQuery(
+          `SELECT salePrice, purchQty FROM stockin
+           WHERE equipColorId = ? AND branchId = ? AND purchQty > 0
+             AND (expiryDate IS NULL OR expiryDate > NOW())
+           ORDER BY createdAt ASC`,
+          [item.equipColorId, branchId],
+          conn,
+        );
+      } else if (item.subProdColorId) {
+        stockInRows = await dbQuery(
+          `SELECT salePrice, purchQty FROM stockin
+           WHERE subProdColorId = ? AND branchId = ? AND purchQty > 0
+             AND (expiryDate IS NULL OR expiryDate > NOW())
+           ORDER BY createdAt ASC`,
+          [item.subProdColorId, branchId],
+          conn,
+        );
+      } else if (item.subProdId) {
+        stockInRows = await dbQuery(
+          `SELECT salePrice, purchQty FROM stockin
+           WHERE subProdId = ? AND branchId = ? AND purchQty > 0
+             AND (expiryDate IS NULL OR expiryDate > NOW())
+           ORDER BY createdAt ASC`,
+          [item.subProdId, branchId],
+          conn,
+        );
+      }
+
+      const salePrice =
+        stockInRows.length > 0
+          ? Number(stockInRows[stockInRows.length - 1].salePrice ?? 0)
+          : 0;
+      priceMap[item.cartItemId] = salePrice;
     }
-  }
 
-  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId IN (?)`, [
-    cartItemIds,
-  ]);
-  await dbQuery(`DELETE FROM cartitems WHERE cartId = ?`, [cartId]);
-  await dbQuery(`DELETE FROM cart WHERE id = ?`, [cartId]);
+    const price = items.reduce(
+      (s, i) => s + priceMap[i.cartItemId] * Number(i.qty),
+      0,
+    );
+    const chargeP2 = parseFloat((price * 0.02).toFixed(2));
+    const chargeP3 = parseFloat((price * 0.03).toFixed(2));
 
-  const branchRows = await dbQuery(
-    `SELECT branchName, district, province FROM branches WHERE id = ? LIMIT 1`,
-    [branchId],
-  );
-  const branch = branchRows[0] ?? {};
-  const shopAddress = [branch.branchName, branch.district, branch.province]
-    .filter(Boolean)
-    .join(", ");
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(2);
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const datePart = `${yy}${mm}${dd}`;
+    const prefix = `GS${farmerId}${datePart}`;
 
-  return { orderId, invNo, price, chargeP2, chargeP3, shopAddress };
+    const lastInvRows = await dbQuery(
+      `SELECT invNo FROM govishoporders
+       WHERE farmerId = ? AND invNo LIKE ?
+       ORDER BY invNo DESC LIMIT 1`,
+      [farmerId, `${prefix}%`],
+      conn,
+    );
+
+    let nextSeq = 1;
+    if (lastInvRows.length > 0) {
+      const lastInv = lastInvRows[0].invNo;
+      const lastSeqStr = lastInv.slice(prefix.length);
+      const lastSeq = parseInt(lastSeqStr, 10);
+      if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
+    }
+    const invNo = `${prefix}${String(nextSeq).padStart(4, "0")}`;
+
+    const orderInsert = await dbQuery(
+      `INSERT INTO govishoporders (farmerId, branchId, invNo, price, chargeP2, chargeP3)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [farmerId, branchId, invNo, price, chargeP2, chargeP3],
+      conn,
+    );
+    const orderId = orderInsert.insertId;
+
+    const stockMap = {};
+    for (const s of stockRows) {
+      if (!stockMap[s.cartItemId]) stockMap[s.cartItemId] = [];
+      stockMap[s.cartItemId].push(s);
+    }
+
+    for (const item of items) {
+      const itemInsert = await dbQuery(
+        `INSERT INTO orderitems
+           (orderId, productId, subProdId, subProdColorId, equipColorId, qty)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.productId,
+          item.subProdId ?? null,
+          item.subProdColorId ?? null,
+          item.equipColorId ?? null,
+          item.qty,
+        ],
+        conn,
+      );
+      const orderItemId = itemInsert.insertId;
+
+      const allocs = stockMap[item.cartItemId] ?? [];
+      for (const alloc of allocs) {
+        await dbQuery(
+          `INSERT INTO orderstockout (orderItmId, stockInId, outQty)
+           VALUES (?, ?, ?)`,
+          [orderItemId, alloc.stockInId, alloc.outQty],
+          conn,
+        );
+      }
+    }
+
+    await dbQuery(
+      `DELETE FROM cartitemstock WHERE cartItemId IN (?)`,
+      [cartItemIds],
+      conn,
+    );
+    await dbQuery(`DELETE FROM cartitems WHERE cartId = ?`, [cartId], conn);
+    await dbQuery(`DELETE FROM cart WHERE id = ?`, [cartId], conn);
+
+    const branchRows = await dbQuery(
+      `SELECT branchName, district, province FROM branches WHERE id = ? LIMIT 1`,
+      [branchId],
+      conn,
+    );
+    const branch = branchRows[0] ?? {};
+    const shopAddress = [branch.branchName, branch.district, branch.province]
+      .filter(Boolean)
+      .join(", ");
+
+    return { orderId, invNo, price, chargeP2, chargeP3, shopAddress };
+  });
 };
 
 exports.getCart = async (farmerId, branchId) => {
