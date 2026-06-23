@@ -202,3 +202,15 @@ exports.getOrderInvoice = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Failed to fetch invoice" });
   }
 });
+
+
+exports.getAllOrders = asyncHandler(async (req, res) => {
+  try {
+    const farmerId = req.user.id;
+    const orders = await goviShopDao.getAllOrders(farmerId);
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
+});

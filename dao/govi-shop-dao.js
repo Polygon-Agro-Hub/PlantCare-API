@@ -209,19 +209,21 @@ function allocateFIFO(batches, totalQty) {
   return allocation;
 }
 
-async function replaceCartItemStock(cartItemId, newAllocation) {
+async function replaceCartItemStock(cartItemId, newAllocation, conn) {
   const oldRows = await dbQuery(
     `SELECT stockInId, outQty FROM cartitemstock WHERE cartItemId = ?`,
     [cartItemId],
+    conn,
   );
   for (const row of oldRows) {
-    await dbQuery(`UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`, [
-      row.outQty,
-      row.stockInId,
-    ]);
+    await dbQuery(
+      `UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`,
+      [row.outQty, row.stockInId],
+      conn,
+    );
   }
 
-  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [cartItemId]);
+  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [cartItemId], conn);
 
   if (newAllocation.length === 0) return;
 
@@ -229,28 +231,32 @@ async function replaceCartItemStock(cartItemId, newAllocation) {
   await dbQuery(
     `INSERT INTO cartitemstock (cartItemId, stockInId, outQty) VALUES ?`,
     [values],
+    conn,
   );
 
   for (const a of newAllocation) {
-    await dbQuery(`UPDATE stockin SET purchQty = purchQty - ? WHERE id = ?`, [
-      a.outQty,
-      a.stockInId,
-    ]);
+    await dbQuery(
+      `UPDATE stockin SET purchQty = purchQty - ? WHERE id = ?`,
+      [a.outQty, a.stockInId],
+      conn,
+    );
   }
 }
 
-async function restoreAndDeleteCartItemStock(cartItemId) {
+async function restoreAndDeleteCartItemStock(cartItemId, conn) {
   const oldRows = await dbQuery(
     `SELECT stockInId, outQty FROM cartitemstock WHERE cartItemId = ?`,
     [cartItemId],
+    conn,
   );
   for (const row of oldRows) {
-    await dbQuery(`UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`, [
-      row.outQty,
-      row.stockInId,
-    ]);
+    await dbQuery(
+      `UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`,
+      [row.outQty, row.stockInId],
+      conn,
+    );
   }
-  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [cartItemId]);
+  await dbQuery(`DELETE FROM cartitemstock WHERE cartItemId = ?`, [cartItemId], conn);
 }
 
 exports.getShops = (search = "", userDistrict = "") => {
@@ -788,24 +794,28 @@ exports.removeCartItem = async ({
   subProdColorId = null,
   equipColorId = null,
 }) => {
-  const cartRows = await dbQuery(
-    `SELECT id FROM cart WHERE farmerId = ? AND branchId = ? LIMIT 1`,
-    [farmerId, branchId],
-  );
-  if (!cartRows.length) return;
+  return withTransaction(async (conn) => {
+    const cartRows = await dbQuery(
+      `SELECT id FROM cart WHERE farmerId = ? AND branchId = ? LIMIT 1`,
+      [farmerId, branchId],
+      conn,
+    );
+    if (!cartRows.length) return;
 
-  const cartId = cartRows[0].id;
-  const item = await findCartItem(
-    cartId,
-    productId,
-    subProdId,
-    subProdColorId,
-    equipColorId,
-  );
-  if (!item) return;
+    const cartId = cartRows[0].id;
+    const item = await findCartItem(
+      cartId,
+      productId,
+      subProdId,
+      subProdColorId,
+      equipColorId,
+      conn,
+    );
+    if (!item) return;
 
-  await restoreAndDeleteCartItemStock(item.id);
-  await dbQuery(`DELETE FROM cartitems WHERE id = ?`, [item.id]);
+    await restoreAndDeleteCartItemStock(item.id, conn);
+    await dbQuery(`DELETE FROM cartitems WHERE id = ?`, [item.id], conn);
+  });
 };
 
 exports.placeOrder = async (farmerId, branchId) => {
@@ -1348,3 +1358,30 @@ exports.getOrderInvoice = async (orderId, farmerId) => {
     grandTotal,
   };
 };
+
+exports.getAllOrders = (farmerId) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        o.id,
+        o.invNo,
+        o.price,
+        o.createdAt,
+        o.branchId,
+        b.branchName,
+        b.branchCode,
+        s.shopName
+      FROM govishoporders o
+      INNER JOIN branches b ON o.branchId = b.id
+      INNER JOIN govishops s ON b.shopId = s.id
+      WHERE o.farmerId = ?
+      ORDER BY o.createdAt DESC
+    `;
+
+    db.govishop.query(query, [farmerId], (error, results) => {
+      if (error) reject(error);
+      else resolve(results);
+    });
+  });
+};
+

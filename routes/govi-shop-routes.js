@@ -26,4 +26,6 @@ router.get(
   goviShopEp.getOrderInvoice,
 );
 
+router.get("/get-all-orders", authenticate, goviShopEp.getAllOrders);
+
 module.exports = router;
