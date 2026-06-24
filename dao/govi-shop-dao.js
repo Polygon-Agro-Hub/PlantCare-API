@@ -705,7 +705,7 @@ exports.upsertCartItem = async ({
 
     if (existing) {
       await dbQuery(
-        `UPDATE cartitems SET qty = ? WHERE id = ?`,
+        `UPDATE cartitems SET qty = ?, createdAt = NOW() WHERE id = ?`,
         [qty, existing.id],
         conn,
       );
@@ -713,8 +713,8 @@ exports.upsertCartItem = async ({
     } else {
       const insert = await dbQuery(
         `INSERT INTO cartitems
-           (cartId, productId, subProdId, subProdColorId, equipColorId, qty)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+           (cartId, productId, subProdId, subProdColorId, equipColorId, qty, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
         [cartId, productId, subProdId, subProdColorId, equipColorId, qty],
         conn,
       );
@@ -900,7 +900,7 @@ exports.placeOrder = async (farmerId, branchId) => {
     const lastInvRows = await dbQuery(
       `SELECT invNo FROM govishoporders
        WHERE farmerId = ? AND invNo LIKE ?
-       ORDER BY invNo DESC LIMIT 1`,
+       ORDER BY invNo DESC LIMIT 1 FOR UPDATE`,
       [farmerId, `${prefix}%`],
       conn,
     );
@@ -929,6 +929,34 @@ exports.placeOrder = async (farmerId, branchId) => {
     }
 
     for (const item of items) {
+      const productRows = await dbQuery(
+        `SELECT isMRP FROM shopproducts WHERE id = ? AND isActive = 1 LIMIT 1`,
+        [item.productId],
+        conn,
+      );
+      const isMRP = productRows.length > 0 && productRows[0].isMRP === 1;
+
+      let allocs = [];
+
+      if (isMRP) {
+        allocs = stockMap[item.cartItemId] ?? [];
+      } else {
+        const batches = await fetchBatches(
+          item.subProdId,
+          item.equipColorId,
+          branchId,
+          conn,
+        );
+        allocs = allocateFIFO(batches, item.qty);
+        for (const a of allocs) {
+          await dbQuery(
+            `UPDATE stockin SET purchQty = purchQty - ? WHERE id = ?`,
+            [a.outQty, a.stockInId],
+            conn,
+          );
+        }
+      }
+
       const itemInsert = await dbQuery(
         `INSERT INTO orderitems
            (orderId, productId, subProdId, subProdColorId, equipColorId, qty)
@@ -945,7 +973,6 @@ exports.placeOrder = async (farmerId, branchId) => {
       );
       const orderItemId = itemInsert.insertId;
 
-      const allocs = stockMap[item.cartItemId] ?? [];
       for (const alloc of allocs) {
         await dbQuery(
           `INSERT INTO orderstockout (orderItmId, stockInId, outQty)
@@ -1382,6 +1409,65 @@ exports.getAllOrders = (farmerId) => {
       if (error) reject(error);
       else resolve(results);
     });
+  });
+};
+
+exports.cleanExpiredCarts = async () => {
+  return withTransaction(async (conn) => {
+    const expiredItems = await dbQuery(
+      `SELECT id, cartId FROM cartitems WHERE createdAt < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`,
+      [],
+      conn,
+    );
+
+    if (expiredItems.length === 0) {
+      return { releasedCount: 0, deletedItemsCount: 0 };
+    }
+
+    const expiredItemIds = expiredItems.map((item) => item.id);
+
+    const allocations = await dbQuery(
+      `SELECT stockInId, outQty FROM cartitemstock WHERE cartItemId IN (?)`,
+      [expiredItemIds],
+      conn,
+    );
+
+    for (const alloc of allocations) {
+      await dbQuery(
+        `UPDATE stockin SET purchQty = purchQty + ? WHERE id = ?`,
+        [alloc.outQty, alloc.stockInId],
+        conn,
+      );
+    }
+
+    await dbQuery(
+      `DELETE FROM cartitemstock WHERE cartItemId IN (?)`,
+      [expiredItemIds],
+      conn,
+    );
+
+    await dbQuery(
+      `DELETE FROM cartitems WHERE id IN (?)`,
+      [expiredItemIds],
+      conn,
+    );
+
+    const cartIds = [...new Set(expiredItems.map((item) => item.cartId))];
+    for (const cartId of cartIds) {
+      const remaining = await dbQuery(
+        `SELECT id FROM cartitems WHERE cartId = ? LIMIT 1`,
+        [cartId],
+        conn,
+      );
+      if (remaining.length === 0) {
+        await dbQuery(`DELETE FROM cart WHERE id = ?`, [cartId], conn);
+      }
+    }
+
+    return {
+      releasedCount: allocations.length,
+      deletedItemsCount: expiredItemIds.length,
+    };
   });
 };
 

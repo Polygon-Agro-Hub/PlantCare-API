@@ -28,4 +28,6 @@ router.get(
 
 router.get("/get-all-orders", authenticate, goviShopEp.getAllOrders);
 
+router.post("/cron/clean-expired-carts", goviShopEp.cleanExpiredCarts);
+
 module.exports = router;
