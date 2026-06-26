@@ -272,6 +272,7 @@ exports.getShops = (search = "", userDistrict = "") => {
         b.district,
         b.province,
         b.mobilePhone,
+        b.address,
         b.isActive
       FROM govishops gs
       INNER JOIN branches b ON b.shopId = gs.id
