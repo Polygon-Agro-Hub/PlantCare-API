@@ -16,8 +16,18 @@ router.get("/products/:productId/variants", authenticate, goviShopEp.getProductV
 
 router.post("/cart/item", authenticate, goviShopEp.upsertCartItem);
 router.delete("/cart/item", authenticate, goviShopEp.removeCartItem);
-
 router.get("/cart", authenticate, goviShopEp.getCart);
 
+router.post("/checkout", authenticate, goviShopEp.placeOrder);
+
+router.get(
+  "/orders/:orderId/invoice",
+  authenticate,
+  goviShopEp.getOrderInvoice,
+);
+
+router.get("/get-all-orders", authenticate, goviShopEp.getAllOrders);
+
+router.post("/cron/clean-expired-carts", goviShopEp.cleanExpiredCarts);
 
 module.exports = router;
