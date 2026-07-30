@@ -4,7 +4,7 @@ const { createComplain } = require("../validations/complain-validation");
 
 exports.createComplain = asyncHandler(async (req, res) => {
     try {
-        const farmerId = req.user.id;
+        const farmerId = req.user.ownerId;
         const input = { ...req.body, farmerId };
         const today = new Date();
         const YYMMDD = today.toISOString().slice(2, 10).replace(/-/g, "");
