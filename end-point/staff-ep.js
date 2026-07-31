@@ -1,7 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const staffDao = require("../dao/staff-dao");
-const { createStaffMember } = require('../validations/farm-validation');
-
+const { createStaffMember } = require("../validations/farm-validation");
 
 exports.getFarmById = asyncHandler(async (req, res) => {
     try {
@@ -21,7 +20,6 @@ exports.getFarmById = asyncHandler(async (req, res) => {
     }
 });
 
-
 exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.ownerId;
@@ -29,7 +27,7 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
 
         const input = {
             ...req.body,
-            farmId 
+            farmId,
         };
 
         const { value, error } = createStaffMember.validate(input);
@@ -40,17 +38,8 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             });
         }
 
+        const { firstName, lastName, phoneNumber, countryCode, role, nic } = value;
 
-        const {
-            firstName,
-            lastName,
-            phoneNumber,
-            countryCode,
-            role,
-            nic
-        } = value;
-
-        // Create staff member
         const result = await staffDao.CreateStaffMember({
             userId,
             farmId,
@@ -59,23 +48,21 @@ exports.CreateNewStaffMember = asyncHandler(async (req, res) => {
             phoneNumber,
             countryCode,
             role,
-            nic
+            nic,
         });
-
 
         res.status(201).json({
             status: "success",
             message: "Staff member created successfully.",
             staffId: result.staffId,
-            data: result.data
+            data: result.data,
         });
-
     } catch (err) {
         console.error("Error creating staff member:", err);
         res.status(500).json({
             status: "error",
             message: "Internal Server Error",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
         });
     }
 });

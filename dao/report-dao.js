@@ -1,8 +1,6 @@
 const db = require("../startup/database");
 
-
 exports.getTransactionHistoryByUserId = (userId, limit, offset) => {
- 
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -46,13 +44,17 @@ exports.getTransactionHistoryByUserId = (userId, limit, offset) => {
       LIMIT ? OFFSET ?
     `;
 
-    db.collectionofficer.query(query, [userId, limit, offset], (error, results) => {
-      if (error) {
-        return reject(error);
-      }
-      
-      resolve(results);
-    });
+    db.collectionofficer.query(
+      query,
+      [userId, limit, offset],
+      (error, results) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(results);
+      },
+    );
   });
 };
 exports.getTransactionCountByUserId = (userId) => {
@@ -101,14 +103,15 @@ exports.getUserWithBankDetailsById = async (userId, centerId, companyId) => {
     db.plantcare.query(query, [companyId, centerId, userId], (err, result) => {
       if (err) return reject(err);
       resolve(result);
-      
     });
   });
 };
 
-
-
-exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarmerId) => {
+exports.GetFarmerReportDetailsDao = async (
+  userId,
+  createdAtDate,
+  registeredFarmerId,
+) => {
   const query = `
     SELECT
       fpc.id AS id,
@@ -142,82 +145,71 @@ exports.GetFarmerReportDetailsDao = async (userId, createdAtDate, registeredFarm
   `;
 
   return new Promise((resolve, reject) => {
+    db.collectionofficer.query(
+      query,
+      [userId, registeredFarmerId, createdAtDate],
+      (error, results) => {
+        if (error) return reject(error);
 
-    db.collectionofficer.query(query, [userId, registeredFarmerId, createdAtDate], (error, results) => {
-      if (error) return reject(error);
+        const transformedResults = results.flatMap((row) => {
+          const entries = [];
 
+          if (row.weightA > 0)
+            entries.push({
+              id: row.id,
+              cropName: row.cropName,
+              cropNameSinhala: row.cropNameSinhala,
+              cropNameTamil: row.cropNameTamil,
+              varietyNameSinhala: row.varietyNameSinhala,
+              varietyNameTamil: row.varietyNameTamil,
+              variety: row.variety,
+              grade: "A",
+              unitPrice: row.unitPriceA,
+              quantity: row.weightA,
+              subTotal: (row.unitPriceA * row.weightA).toFixed(2),
+              invoiceNumber: row.invoiceNumber,
+              createdAt: row.createdAt,
+            });
 
-      const transformedResults = results.flatMap(row => {
-        const entries = [];
+          if (row.weightB > 0)
+            entries.push({
+              id: row.id,
+              cropName: row.cropName,
+              cropNameSinhala: row.cropNameSinhala,
+              cropNameTamil: row.cropNameTamil,
+              varietyNameSinhala: row.varietyNameSinhala,
+              varietyNameTamil: row.varietyNameTamil,
+              variety: row.variety,
+              grade: "B",
+              unitPrice: row.unitPriceB,
+              quantity: row.weightB,
+              subTotal: (row.unitPriceB * row.weightB).toFixed(2),
+              invoiceNumber: row.invoiceNumber,
+              createdAt: row.createdAt,
+            });
 
-        if (row.weightA > 0) entries.push({
-          id: row.id,
-          cropName: row.cropName,
-          cropNameSinhala: row.cropNameSinhala,
-          cropNameTamil: row.cropNameTamil,
-          varietyNameSinhala: row.varietyNameSinhala,
-          varietyNameTamil: row.varietyNameTamil,
-          variety: row.variety,
-          grade: 'A',
-          unitPrice: row.unitPriceA,
-          quantity: row.weightA,
-          subTotal: (row.unitPriceA * row.weightA).toFixed(2),
-          invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt
+          if (row.weightC > 0)
+            entries.push({
+              id: row.id,
+              cropName: row.cropName,
+              cropNameSinhala: row.cropNameSinhala,
+              cropNameTamil: row.cropNameTamil,
+              varietyNameSinhala: row.varietyNameSinhala,
+              varietyNameTamil: row.varietyNameTamil,
+              variety: row.variety,
+              grade: "C",
+              unitPrice: row.unitPriceC,
+              quantity: row.weightC,
+              subTotal: (row.unitPriceC * row.weightC).toFixed(2),
+              invoiceNumber: row.invoiceNumber,
+              createdAt: row.createdAt,
+            });
+
+          return entries;
         });
 
-        if (row.weightB > 0) entries.push({
-          id: row.id,
-          cropName: row.cropName,
-          cropNameSinhala: row.cropNameSinhala,
-          cropNameTamil: row.cropNameTamil,
-          varietyNameSinhala: row.varietyNameSinhala,
-          varietyNameTamil: row.varietyNameTamil,
-          variety: row.variety,
-          grade: 'B',
-          unitPrice: row.unitPriceB,
-          quantity: row.weightB,
-          subTotal: (row.unitPriceB * row.weightB).toFixed(2),
-          invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt
-        });
-
-        if (row.weightC > 0) entries.push({
-          id: row.id,
-          cropName: row.cropName,
-          cropNameSinhala: row.cropNameSinhala,
-          cropNameTamil: row.cropNameTamil,
-          varietyNameSinhala: row.varietyNameSinhala,
-          varietyNameTamil: row.varietyNameTamil,
-          variety: row.variety,
-          grade: 'C',
-          unitPrice: row.unitPriceC,
-          quantity: row.weightC,
-          subTotal: (row.unitPriceC * row.weightC).toFixed(2),
-          invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt
-        });
-
-        return entries;
-      });
-
-      resolve(transformedResults);
-    });
+        resolve(transformedResults);
+      },
+    );
   });
 };
-
-
-function formatDateTime(dateTimeString) {
-  const date = new Date(dateTimeString);
-  return date.toLocaleString('en-GB', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-}
-
-
