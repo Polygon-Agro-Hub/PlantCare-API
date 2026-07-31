@@ -30,7 +30,7 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const farmId = req.params.farmId;
-        const { certificateId, amount, validityMonths } = req.body;
+        const { certificateId, amount, validityMonths, processFee } = req.body;
 
         if (!certificateId || !amount || !validityMonths) {
             console.error("Missing required fields");
@@ -66,6 +66,7 @@ exports.createCertificatePayment = asyncHandler(async (req, res) => {
             payType: "Farm",
             transactionId: transactionId,
             amount: parseFloat(amount),
+            processFee: parseFloat(processFee) || 0.00,
             expireDate: expireDate,
             farmId: parseInt(farmId),
         };
@@ -132,7 +133,7 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
         const cropId = req.params.cropId;
-        const { certificateId, amount, validityMonths } = req.body;
+        const { certificateId, amount, validityMonths, processFee } = req.body;
 
         if (!certificateId || !amount || !validityMonths) {
             console.error("Missing required fields");
@@ -168,6 +169,7 @@ exports.createCropCertificatePayment = asyncHandler(async (req, res) => {
             payType: "Crop",
             transactionId: transactionId,
             amount: parseFloat(amount),
+            processFee: parseFloat(processFee) || 0.00,
             expireDate: expireDate,
             cropId: parseInt(cropId),
         };
