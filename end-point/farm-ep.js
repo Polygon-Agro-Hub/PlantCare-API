@@ -28,6 +28,34 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             });
         }
 
+        // Validation: Basic user can only add 1 farm
+        const userMembership = await farmDao.getMemberShip(userId);
+        const userFarms = await farmDao.getAllFarmByUserId(userId);
+        const farmCount = userFarms ? userFarms.length : 0;
+
+        let isPro =
+            userMembership &&
+            userMembership.membership &&
+            userMembership.membership.toLowerCase() === "pro";
+
+        if (isPro) {
+            const renewalData = await farmDao.getrenew(userId);
+            if (
+                renewalData &&
+                (renewalData.activeStatus !== 1 || renewalData.daysRemaining <= 0)
+            ) {
+                isPro = false;
+            }
+        }
+
+        if (!isPro && farmCount >= 1) {
+            return res.status(403).json({
+                status: "error",
+                message:
+                    "Basic members are allowed to add only 1 farm. Please upgrade to Pro to add more farms.",
+            });
+        }
+
         const {
             farmName,
             farmIndex,
@@ -263,6 +291,18 @@ exports.enroll = asyncHandler(async (req, res) => {
             farmId,
         );
         const cropCount = cropCountResult[0].count;
+
+        const userMembership = await farmDao.getMemberShip(userId);
+        const isPro =
+            userMembership &&
+            userMembership.membership &&
+            userMembership.membership.toLowerCase() === "pro";
+
+        if (!isPro && cropCount >= 3) {
+            return res
+                .status(400)
+                .json({ message: "You have already enrolled in 3 crops" });
+        }
 
         const enrolledCrops = await farmDao.checkEnrollCropByFarm(
             cultivationId,

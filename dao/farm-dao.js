@@ -18,7 +18,7 @@ exports.createFarmWithStaff = async (farmData) => {
             });
         });
 
-        const getUserSql = `SELECT NICnumber FROM users WHERE id = ?`;
+        const getUserSql = `SELECT NICnumber, membership FROM users WHERE id = ?`;
         const [userResult] = await connection
             .promise()
             .query(getUserSql, [farmData.userId]);
@@ -28,12 +28,42 @@ exports.createFarmWithStaff = async (farmData) => {
         }
 
         const userNIC = userResult[0].NICnumber;
+        const membership = userResult[0].membership;
 
         const getFarmCountSql = `SELECT COUNT(*) as farmCount FROM farms WHERE userId = ?`;
         const [countResult] = await connection
             .promise()
             .query(getFarmCountSql, [farmData.userId]);
         const currentFarmCount = countResult[0].farmCount;
+
+        let isPro = membership && membership.toLowerCase() === "pro";
+        if (isPro) {
+            const checkPaymentSql = `
+                SELECT expireDate, activeStatus, DATEDIFF(expireDate, NOW()) as daysRemaining 
+                FROM membershippayment 
+                WHERE userId = ? 
+                ORDER BY createdAt DESC 
+                LIMIT 1
+            `;
+            const [paymentResult] = await connection
+                .promise()
+                .query(checkPaymentSql, [farmData.userId]);
+            if (paymentResult.length > 0) {
+                const payment = paymentResult[0];
+                if (payment.activeStatus !== 1 || payment.daysRemaining <= 0) {
+                    isPro = false;
+                }
+            } else {
+                isPro = false;
+            }
+        }
+
+        if (!isPro && currentFarmCount >= 1) {
+            throw new Error(
+                "Basic members are allowed to add only 1 farm. Please upgrade to Pro to add more farms."
+            );
+        }
+
         const nextFarmIndex = currentFarmCount + 1;
 
         if (farmData.staff && Array.isArray(farmData.staff)) {
