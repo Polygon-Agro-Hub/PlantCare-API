@@ -28,6 +28,34 @@ exports.CreateFarm = asyncHandler(async (req, res) => {
             });
         }
 
+        // Validation: Basic user can only add 1 farm
+        const userMembership = await farmDao.getMemberShip(userId);
+        const userFarms = await farmDao.getAllFarmByUserId(userId);
+        const farmCount = userFarms ? userFarms.length : 0;
+
+        let isPro =
+            userMembership &&
+            userMembership.membership &&
+            userMembership.membership.toLowerCase() === "pro";
+
+        if (isPro) {
+            const renewalData = await farmDao.getrenew(userId);
+            if (
+                renewalData &&
+                (renewalData.activeStatus !== 1 || renewalData.daysRemaining <= 0)
+            ) {
+                isPro = false;
+            }
+        }
+
+        if (!isPro && farmCount >= 1) {
+            return res.status(403).json({
+                status: "error",
+                message:
+                    "Basic members are allowed to add only 1 farm. Please upgrade to Pro to add more farms.",
+            });
+        }
+
         const {
             farmName,
             farmIndex,
