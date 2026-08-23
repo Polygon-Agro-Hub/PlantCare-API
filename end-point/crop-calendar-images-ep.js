@@ -22,20 +22,20 @@ exports.uploadImage = asyncHandler(async (req, res) => {
             return res.status(400).json({ message: "No file uploaded." });
         }
         const { slaveId, farmId, onCulscropID } = req.body;
-        const ownerId = req.user.ownerId;
-        const userId = req.user.id;
+        const ownerId = (req.user && (req.user.ownerId || req.user.id)) || "user";
+        const userId = (req.user && req.user.id) || ownerId;
 
         if (!slaveId) {
             return res.status(400).json({ message: "No slaveId provided." });
         }
 
         const imageBuffer = req.file.buffer;
-        const fileName = req.file.originalname;
+        const fileName = req.file.originalname || "image.jpg";
 
         const image = await uploadFileToS3(
             imageBuffer,
             fileName,
-            `plantcareuser/owner${ownerId}/farm${farmId}/onCulscropID${onCulscropID}`,
+            `plantcareuser/owner${ownerId}/farm${farmId || "default"}/onCulscropID${onCulscropID || "0"}`,
         );
 
         const staffId = ownerId === userId ? null : userId;

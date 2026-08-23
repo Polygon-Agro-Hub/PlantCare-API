@@ -264,6 +264,18 @@ exports.enroll = asyncHandler(async (req, res) => {
         );
         const cropCount = cropCountResult[0].count;
 
+        const userMembership = await farmDao.getMemberShip(userId);
+        const isPro =
+            userMembership &&
+            userMembership.membership &&
+            userMembership.membership.toLowerCase() === "pro";
+
+        if (!isPro && cropCount >= 3) {
+            return res
+                .status(400)
+                .json({ message: "You have already enrolled in 3 crops" });
+        }
+
         const enrolledCrops = await farmDao.checkEnrollCropByFarm(
             cultivationId,
             farmId,
