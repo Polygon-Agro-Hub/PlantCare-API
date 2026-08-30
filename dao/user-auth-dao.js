@@ -535,7 +535,7 @@ exports.deleteUserById = async (userId) => {
 
 exports.getFeedbackOptions = async () => {
     return new Promise((resolve, reject) => {
-        const query = "SELECT * FROM feedbacklist";
+        const query = "SELECT * FROM feedbacklist ORDER BY orderNumber ASC, id ASC";
 
         db.plantcare.query(query, (err, result) => {
             if (err) {
