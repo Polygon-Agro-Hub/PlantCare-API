@@ -1,11 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const authenticate = require("../middleware/auth.middleware");
+const checkProfanity = require("../middleware/profanity.middleware");
 const complainEp = require("../end-point/complain-ep");
 
 router.post(
     "/add-complain", 
     authenticate, 
+    checkProfanity(["complain"]),
     complainEp.createComplain
 );
 
