@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authenticate = require("../middleware/auth.middleware");
 const upload = require("../middleware/multer.middleware");
+const checkProfanity = require("../middleware/profanity.middleware");
 const postsEp = require("../end-point/public-forum-ep");
 
 router.get(
@@ -17,6 +18,7 @@ router.get(
 router.post(
     "/add/reply", 
     authenticate, 
+    checkProfanity(["replyMessage"]),
     postsEp.createReply
 );
 
@@ -24,6 +26,7 @@ router.post(
     "/add/post", 
     authenticate, 
     upload.single("postimage"), 
+    checkProfanity(["heading", "message"]),
     postsEp.createPost
 );
 
@@ -42,12 +45,14 @@ router.put(
     "/updatepost/:postId",
     authenticate,
     upload.single("postimage"),
+    checkProfanity(["heading", "message"]),
     postsEp.updatepost,
 );
 
 router.put(
     "/update/reply/:editingCommentId", 
     authenticate, 
+    checkProfanity(["replyMessage"]),
     postsEp.EditReply
 );
 
