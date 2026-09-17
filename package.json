@@ -32,7 +32,6 @@
         "jsonwebtoken": "^9.0.2",
         "multer": "^1.4.5-lts.1",
         "mysql2": "^3.11.0",
-        "oracledb": "^6.6.0",
         "qrcode": "^1.5.4",
         "uuid": "^8.3.2",
         "winston": "^3.17.0"

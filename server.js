@@ -8,10 +8,7 @@ require("dotenv").config();
 const {
   plantcare,
   collectionofficer,
-  marketPlace,
   admin,
-  investments,
-  govishop,
 } = require("./startup/database");
 
 // Import routes
@@ -174,10 +171,7 @@ const initializeServer = () => {
     console.log("\n🔍 Testing database connections...");
     testDatabaseConnection(plantcare, "PlantCare");
     testDatabaseConnection(collectionofficer, "CollectionOfficer");
-    testDatabaseConnection(marketPlace, "MarketPlace");
     testDatabaseConnection(admin, "Admin");
-    testDatabaseConnection(investments, "Investment");
-    testDatabaseConnection(govishop, "Govishop");
 
     // Start server
     app.listen(port, () => {
