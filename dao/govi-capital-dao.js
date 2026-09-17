@@ -43,7 +43,7 @@ exports.getFarmerDetails = async (userId) => {
 
 exports.createInvestmentRequest = async (requestData) => {
     return new Promise((resolve, reject) => {
-        db.investments.getConnection((err, connection) => {
+        db.plantcare.getConnection((err, connection) => {
             if (err) {
                 console.error("Error getting connection:", err);
                 reject(err);
@@ -179,12 +179,12 @@ exports.getInvestmentRequests = async (userId) => {
                 cg.cropNameSinhala,
                 cg.cropNameTamil
             FROM investmentrequest ir
-            LEFT JOIN plant_care.cropgroup cg ON ir.cropId = cg.id
+            LEFT JOIN cropgroup cg ON ir.cropId = cg.id
             WHERE ir.farmerId = ?
             ORDER BY ir.createdAt DESC
         `;
 
-        db.investments.query(query, [userId], (error, results) => {
+        db.plantcare.query(query, [userId], (error, results) => {
             if (error) {
                 console.error("Error fetching Investment Requests:", error);
                 reject(error);
@@ -233,12 +233,12 @@ exports.getApprovedStatusDetails = async (invId) => {
             WHERE reqId = ? AND invtStatus = 'Approved'
         `;
 
-        db.investments.query(query, [invId], (error, requestResults) => {
+        db.plantcare.query(query, [invId], (error, requestResults) => {
             if (error) {
                 console.error("Error fetching Investment request details:", error);
                 reject(error);
             } else {
-                db.investments.query(
+                db.plantcare.query(
                     investmentQuery,
                     [invId],
                     (invError, investmentResults) => {
@@ -266,7 +266,7 @@ exports.updateReviewStatus = async (invId) => {
             SET isFistTime = 1
             WHERE id = ?
         `;
-        db.investments.query(query, [invId], (error, results) => {
+        db.plantcare.query(query, [invId], (error, results) => {
             if (error) {
                 console.error("Error updating review status:", error);
                 reject(error);

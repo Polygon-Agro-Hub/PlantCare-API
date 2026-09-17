@@ -59,8 +59,6 @@ router.get("/health/detailed", (req, res) => {
       plantcare: "checking...",
       collectionofficer: "checking...",
       admin: "checking...",
-      investments: "checking...",
-      govishop: "checking...",
     },
   };
 

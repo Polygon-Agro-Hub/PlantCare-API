@@ -22,7 +22,5 @@ const createPool = (database) => {
 const plantcare = createPool(process.env.DB_NAME_PC);
 const collectionofficer = createPool(process.env.DB_NAME_CO);
 const admin = createPool(process.env.DB_NAME_AD);
-const investments = createPool(process.env.DB_NAME_IN);
-const govishop = createPool(process.env.DB_NAME_GS);
 
-module.exports = { plantcare, collectionofficer, admin, investments, govishop };
+module.exports = { plantcare, collectionofficer, admin };

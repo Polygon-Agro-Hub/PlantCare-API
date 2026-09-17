@@ -174,10 +174,12 @@ exports.updatepost = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const ownerId = req.user.ownerId;
 
-  let postimage = null;
+  const existingPost = await postsDao.getPostbyId(postId);
+  let postimage = existingPost ? existingPost.postimage : null;
 
   if (prepostimage) {
     await delectfilesOnS3(req.body.prepostimage);
+    postimage = null;
   }
   if (req.file) {
     const fileName = req.file.originalname;
@@ -188,7 +190,6 @@ exports.updatepost = asyncHandler(async (req, res) => {
       `plantcareuser/owner${ownerId}/user${userId}`,
     );
     postimage = image;
-  } else {
   }
 
   const update = await postsDao.updatePost(postId, heading, message, postimage);

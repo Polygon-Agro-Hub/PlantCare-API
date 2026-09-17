@@ -9,8 +9,6 @@ const {
   plantcare,
   collectionofficer,
   admin,
-  investments,
-  govishop,
 } = require("./startup/database");
 
 // Import routes
@@ -174,8 +172,6 @@ const initializeServer = () => {
     testDatabaseConnection(plantcare, "PlantCare");
     testDatabaseConnection(collectionofficer, "CollectionOfficer");
     testDatabaseConnection(admin, "Admin");
-    testDatabaseConnection(investments, "Investment");
-    testDatabaseConnection(govishop, "Govishop");
 
     // Start server
     app.listen(port, () => {

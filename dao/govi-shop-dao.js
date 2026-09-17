@@ -1,7 +1,7 @@
 const db = require("../startup/database");
 
 function dbQuery(sql, params = [], conn = null) {
-  const executor = conn || db.govishop;
+  const executor = conn || db.plantcare;
   return new Promise((resolve, reject) => {
     executor.query(sql, params, (err, results) => {
       if (err) reject(err);
@@ -44,7 +44,7 @@ function rollbackTransaction(conn) {
 }
 
 async function withTransaction(fn) {
-  const conn = await getConnection(db.govishop);
+  const conn = await getConnection(db.plantcare);
   try {
     await beginTransaction(conn);
     const result = await fn(conn);
@@ -322,7 +322,7 @@ exports.getShops = (search = "", userDistrict = "") => {
       searchTerm,
     ];
 
-    db.govishop.query(query, params, (error, results) => {
+    db.plantcare.query(query, params, (error, results) => {
       if (error) reject(error);
       else resolve(results);
     });
@@ -356,7 +356,7 @@ exports.getBranchCategories = (branchId) => {
         AND sp.isActive = 1
       ORDER BY sc.catName
     `;
-    db.govishop.query(query, [branchId], (error, results) => {
+    db.plantcare.query(query, [branchId], (error, results) => {
       if (error) reject(error);
       else resolve(results);
     });
@@ -399,7 +399,7 @@ exports.getBranchProducts = (branchId, categoryId = null, search = "") => {
 
     query += ` ORDER BY sp.prodName ASC`;
 
-    db.govishop.query(query, params, (error, results) => {
+    db.plantcare.query(query, params, (error, results) => {
       if (error) reject(error);
       else resolve(results);
     });
@@ -408,7 +408,7 @@ exports.getBranchProducts = (branchId, categoryId = null, search = "") => {
 
 exports.getProductVariants = (productId, branchId) => {
   return new Promise((resolve, reject) => {
-    db.govishop.query(
+    db.plantcare.query(
       `SELECT baseUom, isMRP FROM shopproducts WHERE id = ? AND isActive = 1`,
       [productId],
       (uomError, uomResult) => {
@@ -440,7 +440,7 @@ exports.getProductVariants = (productId, branchId) => {
             ORDER BY ec.id ASC, si.createdAt ASC
           `;
 
-          return db.govishop.query(
+          return db.plantcare.query(
             colorQuery,
             [branchId, productId],
             (err, colorRows) => {
@@ -472,7 +472,7 @@ exports.getProductVariants = (productId, branchId) => {
               ORDER BY si.createdAt ASC
             `;
 
-              db.govishop.query(
+              db.plantcare.query(
                 directQuery,
                 [productId, productId, branchId],
                 (err2, directRows) => {
@@ -494,7 +494,7 @@ exports.getProductVariants = (productId, branchId) => {
             ORDER BY sp.qty ASC
           `;
 
-          db.govishop.query(subQuery, [productId], (subErr, subRows) => {
+          db.plantcare.query(subQuery, [productId], (subErr, subRows) => {
             if (subErr) return reject(subErr);
             if (!subRows || subRows.length === 0) return resolve([]);
 
@@ -520,7 +520,7 @@ exports.getProductVariants = (productId, branchId) => {
               ORDER BY spc.subProdId ASC, spc.id ASC, si.createdAt ASC
             `;
 
-            db.govishop.query(
+            db.plantcare.query(
               colorStockQuery,
               [branchId, subIds],
               (colorErr, colorRows) => {
@@ -653,7 +653,7 @@ exports.getProductVariants = (productId, branchId) => {
           ORDER BY sp.qty ASC, sp.unit ASC, si.createdAt ASC
         `;
 
-        db.govishop.query(query, [branchId, productId], (err, rows) => {
+        db.plantcare.query(query, [branchId, productId], (err, rows) => {
           if (err) return reject(err);
           resolve(groupAndResolve(rows, isMRP));
         });
@@ -1406,7 +1406,7 @@ exports.getAllOrders = (farmerId) => {
       ORDER BY o.createdAt DESC
     `;
 
-    db.govishop.query(query, [farmerId], (error, results) => {
+    db.plantcare.query(query, [farmerId], (error, results) => {
       if (error) reject(error);
       else resolve(results);
     });
