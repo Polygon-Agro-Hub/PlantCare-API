@@ -12,11 +12,13 @@ exports.getPaginatedPosts = (limit, offset) => {
         p.postimage,
         p.createdAt,
         COUNT(r.chatId) AS replyCount,
-COALESCE(
+        COALESCE(
           CONCAT(
             CASE 
               WHEN p.staffId IS NOT NULL THEN CONCAT(s.firstName, ' ', s.lastName)
-              ELSE CONCAT(u.firstName, ' ', u.lastName)
+              WHEN u.id IS NOT NULL THEN CONCAT(u.firstName, ' ', u.lastName)
+              WHEN au.id IS NOT NULL THEN 'GoviCare Admin'
+              ELSE 'GoviCare Admin'
             END
           )
         ) AS userName
@@ -27,9 +29,11 @@ COALESCE(
       LEFT JOIN
         users u ON p.userId = u.id
       LEFT JOIN
+        agro_world_admin.adminusers au ON p.userId = au.id
+      LEFT JOIN
         farmstaff s ON p.staffId = s.id
       GROUP BY 
-        p.id, u.firstName, u.lastName, s.firstName, s.lastName
+        p.id, u.firstName, u.lastName, s.firstName, s.lastName, au.id
       ORDER BY 
         p.createdAt DESC
       LIMIT ? OFFSET ?;
@@ -73,7 +77,9 @@ exports.getRepliesByChatId = (chatId) => {
           r.createdAt, 
           CASE 
             WHEN r.replyStaffId IS NOT NULL THEN f.firstName
-            ELSE u.firstName
+            WHEN u.id IS NOT NULL THEN u.firstName
+            WHEN au.id IS NOT NULL THEN 'GoviCare Admin'
+            ELSE 'GoviCare Admin'
           END AS userName
       FROM 
           publicforumreplies r
@@ -81,6 +87,8 @@ exports.getRepliesByChatId = (chatId) => {
           publicforumposts p ON r.chatId = p.id
       LEFT JOIN   
           users u ON r.replyId = u.id
+      LEFT JOIN
+          agro_world_admin.adminusers au ON r.replyId = au.id
       LEFT JOIN
           farmstaff f ON r.replyStaffId = f.id
       WHERE 
