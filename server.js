@@ -31,6 +31,7 @@ const calendartaskImages = require("./routes/crop-calendar-images-routes");
 const reportRoutes = require("./routes/report-routes");
 const pentionRoutes = require("./routes/pension-routes");
 const goviShopRoutes = require("./routes/govi-shop-routes");
+const appVersionRoutes = require("./routes/app-version.routes");
 const { startCronJobs } = require("./startup/cron");
 
 const app = express();
@@ -99,6 +100,7 @@ const registerRoutes = () => {
   app.use("/api/goviCapital", goviCapitalRoutes);
   app.use("/api/pension", pentionRoutes);
   app.use("/api/govi-shop", goviShopRoutes);
+  app.use("/api/app-version", appVersionRoutes);
   app.use("", heathRoutes); // Health check routes
 
   // Protected routes (with AUTHOR prefix)
