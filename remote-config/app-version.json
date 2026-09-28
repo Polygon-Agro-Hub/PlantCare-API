@@ -1,0 +1,19 @@
+{
+  "android": {
+    "latestVersion": "2.0.0",
+    "minimumVersion": "2.0.0",
+    "minOsVersion": "24"
+  },
+  "ios": {
+    "latestVersion": "2.0.0",
+    "minimumVersion": "2.0.0"
+  },
+  "messages": {
+    "softTitle": "New Update Available",
+    "softMessage": "A new version of GoViCare is ready. Update now for the latest improvements and bug fixes.",
+    "forceTitle": "Update Required",
+    "forceMessage": "This version is no longer supported. Please update to continue using GoViCare.",
+    "updateButton": "Update Now",
+    "laterButton": "Update Later"
+  }
+}
