@@ -16,7 +16,7 @@ const newsRoutes = require("./routes/news-routes");
 const cropRoutes = require("./routes/crop-routes");
 const MarketPriceRoutes = require("./routes/market-price-routes");
 const complainRoutes = require("./routes/complain-routes");
-const heathRoutes = require("./routes/heath-routes");
+const healthRoutes = require("./routes/health-routes");
 const farmRoutes = require("./routes/farm-routes");
 const staffRoutes = require("./routes/staff-routes");
 const certificateRoutes = require("./routes/certificate-routes");
@@ -101,7 +101,8 @@ const registerRoutes = () => {
   app.use("/api/pension", pentionRoutes);
   app.use("/api/govi-shop", goviShopRoutes);
   app.use("/api/app-version", appVersionRoutes);
-  app.use("", heathRoutes); // Health check routes
+  app.use("", healthRoutes); // Health check routes
+  app.use("/plantcare-api", healthRoutes);
 
   // Protected routes (with AUTHOR prefix)
   app.use(authorBasePath, myCropRoutes);
