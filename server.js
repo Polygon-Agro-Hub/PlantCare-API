@@ -81,10 +81,6 @@ const configureMiddleware = () => {
   app.options("*", cors(corsOptions));
 };
 
-/**
- * Route Registration
- * Registers all application routes with their respective base paths
- */
 const registerRoutes = () => {
   const authorBasePath = process.env.AUTHOR || "/api";
 
