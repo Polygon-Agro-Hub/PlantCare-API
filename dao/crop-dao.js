@@ -2,7 +2,33 @@ const db = require("../startup/database");
 
 exports.getCropByCategory = (categorie) => {
     return new Promise((resolve, reject) => {
-        const sql = "SELECT * FROM cropgroup WHERE category=?";
+        const sql = `
+            SELECT
+                id,
+                cropNameEnglish,
+                cropNameSinhala,
+                cropNameTamil,
+                category,
+                LEFT(image, 256) AS image,
+                bgColor,
+                costFeild,
+                incomeFeild,
+                seedRate,
+                rowSpace,
+                plantSpace,
+                AvgYield,
+                nitrogen,
+                phosphorus,
+                potassium,
+                displayFor,
+                modifyBy,
+                modifyAt,
+                createdAt
+            FROM cropgroup
+            WHERE category = ?
+              AND displayFor IN ('Farmery', 'Both')
+        `;
+
         db.plantcare.query(sql, [categorie], (err, results) => {
             if (err) {
                 console.error("Error executing query:", err);
