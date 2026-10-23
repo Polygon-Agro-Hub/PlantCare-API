@@ -93,6 +93,7 @@ exports.getComplainCategories = async () => {
                 FROM complaincategory cc
                 JOIN systemapplications ssa ON cc.appId = ssa.id
                 WHERE ssa.appName = 'GoviCare'
+                ORDER BY cc.categoryEnglish ASC
       `;
         db.admin.query(query, (error, results) => {
             if (error) {
