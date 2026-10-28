@@ -1,11 +1,11 @@
 {
   "android": {
-    "latestVersion": "2.0.2",
+    "latestVersion": "2.0.3",
     "minimumVersion": "2.0.2",
     "minOsVersion": "24"
   },
   "ios": {
-    "latestVersion": "2.0.2",
+    "latestVersion": "2.0.3",
     "minimumVersion": "2.0.2"
   },
   "messages": {
