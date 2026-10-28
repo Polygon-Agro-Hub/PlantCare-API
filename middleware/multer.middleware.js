@@ -7,16 +7,22 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
+    const filetypes = /jpeg|jpg|png|heic|heif/;
     const extname = filetypes.test(
       path.extname(file.originalname).toLowerCase(),
     );
-    const mimetype = filetypes.test(file.mimetype);
+    const mimetype =
+      filetypes.test(file.mimetype) ||
+      file.mimetype === "image/heic" ||
+      file.mimetype === "image/heif" ||
+      file.mimetype === "application/octet-stream";
 
-    if (mimetype && extname) {
+    if (extname || mimetype) {
       return cb(null, true);
     } else {
-      return cb(new Error("Only images are allowed"));
+      const err = new Error("Only HEIC, JPG, and PNG files are allowed.");
+      err.status = 400;
+      return cb(err);
     }
   },
 });
