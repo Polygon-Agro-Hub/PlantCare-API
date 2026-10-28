@@ -140,6 +140,13 @@ const setupErrorHandlers = () => {
   app.use((err, req, res, next) => {
     console.error("Unhandled error:", err);
 
+    if (err.status === 400 || err.name === "MulterError") {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: err.message || "Only HEIC, JPG, and PNG files are allowed.",
+      });
+    }
+
     // Don't expose error details in production
     const errorResponse = {
       error: "Internal server error",
