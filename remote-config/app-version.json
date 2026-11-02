@@ -1,12 +1,12 @@
 {
   "android": {
-    "latestVersion": "2.0.5",
-    "minimumVersion": "2.0.5",
+    "latestVersion": "2.0.6",
+    "minimumVersion": "2.0.6",
     "minOsVersion": "24"
   },
   "ios": {
-    "latestVersion": "2.0.5",
-    "minimumVersion": "2.0.5"
+    "latestVersion": "2.0.6",
+    "minimumVersion": "2.0.6"
   },
   "messages": {
     "softTitle": "New Update Available",
