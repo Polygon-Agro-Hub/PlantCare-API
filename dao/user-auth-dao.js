@@ -165,8 +165,8 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
                     u.city,
                     u.route,
                     u.language,
-                    LEFT(u.profileImage, 256) AS profileImage,
-                    LEFT(u.farmerQr, 256) AS farmerQr,
+                    u.profileImage,
+                    u.farmerQr,
                     u.membership,
                     COALESCE(mp.activeStatus, 0) as activeStatus,
                     'Owner' AS role
@@ -225,8 +225,8 @@ exports.getUserProfileById = (userId, ownerId, userrole) => {
             ELSE farmstaff.phoneNumber
         END as phoneNumber,
         farmstaff.nic AS NICnumber,
-        LEFT(farmstaff.Image, 256) as profileImage,
-        LEFT(users.farmerQr, 256) as farmerQr, 
+        farmstaff.Image as profileImage,
+        users.farmerQr as farmerQr,
         farmstaff.role,
         farmstaff.farmId,
         farms.farmName,

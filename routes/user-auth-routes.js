@@ -61,4 +61,14 @@ router.get(
     userAuthEp.getFeedbackOptions
 );
 
+router.post(
+    "/send-otp",
+    userAuthEp.sendOtp
+);
+
+router.post(
+    "/verify-otp",
+    userAuthEp.verifyOtp
+);
+
 module.exports = router;

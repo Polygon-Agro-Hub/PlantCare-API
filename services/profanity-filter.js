@@ -145,7 +145,7 @@ class ProfanityFilter {
 }
 
 // ------------------- CACHE & AUTO-REFRESH -------------------
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 1 day (24 hours)
 let filter = new ProfanityFilter();
 let lastBuiltAt = 0;
 let inFlight = null;

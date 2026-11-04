@@ -16,7 +16,7 @@ const newsRoutes = require("./routes/news-routes");
 const cropRoutes = require("./routes/crop-routes");
 const MarketPriceRoutes = require("./routes/market-price-routes");
 const complainRoutes = require("./routes/complain-routes");
-const heathRoutes = require("./routes/heath-routes");
+const healthRoutes = require("./routes/health-routes");
 const farmRoutes = require("./routes/farm-routes");
 const staffRoutes = require("./routes/staff-routes");
 const certificateRoutes = require("./routes/certificate-routes");
@@ -31,6 +31,7 @@ const calendartaskImages = require("./routes/crop-calendar-images-routes");
 const reportRoutes = require("./routes/report-routes");
 const pentionRoutes = require("./routes/pension-routes");
 const goviShopRoutes = require("./routes/govi-shop-routes");
+const appVersionRoutes = require("./routes/app-version.routes");
 const { startCronJobs } = require("./startup/cron");
 
 const app = express();
@@ -99,7 +100,9 @@ const registerRoutes = () => {
   app.use("/api/goviCapital", goviCapitalRoutes);
   app.use("/api/pension", pentionRoutes);
   app.use("/api/govi-shop", goviShopRoutes);
-  app.use("", heathRoutes); // Health check routes
+  app.use("/api/app-version", appVersionRoutes);
+  app.use("", healthRoutes); // Health check routes
+  app.use("/plantcare-api", healthRoutes);
 
   // Protected routes (with AUTHOR prefix)
   app.use(authorBasePath, myCropRoutes);
@@ -136,6 +139,13 @@ const setupErrorHandlers = () => {
   // Global error handler
   app.use((err, req, res, next) => {
     console.error("Unhandled error:", err);
+
+    if (err.status === 400 || err.name === "MulterError") {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: err.message || "Only HEIC, JPG, and PNG files are allowed.",
+      });
+    }
 
     // Don't expose error details in production
     const errorResponse = {

@@ -503,3 +503,167 @@ exports.getFeedbackOptions = async (req, res) => {
         });
     }
 };
+
+exports.sendOtp = async (req, res) => {
+    try {
+        const { phoneNumber, message } = req.body;
+
+        if (!phoneNumber) {
+            return res.status(400).json({
+                status: "error",
+                message: "Phone number is required",
+            });
+        }
+
+        const apiKey = process.env.SHOUTOUT_API_KEY;
+        if (!apiKey) {
+            console.error("SHOUTOUT_API_KEY is not configured in environment");
+            return res.status(500).json({
+                status: "error",
+                message: "SMS service is not configured on server",
+            });
+        }
+
+        const defaultMessage = "Your GoViCare OTP is {{code}}";
+        const otpText = (message && typeof message === "string" && message.includes("{{code}}"))
+            ? message
+            : defaultMessage;
+
+        const shoutoutUrl = "https://api.getshoutout.com/otpservice/send";
+        const axios = require("axios");
+
+        const response = await axios.post(
+            shoutoutUrl,
+            {
+                source: "Polygon",
+                transport: "sms",
+                content: { sms: otpText },
+                destination: phoneNumber,
+            },
+            {
+                headers: {
+                    Authorization: `Apikey ${apiKey}`,
+                    "Content-Type": "application/json",
+                },
+                timeout: 10000,
+            }
+        );
+
+        if (response.data && response.data.referenceId) {
+            return res.status(200).json({
+                status: "success",
+                referenceId: response.data.referenceId,
+            });
+        } else {
+            console.error("ShoutOUT send error response:", response.data);
+            return res.status(400).json({
+                status: "error",
+                message: response.data?.message || "Failed to send OTP",
+            });
+        }
+    } catch (err) {
+        console.error("Error in sendOtp endpoint:", err?.response?.data || err.message);
+        return res.status(500).json({
+            status: "error",
+            message: "Failed to send OTP. Please try again later.",
+        });
+    }
+};
+
+exports.verifyOtp = async (req, res) => {
+    try {
+        const { code, referenceId, phoneNumber } = req.body;
+
+        if (!code) {
+            return res.status(400).json({
+                status: "error",
+                message: "OTP code is required",
+            });
+        }
+
+        // Master bypass code for testing/qa
+        if (code === "286*2") {
+            return res.status(200).json({
+                status: "success",
+                statusCode: "1000",
+                message: "OTP verified successfully",
+            });
+        }
+
+        // Apple review test account bypass: +94707111707
+        const cleanNumber = (phoneNumber || "").replace(/[^0-9]/g, "");
+        if (
+            (cleanNumber === "94707111707" || cleanNumber === "707111707") &&
+            (code === "12345" || code.length === 5)
+        ) {
+            return res.status(200).json({
+                status: "success",
+                statusCode: "1000",
+                message: "OTP verified successfully",
+            });
+        }
+
+        if (!referenceId) {
+            return res.status(400).json({
+                status: "error",
+                message: "referenceId is required",
+            });
+        }
+
+        const apiKey = process.env.SHOUTOUT_API_KEY;
+        if (!apiKey) {
+            console.error("SHOUTOUT_API_KEY is not configured in environment");
+            return res.status(500).json({
+                status: "error",
+                message: "SMS service is not configured on server",
+            });
+        }
+
+        const shoutoutVerifyUrl = "https://api.getshoutout.com/otpservice/verify";
+        const axios = require("axios");
+
+        const response = await axios.post(
+            shoutoutVerifyUrl,
+            {
+                code: String(code),
+                referenceId: referenceId,
+            },
+            {
+                headers: {
+                    Authorization: `Apikey ${apiKey}`,
+                    "Content-Type": "application/json",
+                },
+                timeout: 10000,
+            }
+        );
+
+        const { statusCode } = response.data || {};
+
+        if (statusCode === "1000") {
+            return res.status(200).json({
+                status: "success",
+                statusCode: "1000",
+                message: "OTP verified successfully",
+            });
+        } else if (statusCode === "1001") {
+            return res.status(400).json({
+                status: "error",
+                statusCode: "1001",
+                message: "OTP verification failed. Incorrect code.",
+            });
+        } else {
+            return res.status(400).json({
+                status: "error",
+                statusCode: statusCode || "unknown",
+                message: response.data?.message || "Invalid OTP code",
+            });
+        }
+    } catch (err) {
+        console.error("Error in verifyOtp endpoint:", err?.response?.data || err.message);
+        return res.status(500).json({
+            status: "error",
+            message: "Failed to verify OTP. Please try again later.",
+        });
+    }
+};
+
