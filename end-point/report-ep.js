@@ -51,6 +51,8 @@ exports.getUserWithBankDetails = async (req, res) => {
       bankName: user.bankName,
       branchName: user.branchName,
       companyNameEnglish: user.companyNameEnglish,
+      companyNameSinhala: user.companyNameSinhala,
+      companyNameTamil: user.companyNameTamil,
       centerName: user.centerName,
       createdAt: user.createdAt,
     };
