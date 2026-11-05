@@ -90,6 +90,8 @@ exports.getUserWithBankDetailsById = async (userId, centerId, companyId) => {
           b.bankName,
           b.branchName,
           c.companyNameEnglish,
+          c.companyNameSinhala,
+          c.companyNameTamil,
           cc.centerName,
           b.createdAt
       FROM users u
